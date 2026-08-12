@@ -34,12 +34,16 @@
     }
     return json;
   }
+  // public/js/wizard.js corre por fuera de este IIFE y necesita el mismo cliente
+  // autenticado (token + apiBase) en vez de reimplementarlo aparte.
+  window.NUVA_API = apiCall;
 
   async function fetchState(){
     data = await apiCall('GET', '/api/state');
     setConn(true);
   }
 
+  let _wizardChecked = false;
   async function refreshAndRender(){
     try{
       await fetchState();
@@ -49,6 +53,10 @@
       return;
     }
     renderAll();
+    if(!_wizardChecked){
+      _wizardChecked = true;
+      window.NUVA_WIZARD && window.NUVA_WIZARD.maybeShow(data);
+    }
   }
 
   function todayStr(){

@@ -9,44 +9,27 @@
     ahorro:'Cuenta de ahorros', corriente:'Cuenta corriente', efectivo:'Efectivo en mano', tarjeta:'Tarjeta de crédito'
   };
 
-  const STEPS = ['welcome','import','basic','accounts','categories','goal','telegram','mobile','done'];
+  const STEPS = ['welcome','basic','accounts','categories','goal','telegram','done'];
 
   const wiz = {
     overlay: null, body: null, stepsBar: null,
-    path: null, // 'scratch' | 'import'
+    shown: false,
     stepIndex: 0,
     addedAccounts: [],
-    addedCategories: [],
     telegramLinked: false
   };
 
-  async function api(method, url, body){
-    const res = await fetch(url, {
-      method,
-      headers: body !== undefined ? {'Content-Type':'application/json'} : undefined,
-      body: body !== undefined ? JSON.stringify(body) : undefined
-    });
-    let json = null;
-    try{ json = await res.json(); }catch(e){}
-    if(!res.ok) throw new Error((json && json.error) || 'Error de conexión con el servidor');
-    return json;
-  }
+  // window.NUVA_API lo expone public/js/app.js — ya maneja el token de sesión y
+  // el apiBase (Vercel → Railway). El wizard nunca debe hacer fetch() directo.
+  function api(method, url, body){ return window.NUVA_API(method, url, body); }
 
   function escapeHtml(s){
     return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   }
 
-  function visibleSteps(){
-    // El camino de "importar" salta directo a la pantalla de importación y termina ahí.
-    if(wiz.path === 'import') return ['welcome','import'];
-    return STEPS.filter(s => s !== 'import');
-  }
-
   function renderDots(){
-    const steps = visibleSteps();
-    const idx = steps.indexOf(STEPS[wiz.stepIndex] === 'import' ? 'import' : currentStepName());
-    wiz.stepsBar.innerHTML = steps.map((s,i)=>{
-      const cls = i < idx ? 'wiz-dot done' : (i === idx ? 'wiz-dot active' : 'wiz-dot');
+    wiz.stepsBar.innerHTML = STEPS.map((s,i)=>{
+      const cls = i < wiz.stepIndex ? 'wiz-dot done' : (i === wiz.stepIndex ? 'wiz-dot active' : 'wiz-dot');
       return `<div class="${cls}"></div>`;
     }).join('');
   }
@@ -64,9 +47,8 @@
     const step = currentStepName();
     renderDots();
     const renderers = {
-      welcome: renderWelcome, import: renderImport, basic: renderBasic,
-      accounts: renderAccounts, categories: renderCategories, goal: renderGoal,
-      telegram: renderTelegram, mobile: renderMobile, done: renderDone
+      welcome: renderWelcome, basic: renderBasic, accounts: renderAccounts,
+      categories: renderCategories, goal: renderGoal, telegram: renderTelegram, done: renderDone
     };
     (renderers[step] || renderWelcome)();
   }
@@ -74,69 +56,25 @@
   /* ---------------- Paso: bienvenida ---------------- */
   function renderWelcome(){
     wiz.body.innerHTML = `
-      <div class="wiz-eyebrow">Bienvenido</div>
-      <div class="wiz-title">Configuremos NUVA</div>
-      <div class="wiz-sub">Antes de empezar, dinos cómo quieres arrancar. Esto solo se pregunta una vez.</div>
-      <div class="wiz-choice-grid">
-        <button type="button" class="wiz-choice" id="wizChoiceScratch">
-          <i class="ph ph-sparkle"></i>
-          <div class="wc-title">Configurar desde cero</div>
-          <div class="wc-sub">Crea tus cuentas, categorías y preferencias en unos pasos.</div>
-        </button>
-        <button type="button" class="wiz-choice" id="wizChoiceImport">
-          <i class="ph ph-upload-simple"></i>
-          <div class="wc-title">Importar configuración existente</div>
-          <div class="wc-sub">Sube un archivo data.json de un respaldo o de otra instalación.</div>
-        </button>
-      </div>
-    `;
-    document.getElementById('wizChoiceScratch').addEventListener('click', ()=>{ wiz.path = 'scratch'; goTo('basic'); });
-    document.getElementById('wizChoiceImport').addEventListener('click', ()=>{ wiz.path = 'import'; goTo('import'); });
-  }
-
-  /* ---------------- Paso: importar ---------------- */
-  function renderImport(){
-    wiz.body.innerHTML = `
-      <div class="wiz-eyebrow">Importar</div>
-      <div class="wiz-title">Sube tu archivo data.json</div>
-      <div class="wiz-sub">Reemplazará cualquier dato de esta instalación por el contenido del archivo.</div>
-      <div class="wiz-file-drop" id="wizDropZone">
-        <i class="ph ph-file-arrow-up"></i>
-        <div class="wfd-text">Haz clic para elegir el archivo</div>
-        <div class="wfd-sub">Debe ser el data.json exportado desde NUVA</div>
-      </div>
-      <input type="file" id="wizFileInput" accept="application/json,.json" style="display:none;">
-      <div id="wizImportError"></div>
+      <div class="wiz-eyebrow">Bienvenido a NUVA</div>
+      <div class="wiz-title">Organicemos tus finanzas</div>
+      <div class="wiz-sub">Este recorrido rápido te muestra lo esencial: tu primera cuenta, tus categorías de gasto, una meta de ahorro y cómo registrar movimientos por Telegram. Toma menos de 2 minutos y puedes cambiar cualquier cosa después.</div>
       <div class="wiz-actions">
-        <button type="button" class="btn btn-ghost" id="wizBackBtn">Atrás</button>
+        <span></span>
+        <div class="wiz-actions-right">
+          <button type="button" class="btn btn-primary" id="wizNextBtn">Empecemos</button>
+        </div>
       </div>
     `;
-    document.getElementById('wizBackBtn').addEventListener('click', ()=>{ wiz.path = null; goTo('welcome'); });
-    const dz = document.getElementById('wizDropZone');
-    const input = document.getElementById('wizFileInput');
-    dz.addEventListener('click', ()=> input.click());
-    input.addEventListener('change', async ()=>{
-      const file = input.files[0];
-      if(!file) return;
-      const errBox = document.getElementById('wizImportError');
-      errBox.innerHTML = '';
-      try{
-        const text = await file.text();
-        const parsed = JSON.parse(text);
-        await api('POST', '/api/setup/import', parsed);
-        finishAndReload();
-      }catch(e){
-        errBox.innerHTML = `<div class="wiz-error">No se pudo importar: ${escapeHtml(e.message)}</div>`;
-      }
-    });
+    document.getElementById('wizNextBtn').addEventListener('click', next);
   }
 
   /* ---------------- Paso: datos básicos ---------------- */
   function renderBasic(){
     wiz.body.innerHTML = `
-      <div class="wiz-eyebrow">Paso 1 de 6</div>
+      <div class="wiz-eyebrow">Paso 1 de 5</div>
       <div class="wiz-title">Cuéntanos de ti</div>
-      <div class="wiz-sub">La moneda de NUVA es soles (S/) — está fija, no hace falta configurarla.</div>
+      <div class="wiz-sub">Usamos tu nombre solo para saludarte dentro de la app. La moneda de NUVA es soles (S/), fija.</div>
       <div class="field" style="margin-bottom:18px;"><label>Tu nombre (opcional)</label><input type="text" id="wizOwnerName" placeholder="Ej: Sandro"></div>
       <div class="wiz-actions">
         <span></span>
@@ -168,9 +106,9 @@
 
   function renderAccounts(){
     wiz.body.innerHTML = `
-      <div class="wiz-eyebrow">Paso 2 de 6</div>
-      <div class="wiz-title">Tus cuentas</div>
-      <div class="wiz-sub">Agrega tus cuentas de banco, efectivo o tarjetas de crédito. Puedes agregar más después desde Billetera.</div>
+      <div class="wiz-eyebrow">Paso 2 de 5</div>
+      <div class="wiz-title">Tu primera cuenta</div>
+      <div class="wiz-sub">Todo en NUVA parte de una cuenta: banco, efectivo o tarjeta de crédito. Tus movimientos, metas y tarjetas siempre están ligados a una. Puedes agregar más después desde Billetera.</div>
       ${accListHtml()}
       <div class="form-grid" style="margin-bottom:14px;">
         <div class="field"><label>Tipo</label>
@@ -231,9 +169,9 @@
   /* ---------------- Paso: categorías ---------------- */
   function renderCategories(){
     wiz.body.innerHTML = `
-      <div class="wiz-eyebrow">Paso 3 de 6</div>
+      <div class="wiz-eyebrow">Paso 3 de 5</div>
       <div class="wiz-title">Categorías de gasto</div>
-      <div class="wiz-sub">Ya vienen algunas categorías comunes. Agrega las que te falten (puedes agregar más después).</div>
+      <div class="wiz-sub">Cada gasto o ingreso que registres queda agrupado por categoría — así los gráficos del Panel te muestran en qué se te va la plata. Ya vienen algunas comunes; agrega las que te falten.</div>
       <div class="wiz-chip-row" id="wizCatChips"><div class="wiz-chip">Cargando…</div></div>
       <div class="wiz-inline-add">
         <input type="text" id="wizCatInput" placeholder="Ej: Mascotas">
@@ -276,9 +214,9 @@
   /* ---------------- Paso: meta de ahorro ---------------- */
   function renderGoal(){
     wiz.body.innerHTML = `
-      <div class="wiz-eyebrow">Paso 4 de 6 · Opcional</div>
+      <div class="wiz-eyebrow">Paso 4 de 5 · Opcional</div>
       <div class="wiz-title">Meta de ahorro mensual</div>
-      <div class="wiz-sub">¿Cuánto te gustaría ahorrar cada mes? Puedes cambiarlo cuando quieras desde el Panel.</div>
+      <div class="wiz-sub">Si nos dices cuánto quieres ahorrar cada mes, el Panel te muestra tu progreso en tiempo real. Puedes cambiarla cuando quieras.</div>
       <div class="field" style="margin-bottom:18px;"><label>Meta mensual (S/)</label><input type="number" min="0" step="0.01" id="wizGoalAmount" placeholder="Ej: 500"></div>
       <div class="wiz-actions">
         <button type="button" class="btn btn-ghost" id="wizBackBtn">Atrás</button>
@@ -299,19 +237,16 @@
 
   /* ---------------- Paso: Telegram ---------------- */
   let wizTelegramPoll = null;
+  let wizCodeCountdown = null;
   function renderTelegram(){
     clearInterval(wizTelegramPoll);
+    clearInterval(wizCodeCountdown);
     wiz.body.innerHTML = `
-      <div class="wiz-eyebrow">Paso 5 de 6 · Opcional</div>
-      <div class="wiz-title">Bot de Telegram</div>
-      <div class="wiz-sub">Recibe avisos de pagos, cuotas y metas de ahorro directo en Telegram. Cada instalación usa su propio bot, así que nadie más puede ver tus datos.</div>
-      <ol class="wiz-steps-list">
-        <li>Abre Telegram y busca <b>@BotFather</b>.</li>
-        <li>Envíale <b>/newbot</b> y sigue las instrucciones (nombre y usuario del bot).</li>
-        <li>Copia el <b>token</b> que te da y pégalo abajo.</li>
-      </ol>
-      <div class="field" style="margin-bottom:12px;"><label>Token del bot</label><input type="text" id="wizTgToken" placeholder="123456789:AA...", autocomplete="off"></div>
-      <button type="button" class="btn btn-ghost" id="wizTgConnectBtn" style="margin-bottom:14px;">Vincular bot</button>
+      <div class="wiz-eyebrow">Paso 5 de 5 · Opcional</div>
+      <div class="wiz-title">Registra gastos por Telegram</div>
+      <div class="wiz-sub">NUVA tiene un bot compartido: escríbele "gasto 25 comida" y queda registrado al toque, sin abrir la app. Para vincularlo, genera un código acá y pégalo en el chat del bot.</div>
+      <button type="button" class="btn btn-ghost" id="wizTgGenBtn" style="margin-bottom:14px;">Generar código de vinculación</button>
+      <div id="wizTgCodeBox"></div>
       <div id="wizTgStatus"></div>
       <div id="wizTgError"></div>
       <div class="wiz-actions">
@@ -322,19 +257,33 @@
         </div>
       </div>
     `;
-    document.getElementById('wizBackBtn').addEventListener('click', ()=>{ clearInterval(wizTelegramPoll); back(); });
-    document.getElementById('wizSkipBtn').addEventListener('click', ()=>{ clearInterval(wizTelegramPoll); next(); });
-    document.getElementById('wizNextBtn').addEventListener('click', ()=>{ clearInterval(wizTelegramPoll); next(); });
-    document.getElementById('wizTgConnectBtn').addEventListener('click', async ()=>{
-      const token = document.getElementById('wizTgToken').value.trim();
+    const stopPolling = () => { clearInterval(wizTelegramPoll); clearInterval(wizCodeCountdown); };
+    document.getElementById('wizBackBtn').addEventListener('click', ()=>{ stopPolling(); back(); });
+    document.getElementById('wizSkipBtn').addEventListener('click', ()=>{ stopPolling(); next(); });
+    document.getElementById('wizNextBtn').addEventListener('click', ()=>{ stopPolling(); next(); });
+    document.getElementById('wizTgGenBtn').addEventListener('click', async ()=>{
       const errBox = document.getElementById('wizTgError');
       errBox.innerHTML = '';
-      if(!token){ errBox.innerHTML = `<div class="wiz-error">Pega el token que te dio @BotFather</div>`; return; }
       try{
-        await api('POST', '/api/setup/telegram', { token });
-        showTgStatus('pulse', 'Bot iniciado. Ahora abre tu bot en Telegram y envíale /start…');
-        wizTelegramPoll = setInterval(pollTelegramStatus, 2500);
-        pollTelegramStatus();
+        const { code, expiresAt } = await api('POST', '/api/telegram/link-code');
+        const box = document.getElementById('wizTgCodeBox');
+        const expiresMs = new Date(expiresAt).getTime();
+        const renderCountdown = ()=>{
+          const secsLeft = Math.max(0, Math.round((expiresMs - Date.now())/1000));
+          const mm = Math.floor(secsLeft/60), ss = String(secsLeft%60).padStart(2,'0');
+          box.innerHTML = `
+            <div class="wiz-status-row" style="justify-content:center;flex-direction:column;gap:6px;padding:14px;">
+              <div style="font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;">Tu código (válido ${mm}:${ss})</div>
+              <div style="font-size:28px;font-weight:800;letter-spacing:4px;color:var(--ink);font-variant-numeric:tabular-nums;">${escapeHtml(code)}</div>
+              <div style="font-size:12px;color:var(--text-dim);">Abre el bot en Telegram y pégalo en el chat.</div>
+            </div>
+          `;
+          if(secsLeft <= 0){ clearInterval(wizCodeCountdown); box.innerHTML = `<div class="wiz-error">El código venció. Genera uno nuevo.</div>`; }
+        };
+        renderCountdown();
+        wizCodeCountdown = setInterval(renderCountdown, 1000);
+        showTgStatus('pulse', 'Esperando a que lo pegues en Telegram…');
+        wizTelegramPoll = setInterval(pollTelegramStatus, 3000);
       }catch(e){ errBox.innerHTML = `<div class="wiz-error">${escapeHtml(e.message)}</div>`; }
     });
   }
@@ -345,48 +294,19 @@
   }
   async function pollTelegramStatus(){
     try{
-      const status = await api('GET', '/api/setup/telegram-status');
+      const status = await api('GET', '/api/telegram/link-status');
       if(status.linked){
         clearInterval(wizTelegramPoll);
-        showTgStatus('ok', '¡Listo! Tu bot quedó vinculado a esta instalación.');
+        clearInterval(wizCodeCountdown);
+        showTgStatus('ok', '¡Listo! Tu Telegram quedó vinculado.');
       }
-    }catch(e){}
-  }
-
-  /* ---------------- Paso: celular ---------------- */
-  function renderMobile(){
-    wiz.body.innerHTML = `
-      <div class="wiz-eyebrow">Paso 6 de 6</div>
-      <div class="wiz-title">Usa NUVA desde tu celular</div>
-      <div class="wiz-sub">Con tu celular conectado a la <b>misma red WiFi</b> que esta computadora, abre esta dirección en el navegador del celular:</div>
-      <div id="wizMobileBox"><div class="wiz-link-box"><span class="wlb-url">Cargando…</span></div></div>
-      <div class="wiz-note"><i class="ph ph-info"></i>Esta dirección puede cambiar si tu red WiFi cambia. Siempre puedes verla de nuevo en esta app.</div>
-      <div class="wiz-actions">
-        <button type="button" class="btn btn-ghost" id="wizBackBtn">Atrás</button>
-        <div class="wiz-actions-right">
-          <button type="button" class="btn btn-primary" id="wizNextBtn">Continuar</button>
-        </div>
-      </div>
-    `;
-    document.getElementById('wizBackBtn').addEventListener('click', back);
-    document.getElementById('wizNextBtn').addEventListener('click', next);
-    loadNetworkInfo();
-  }
-  async function loadNetworkInfo(){
-    try{
-      const info = await api('GET', '/api/network-info');
-      const box = document.getElementById('wizMobileBox');
-      if(!box) return;
-      if(!info.ips || !info.ips.length){
-        box.innerHTML = `<div class="wiz-note"><i class="ph ph-warning-circle"></i>No se detectó una red WiFi activa. Conecta esta computadora a tu WiFi y vuelve a intentar más tarde desde Ajustes.</div>`;
-        return;
-      }
-      box.innerHTML = info.ips.map(ip => `<div class="wiz-link-box"><span class="wlb-url">http://${ip}:${info.port}</span></div>`).join('');
     }catch(e){}
   }
 
   /* ---------------- Paso: final ---------------- */
   function renderDone(){
+    clearInterval(wizTelegramPoll);
+    clearInterval(wizCodeCountdown);
     wiz.body.innerHTML = `
       <div class="wiz-eyebrow">Todo listo</div>
       <div class="wiz-title">NUVA está configurado</div>
@@ -403,30 +323,30 @@
     `;
     document.getElementById('wizFinishBtn').addEventListener('click', async ()=>{
       try{ await api('POST', '/api/setup/complete'); }catch(e){}
-      finishAndReload();
+      wiz.overlay.classList.remove('open');
+      document.body.style.overflow = '';
+      // __startNuvaApp() ya es seguro de llamar de nuevo — vuelve a pedir el estado
+      // (ahora con setupCompleted:true) sin duplicar el intervalo de auto-refresco.
+      window.__startNuvaApp ? window.__startNuvaApp() : location.reload();
     });
   }
 
-  function finishAndReload(){
-    location.reload();
-  }
-
-  /* ---------------- Arranque ---------------- */
-  async function init(){
+  /* ---------------- Disparo ---------------- */
+  // Se llama desde public/js/app.js, dentro de refreshAndRender(), justo después de
+  // cargar el estado ya autenticado del usuario — así el wizard nunca hace su propia
+  // llamada sin sesión (esa era la causa de que nunca apareciera).
+  function maybeShow(state){
+    if(wiz.shown) return;
+    if(!state || state.setupCompleted) return;
     wiz.overlay = document.getElementById('wizOverlay');
     wiz.body = document.getElementById('wizBody');
     wiz.stepsBar = document.getElementById('wizSteps');
     if(!wiz.overlay) return;
-    try{
-      const state = await api('GET', '/api/state');
-      if(state.setupCompleted) return;
-    }catch(e){
-      return; // sin conexión con el servidor: no bloquear con el wizard
-    }
+    wiz.shown = true;
     wiz.overlay.classList.add('open');
     document.body.style.overflow = 'hidden';
     goTo('welcome');
   }
 
-  init();
+  window.NUVA_WIZARD = { maybeShow };
 })();
