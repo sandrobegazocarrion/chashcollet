@@ -964,7 +964,7 @@
   .pw-toggle:hover{color:var(--ink);background:var(--bg-soft);}
   .pw-strength{display:flex;align-items:center;gap:8px;margin-top:2px;}
   .pw-strength-bar{flex:1;height:4px;border-radius:999px;background:var(--bg-soft);overflow:hidden;}
-  .pw-strength-fill{height:100%;width:0;border-radius:999px;transition:width .2s ease,background .2s ease;}
+  .pw-strength-fill{height:100%;width:100%;border-radius:999px;transform:scaleX(0);transform-origin:left;transition:transform .2s ease,background .2s ease;}
   .pw-strength-label{font-size:11px;font-weight:700;flex-shrink:0;min-width:52px;text-align:right;}
   .btn-spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:auth-spin .7s linear infinite;margin-right:8px;vertical-align:middle;}
   @keyframes auth-spin{to{transform:rotate(360deg);}}

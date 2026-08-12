@@ -72,7 +72,7 @@
       { pct: 100, color: 'var(--green, #2fa86b)',  label: 'Fuerte' }
     ];
     const lvl = levels[Math.max(0, score - 1)] || levels[0];
-    pwStrengthFill.style.width = lvl.pct + '%';
+    pwStrengthFill.style.transform = `scaleX(${lvl.pct / 100})`;
     pwStrengthFill.style.background = lvl.color;
     pwStrengthLabel.textContent = lvl.label;
     pwStrengthLabel.style.color = lvl.color;
