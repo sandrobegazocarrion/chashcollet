@@ -1,0 +1,22 @@
+.env
+node_modules/
+data.json
+data.json.*
+backups/
+dist/
+
+# Runtime empaquetado del instalador local (contiene un node.exe de ~90MB) y
+# artefactos de herramientas de desarrollo — nada de esto es parte de la app.
+runtime/
+logs.txt
+.codex/
+.impeccable/
+.agents/
+.claude/
+skills-lock.json
+
+# Artefactos compilados / backups sueltos — no son código fuente.
+installer/*.exe
+installer/INSTALLED
+*.bak-*
+*.backup-*

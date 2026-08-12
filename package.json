@@ -1,0 +1,21 @@
+{
+  "name": "nuva",
+  "version": "1.0.0",
+  "description": "App de finanzas personales local (web + Telegram) con datos guardados 100% en tu computador",
+  "private": true,
+  "main": "server/server.js",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server/server.js",
+    "build:installer": "iscc installer\\NUVA.iss"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
+    "cors": "^2.8.6",
+    "express": "^4.19.2",
+    "express-rate-limit": "^8.6.2",
+    "node-telegram-bot-api": "^1.2.0"
+  }
+}

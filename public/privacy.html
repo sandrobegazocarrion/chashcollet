@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Política de Privacidad — NUVA</title>
+<link rel="stylesheet" href="css/styles.css">
+<style>
+  .legal-page{max-width:720px;margin:0 auto;padding:48px 24px 80px;color:var(--ink);background:var(--bg);min-height:100vh;}
+  .legal-page h1{font-size:26px;font-weight:800;margin-bottom:6px;}
+  .legal-page .legal-updated{color:var(--text-dim);font-size:13px;margin-bottom:32px;}
+  .legal-page h2{font-size:16.5px;font-weight:700;margin:28px 0 8px;}
+  .legal-page p, .legal-page li{font-size:14px;line-height:1.65;color:var(--ink);}
+  .legal-page ul{padding-left:20px;margin:8px 0;}
+  .legal-page a.back{display:inline-block;margin-bottom:24px;font-size:13px;color:var(--accent);text-decoration:none;}
+  .legal-page table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13px;}
+  .legal-page th, .legal-page td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--border);}
+  .legal-page th{color:var(--text-dim);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.3px;}
+  .legal-page .notice{margin-top:36px;padding:14px 16px;background:var(--bg-soft);border:1px solid var(--border);border-radius:12px;font-size:12.5px;color:var(--text-dim);}
+</style>
+</head>
+<body>
+<div class="legal-page">
+  <a class="back" href="index.html">← Volver a NUVA</a>
+  <h1>Política de Privacidad</h1>
+  <p class="legal-updated">Última actualización: borrador inicial — pendiente de revisión legal antes de publicación.</p>
+
+  <h2>1. Qué datos recogemos</h2>
+  <table>
+    <tr><th>Dato</th><th>Para qué</th></tr>
+    <tr><td>Correo y contraseña</td><td>Crear e identificar tu cuenta (gestionado por Supabase Auth, tu contraseña nunca queda en texto plano)</td></tr>
+    <tr><td>Nombre (opcional)</td><td>Personalizar el saludo dentro de la app</td></tr>
+    <tr><td>Cuentas, movimientos, metas, tarjetas, deudas</td><td>El registro financiero que tú decides llevar en NUVA</td></tr>
+    <tr><td>Nombre y teléfono de terceros (en "Préstamos entre personas")</td><td>Solo si tú eliges registrar a quién le debes o quién te debe</td></tr>
+    <tr><td>chat_id de Telegram</td><td>Vincular el bot a tu cuenta para registrar movimientos y recibir avisos</td></tr>
+    <tr><td>Datos de pago (tarjeta)</td><td>Procesados directamente por Culqi — NUVA nunca almacena tu número de tarjeta</td></tr>
+  </table>
+
+  <h2>2. Dónde se guardan tus datos</h2>
+  <p>Tu información se almacena en Supabase (base de datos Postgres), con cada fila protegida por Row Level Security: técnicamente, tu cuenta no puede leer ni escribir datos de otro usuario, ni siquiera manipulando la API directamente. Las contraseñas se gestionan por Supabase Auth y nunca son visibles para nosotros.</p>
+
+  <h2>3. Con quién compartimos datos</h2>
+  <ul>
+    <li><strong>Supabase</strong> — aloja la base de datos y la autenticación.</li>
+    <li><strong>Culqi</strong> — procesa los pagos de la suscripción; nosotros solo recibimos confirmación de pago, nunca el número de tu tarjeta.</li>
+    <li><strong>Telegram</strong> — si vinculas el bot, tus mensajes pasan por la infraestructura de Telegram para llegar a nuestro servidor.</li>
+  </ul>
+  <p>No vendemos ni compartimos tu información con terceros para fines publicitarios.</p>
+
+  <h2>4. Datos de terceros que tú registras</h2>
+  <p>Si usas la función de "Préstamos entre personas" y registras el nombre o teléfono de alguien a quien le debes o te debe dinero, eres responsable de tener su consentimiento para guardar esa información, tal como exige la normativa peruana de protección de datos personales.</p>
+
+  <h2>5. Tus derechos</h2>
+  <p>Bajo la Ley N° 29733 (Ley de Protección de Datos Personales del Perú) tienes derecho a acceder, rectificar, cancelar y oponerte al tratamiento de tus datos personales. Puedes ejercer estos derechos escribiendo al correo de soporte, o directamente eliminando tu información desde la app.</p>
+
+  <h2>6. Retención de datos</h2>
+  <p>Conservamos tu información mientras tu cuenta esté activa. Si tu suscripción vence, tu historial se mantiene visible en modo solo-lectura — nunca se borra automáticamente por falta de pago. Si solicitas la eliminación de tu cuenta, borramos tu información de forma permanente.</p>
+
+  <h2>7. Seguridad</h2>
+  <p>Usamos HTTPS en todas las conexiones, autenticación mediante tokens, aislamiento de datos por usuario a nivel de base de datos (RLS), y límites de frecuencia (rate limiting) para prevenir abuso. Ningún sistema es 100% infalible, pero estas medidas están activas desde el primer día.</p>
+
+  <div class="notice">Este documento es un borrador inicial redactado como parte del desarrollo de NUVA. Antes de abrir el registro público, debe ser revisado por un abogado para asegurar cumplimiento con la Ley N° 29733 y su reglamento, incluyendo la eventual inscripción del banco de datos personales ante la Autoridad Nacional de Protección de Datos Personales si corresponde.</div>
+</div>
+</body>
+</html>

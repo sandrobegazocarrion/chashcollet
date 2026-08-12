@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NUVA</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cpath d='M48 162 C38 118, 38 62, 78 52 C120 42, 98 116, 126 120 C155 124, 164 88, 158 42' stroke='%231a2338' stroke-width='30' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script type="module" src="https://unpkg.com/@phosphor-icons/web"></script>
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- ════ ASISTENTE DE PRIMERA CONFIGURACIÓN ════ -->
+<div class="wiz-overlay" id="wizOverlay">
+  <div class="wiz-box">
+    <div class="wiz-head">
+      <div class="brand"><div class="brand-mark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none"><path d="M48 162 C38 118, 38 62, 78 52 C120 42, 98 116, 126 120 C155 124, 164 88, 158 42" stroke="currentColor" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="brand-word">NUVA</span></div>
+      <div class="wiz-steps" id="wizSteps"></div>
+    </div>
+    <div class="wiz-body" id="wizBody"></div>
+  </div>
+</div>
+
+<!-- ════ LOGIN / REGISTRO ════ -->
+<div class="auth-overlay" id="authOverlay">
+  <div class="auth-box">
+    <div class="auth-head">
+      <div class="brand"><div class="brand-mark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none"><path d="M48 162 C38 118, 38 62, 78 52 C120 42, 98 116, 126 120 C155 124, 164 88, 158 42" stroke="currentColor" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="brand-word">NUVA</span></div>
+      <p class="auth-subtitle" id="authSubtitle">Inicia sesión para ver tus finanzas.</p>
+    </div>
+    <form class="auth-body" id="authForm">
+      <div class="field">
+        <label for="authEmail">Correo</label>
+        <input type="email" id="authEmail" autocomplete="email" required>
+      </div>
+      <div class="field">
+        <label for="authPassword">Contraseña</label>
+        <input type="password" id="authPassword" autocomplete="current-password" minlength="6" required>
+      </div>
+      <label class="field" id="authTermsField" style="display:none;flex-direction:row;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--text-dim);">
+        <input type="checkbox" id="authTerms" style="margin-top:2px;">
+        <span>Acepto los <a href="terms.html" target="_blank" rel="noopener">Términos y Condiciones</a> y la <a href="privacy.html" target="_blank" rel="noopener">Política de Privacidad</a>.</span>
+      </label>
+      <div class="auth-error" id="authError" style="display:none;"></div>
+      <button type="submit" class="btn btn-primary auth-submit" id="authSubmitBtn">Entrar</button>
+    </form>
+    <div class="auth-switch">
+      <span id="authSwitchLabel">¿No tienes cuenta?</span>
+      <button type="button" class="auth-switch-btn" id="authSwitchBtn">Regístrate</button>
+    </div>
+  </div>
+</div>
+
+<div class="app-shell" id="appShell" style="display:none;">
+
+  <!-- ════ SIDEBAR ════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-head">
+      <div class="brand"><div class="brand-mark"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none"><path d="M48 162 C38 118, 38 62, 78 52 C120 42, 98 116, 126 120 C155 124, 164 88, 158 42" stroke="currentColor" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/></svg></div><span class="brand-word">NUVA</span></div>
+      <button class="sb-toggle" id="sbClose" title="Ocultar menú" aria-label="Ocultar menú"><i class="ph ph-x"></i></button>
+    </div>
+    <nav class="sb-nav" id="sbNav">
+      <button class="nav-item active" data-tab="dashboard" title="Inicio"><span class="ni"><i class="ph ph-house"></i></span><span class="nav-label">Inicio</span></button>
+      <button class="nav-item" data-tab="cuentas" title="Cuentas"><span class="ni"><i class="ph ph-bank"></i></span><span class="nav-label">Cuentas</span></button>
+      <button class="nav-item" data-tab="tarjeta" title="Tarjetas de crédito"><span class="ni"><i class="ph ph-credit-card"></i></span><span class="nav-label">Tarjetas de crédito</span></button>
+      <button class="nav-item" data-tab="prestamos"><span class="ni"><i class="ph ph-handshake"></i></span><span class="nav-label">Préstamos</span></button>
+      <button class="nav-item" data-tab="transacciones" title="Historial"><span class="ni"><i class="ph ph-clock-counter-clockwise"></i></span><span class="nav-label">Historial</span></button>
+      <button class="nav-item" data-tab="servicios"><span class="ni"><i class="ph ph-receipt"></i></span><span class="nav-label">Servicios</span></button>
+      <button class="nav-item" data-tab="bolsillos" title="Metas"><span class="ni"><i class="ph ph-piggy-bank"></i></span><span class="nav-label">Metas</span></button>
+      <button class="nav-item" data-tab="calendario"><span class="ni"><i class="ph ph-calendar-blank"></i></span><span class="nav-label">Pagos</span></button>
+    </nav>
+    <div class="sb-footer">
+      <button class="sb-add-btn" data-action="open-add-tx" title="Añadir registro"><i class="ph ph-plus"></i> <span class="sb-add-label">Añadir registro</span></button>
+      <div class="conn-label" id="connLabel"><span class="conn-dot" id="connDot"></span><span class="conn-text">Conectando...</span></div>
+    </div>
+  </aside>
+
+  <!-- Backdrop (móvil) -->
+  <div class="sb-backdrop" id="sbBackdrop"></div>
+
+  <!-- ════ MAIN ════ -->
+  <div class="main-wrap" id="mainWrap">
+    <header class="topbar">
+      <button class="hamburger" id="hamburger" title="Abrir/cerrar menú" aria-label="Abrir o cerrar menú"><i class="ph ph-list"></i></button>
+      <div class="page-title" id="pageTitle">Inicio</div>
+      <div class="topbar-actions">
+        <button class="icon-pill" data-action="focus-search" title="Buscar transacciones" aria-label="Buscar transacciones"><i class="ph ph-magnifying-glass"></i></button>
+        <div class="notif-wrap">
+          <button class="icon-pill" id="notifBellBtn" data-action="toggle-notif-panel" title="Notificaciones" aria-label="Notificaciones">
+            <i class="ph ph-bell"></i><span class="notif-dot" id="notifDot" style="display:none;"></span>
+          </button>
+          <div class="notif-panel" id="notifPanel"></div>
+        </div>
+        <button class="theme-toggle" data-action="download-excel" title="Descargar datos en Excel" aria-label="Descargar datos en Excel"><i class="ph ph-download-simple"></i></button>
+        <button class="theme-toggle" id="themeToggle" title="Cambiar tema" aria-label="Cambiar tema"><i class="ph ph-moon"></i></button>
+        <button class="avatar-btn" id="avatarBtn" data-action="open-settings" title="Configuración" aria-label="Configuración">S</button>
+      </div>
+    </header>
+
+    <main class="content">
+
+    <!-- PANEL (Dashboard) -->
+    <section id="tab-dashboard" class="tab-panel active">
+      <h1 class="sr-only">Inicio</h1>
+      <div class="dash-layout">
+
+        <!-- Panel Objetivos (columna izquierda) -->
+        <div class="obj-panel">
+          <div class="obj-head">
+            <span class="obj-title"><i class="ph ph-target"></i> Objetivos</span>
+          </div>
+          <div id="objList"></div>
+          <button class="btn btn-ghost btn-sm obj-new-btn" data-action="open-add-pocket">
+            <i class="ph ph-plus"></i> Nueva meta
+          </button>
+        </div>
+
+        <!-- Contenido principal (columna derecha) -->
+        <div class="dash-main-col">
+          <section class="card hero-card" id="netWorthHero"></section>
+
+          <section class="summary-grid" id="statsRow"></section>
+
+          <!-- Gráficos y números primero: son el contenido con más valor de la
+               pantalla, así que van justo después del resumen, antes de cualquier
+               alerta o consejo (que son de apoyo, no el motivo por el que alguien
+               entra a Inicio). -->
+          <div class="charts-grid">
+            <div class="card chart-card">
+              <div class="chart-head">
+                <h2>Ingresos vs. gastos</h2>
+                <div class="chart-legend" id="lineChartLegend"></div>
+              </div>
+              <div class="view-switch sm" role="tablist" id="lineChartModeSwitch" style="margin-bottom:10px;">
+                <button type="button" class="view-tab active" data-action="set-linechart-mode" data-mode="month" role="tab" aria-selected="true">6 meses</button>
+                <button type="button" class="view-tab" data-action="set-linechart-mode" data-mode="week" role="tab" aria-selected="false">Por semana</button>
+                <button type="button" class="view-tab" data-action="set-linechart-mode" data-mode="day" role="tab" aria-selected="false">Por día</button>
+              </div>
+              <div class="chart-wrap" id="lineChartWrap"><canvas id="lineChart"></canvas></div>
+            </div>
+            <div class="card chart-card">
+              <h2>Gastos por categoría</h2>
+              <div class="donut-wrap" id="doughnutChartWrap"></div>
+            </div>
+          </div>
+
+          <div class="dash-mini-row" id="dashMiniRow"></div>
+
+          <div class="tip-banner" id="tipBanner"></div>
+
+          <div class="card activity-card">
+            <h2 style="font-size:15px;margin-bottom:8px;">Actividad reciente</h2>
+            <div id="activityList"></div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- TRANSACCIONES -->
+    <section id="tab-transacciones" class="tab-panel">
+      <h1 class="section-title">Transacciones
+        <button class="btn btn-primary" data-action="open-add-tx">+ Nueva transacción</button>
+      </h1>
+
+      <div class="filter-bar">
+        <div class="tx-search">
+          <i class="ph ph-magnifying-glass"></i>
+          <input type="text" id="filterSearch" placeholder="Buscar por descripción…">
+        </div>
+        <div class="filter-chip-wrap" id="wrapFilterType">
+          <select id="filterType" class="chip-select"><option value="">Tipo</option><option value="ingreso">Ingresos</option><option value="gasto">Gastos</option></select>
+          <button type="button" class="chip-clear" data-clear="filterType" title="Quitar filtro" aria-label="Quitar filtro de tipo"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="filter-chip-wrap" id="wrapFilterAccount">
+          <select id="filterAccount" class="chip-select"><option value="">Cuenta</option></select>
+          <button type="button" class="chip-clear" data-clear="filterAccount" title="Quitar filtro" aria-label="Quitar filtro de cuenta"><i class="ph ph-x"></i></button>
+        </div>
+        <div class="filter-chip-wrap" id="wrapFilterCategory">
+          <select id="filterCategory" class="chip-select"><option value="">Categoría</option></select>
+          <button type="button" class="chip-clear" data-clear="filterCategory" title="Quitar filtro" aria-label="Quitar filtro de categoría"><i class="ph ph-x"></i></button>
+        </div>
+      </div>
+
+      <div class="tx-stats" id="txStats"></div>
+      <div class="tx-category-bar" id="txCategoryBar" style="display:none;"></div>
+
+      <div class="card" style="padding:10px 14px;">
+        <div id="txGrouped"></div>
+        <div id="txEmpty" class="empty-state" style="display:none;">
+          <div class="big"><i class="ph ph-receipt"></i></div>
+          <div id="txEmptyTitle">No hay transacciones todavía</div>
+          <p id="txEmptySub">Agrega tu primer ingreso o gasto con el botón de arriba, o escríbele al bot de Telegram.</p>
+          <button class="btn btn-primary" data-action="open-add-tx" style="margin-top:14px;">+ Nueva transacción</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- BILLETERA (CUENTAS) -->
+    <section id="tab-cuentas" class="tab-panel">
+      <h1 class="section-title">Mi Billetera
+        <button class="btn btn-primary" data-action="open-add-account">+ Nueva cuenta</button>
+      </h1>
+      <div class="card wallet-hero" id="walletHero" style="display:none;"></div>
+
+      <p class="section-label" id="walletCardsLabel" style="display:none;">Mis cuentas</p>
+      <div class="wallet-cards" id="walletCards"></div>
+
+      <div class="wb-detail" id="accountDetail" style="display:none;"></div>
+
+      <div id="accountsEmpty" class="empty-state" style="display:none;">
+        <div class="big"><i class="ph ph-wallet"></i></div>
+        <div>Todavía no tienes cuentas en tu billetera</div>
+        <p>Crea una cuenta de ahorros, corriente o efectivo para ver el total de tu dinero aquí.</p>
+        <button class="btn btn-primary" data-action="open-add-account" style="margin-top:14px;">+ Nueva cuenta</button>
+      </div>
+    </section>
+
+    <!-- TARJETA -->
+    <section id="tab-tarjeta" class="tab-panel">
+      <h1 class="section-title">Tarjetas de crédito
+        <button class="btn btn-primary" data-action="open-add-cardcharge" id="btnAddCardCharge" style="display:none;">+ Nueva compra en cuotas</button>
+      </h1>
+
+      <div class="tc-row" id="cardsGrid"></div>
+
+      <div class="wb-detail" id="cardDetail" style="display:none;"></div>
+
+      <div id="cardsEmpty" class="empty-state" style="display:none;">
+        <div class="big"><i class="ph ph-credit-card"></i></div>
+        <div>No tienes tarjetas de crédito registradas</div>
+        <p>Crea tu primera tarjeta para llevar el control de tu deuda y fechas de pago.</p>
+        <button class="btn btn-primary" data-action="open-add-account" data-type="tarjeta" style="margin-top:14px;">+ Nueva tarjeta</button>
+      </div>
+    </section>
+
+    <!-- CHANCHITO -->
+    <section id="tab-bolsillos" class="tab-panel">
+      <h1 class="section-title">Chanchito · Ahorro
+        <button class="btn btn-primary" data-action="open-add-pocket">+ Nueva meta</button>
+      </h1>
+
+      <div id="pocketsPriorityBanner"></div>
+
+      <div class="tx-stats" id="pocketsStats"></div>
+
+      <div class="goal-cards" id="pocketsGrid"></div>
+
+      <div class="wb-detail" id="pocketDetail" style="display:none;"></div>
+
+      <div id="pocketsEmpty" class="empty-state" style="display:none;">
+        <div class="big"><i class="ph ph-piggy-bank"></i></div>
+        <div>No tienes chanchitos de ahorro</div>
+        <p>Crea uno para separar dinero con una meta mensual — puedes apartar una cuenta real si quieres.</p>
+        <button class="btn btn-primary" data-action="open-add-pocket" style="margin-top:14px;">+ Nueva meta</button>
+      </div>
+    </section>
+
+    <!-- SERVICIOS (pagos recurrentes, sin préstamos) -->
+    <section id="tab-servicios" class="tab-panel">
+      <h1 class="section-title">Servicios
+        <button class="btn btn-primary" data-action="open-add-deuda">+ Agregar</button>
+      </h1>
+      <div class="card deudas-summary" id="deudasSummary" style="display:none;"></div>
+      <div id="deudasList"></div>
+      <div class="wb-detail" id="deudaDetail" style="display:none;"></div>
+      <div id="deudasEmpty" class="empty-state" style="display:none;">
+        <div class="big"><i class="ph ph-receipt"></i></div>
+        <div>No tienes servicios registrados</div>
+        <p>Agrega tus pagos recurrentes: agua, luz, alquiler, internet, etc.</p>
+        <button class="btn btn-primary" data-action="open-add-deuda" style="margin-top:14px;">+ Agregar</button>
+      </div>
+    </section>
+
+    <!-- PRÉSTAMOS: de banco/financiera/app, y entre personas (bidireccional) -->
+    <section id="tab-prestamos" class="tab-panel">
+      <h1 class="section-title">Préstamos</h1>
+
+      <div class="pr-subsection">
+        <div class="pr-subhead">
+          <span class="pr-subtitle"><i class="ph ph-bank"></i> De banco, financiera o app</span>
+          <button class="btn btn-ghost btn-sm" data-action="open-add-bankloan">+ Agregar</button>
+        </div>
+        <div class="card deudas-summary" id="bankLoansSummary" style="display:none;"></div>
+        <div id="bankLoansList"></div>
+        <div class="wb-detail" id="bankLoanDetail" style="display:none;"></div>
+        <div id="bankLoansEmpty" class="empty-state" style="display:none;">
+          <div class="big"><i class="ph ph-bank"></i></div>
+          <div>No tienes préstamos de este tipo</div>
+          <p>Registra un préstamo bancario, de financiera o de una app.</p>
+          <button class="btn btn-primary" data-action="open-add-bankloan" style="margin-top:14px;">+ Agregar</button>
+        </div>
+      </div>
+
+      <div class="pr-subsection">
+        <div class="pr-subhead">
+          <span class="pr-subtitle"><i class="ph ph-users-three"></i> Entre personas</span>
+          <button class="btn btn-ghost btn-sm" data-action="open-add-personloan">+ Agregar</button>
+        </div>
+        <div id="personLoansList"></div>
+        <div id="personLoansEmpty" class="empty-state" style="display:none;">
+          <div class="big"><i class="ph ph-users-three"></i></div>
+          <div>No tienes préstamos con personas</div>
+          <p>Registra dinero que prestaste o que te prestaron — familiares, amigos, etc.</p>
+          <button class="btn btn-primary" data-action="open-add-personloan" style="margin-top:14px;">+ Agregar</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CALENDARIO -->
+    <section id="tab-calendario" class="tab-panel">
+      <h1 class="section-title">Calendario de pagos
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-ghost btn-sm" data-action="open-settings"><i class="ph ph-bell"></i> Notificaciones</button>
+          <button class="btn btn-primary" data-action="open-add-reminder">+ Nuevo pago</button>
+        </div>
+      </h1>
+
+      <div class="view-switch" role="tablist">
+        <button type="button" class="view-tab active" data-action="cal-set-view" data-view="calendar" role="tab" aria-selected="true"><i class="ph ph-calendar-blank"></i> Calendario</button>
+        <button type="button" class="view-tab" data-action="cal-set-view" data-view="list" role="tab" aria-selected="false"><i class="ph ph-list-bullets"></i> Lista</button>
+      </div>
+
+      <div class="month-nav">
+        <button class="icon-btn" data-action="cal-prev" aria-label="Mes anterior"><i class="ph ph-caret-left"></i></button>
+        <button type="button" class="month-label-btn" data-action="toggle-month-picker">
+          <span id="calMonthLabel"></span><i class="ph ph-caret-down"></i>
+        </button>
+        <button class="icon-btn" data-action="cal-next" aria-label="Mes siguiente"><i class="ph ph-caret-right"></i></button>
+        <div class="month-picker" id="monthPicker">
+          <select id="monthPickerSelect"></select>
+          <select id="yearPickerSelect"></select>
+          <button type="button" class="btn btn-primary btn-sm" data-action="apply-month-picker">Ir</button>
+        </div>
+      </div>
+
+      <div class="card" id="calendarViewCard" style="margin-bottom:16px;">
+        <div class="cal-weekdays"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="cal-legend" style="margin-top:12px;">
+          <div class="cal-legend-item"><i class="ph ph-calendar-blank"></i> Pago programado</div>
+          <div class="cal-legend-item"><i class="ph ph-clipboard-text"></i> Compromiso <span class="muted">(color según tipo, como en Deudas)</span></div>
+          <div class="cal-legend-item"><i class="ph ph-scissors"></i> Corte de tarjeta</div>
+          <div class="cal-legend-item"><i class="ph ph-hand-coins" style="color:var(--green);"></i> Día de sueldo <span class="muted">(configúralo en Notificaciones)</span></div>
+        </div>
+      </div>
+
+      <div class="card" id="listViewCard" style="display:none;margin-bottom:16px;">
+        <div class="cal-event-section-title">Todos los pagos de <span id="calListMonthLabel"></span></div>
+        <div id="calEventsList"></div>
+        <div id="calEventsEmpty" class="muted" style="display:none;padding:10px 0;">No hay pagos programados este mes.</div>
+      </div>
+    </section>
+
+    <!-- ══ SUB-VISTA: Ingresos del mes ══ -->
+    <section id="view-ingresos" class="tab-panel">
+      <div class="subview-header">
+        <button class="back-btn" data-action="back-to-panel">← Volver</button>
+        <h1 class="subview-title"><i class="ph ph-trend-up"></i> Ingresos del mes</h1>
+        <div class="sv-month-nav">
+          <button class="icon-btn" data-action="sv-prev" data-view="ingresos" aria-label="Mes anterior"><i class="ph ph-caret-left"></i></button>
+          <div class="sv-month-label" id="svIngresosLabel"></div>
+          <button class="icon-btn" data-action="sv-next" data-view="ingresos" aria-label="Mes siguiente"><i class="ph ph-caret-right"></i></button>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px;padding:22px;">
+        <h2 style="font-size:14px;margin-bottom:14px;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.4px;">Ingresos por día</h2>
+        <div style="height:240px;position:relative;"><canvas id="ingresosChart"></canvas></div>
+      </div>
+      <div class="card" style="padding:22px;">
+        <div id="ingresosList"></div>
+      </div>
+    </section>
+
+    <!-- ══ SUB-VISTA: Gastos del mes ══ -->
+    <section id="view-gastos" class="tab-panel">
+      <div class="subview-header">
+        <button class="back-btn" data-action="back-to-panel">← Volver</button>
+        <h1 class="subview-title"><i class="ph ph-trend-down"></i> Gastos del mes</h1>
+        <div class="sv-month-nav">
+          <button class="icon-btn" data-action="sv-prev" data-view="gastos" aria-label="Mes anterior"><i class="ph ph-caret-left"></i></button>
+          <div class="sv-month-label" id="svGastosLabel"></div>
+          <button class="icon-btn" data-action="sv-next" data-view="gastos" aria-label="Mes siguiente"><i class="ph ph-caret-right"></i></button>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px;padding:22px;">
+        <h2 style="font-size:14px;margin-bottom:14px;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.4px;">Gastos por día</h2>
+        <div style="height:240px;position:relative;"><canvas id="gastosChart"></canvas></div>
+      </div>
+      <div class="card" style="padding:22px;">
+        <div id="gastosList"></div>
+      </div>
+    </section>
+
+    <!-- ══ SUB-VISTA: Balance neto ══ -->
+    <section id="view-balance" class="tab-panel">
+      <div class="subview-header">
+        <button class="back-btn" data-action="back-to-panel">← Volver</button>
+        <h1 class="subview-title"><i class="ph ph-scales"></i> Balance neto</h1>
+        <div class="sv-month-nav">
+          <button class="icon-btn" data-action="sv-prev" data-view="balance" aria-label="Mes anterior"><i class="ph ph-caret-left"></i></button>
+          <div class="sv-month-label" id="svBalanceLabel"></div>
+          <button class="icon-btn" data-action="sv-next" data-view="balance" aria-label="Mes siguiente"><i class="ph ph-caret-right"></i></button>
+        </div>
+      </div>
+      <div id="balanceView"></div>
+    </section>
+
+    </main>
+  </div><!-- /main-wrap -->
+</div><!-- /app-shell -->
+
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modalDialog" role="dialog" aria-modal="true" tabindex="-1">
+    <button type="button" class="modal-close" id="modalClose" aria-label="Cerrar">&times;</button>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
+    <div class="confirm-icon"><i class="ph ph-warning-circle"></i></div>
+    <h2 id="confirmTitle"></h2>
+    <p id="confirmMessage"></p>
+    <div class="confirm-actions">
+      <button type="button" class="btn btn-ghost" id="confirmCancel">Cancelar</button>
+      <button type="button" class="btn btn-danger" id="confirmOk">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="promptOverlay">
+  <div class="confirm-box" role="dialog" aria-modal="true" aria-labelledby="promptTitle">
+    <h2 id="promptTitle"></h2>
+    <form id="promptForm">
+      <div class="field">
+        <label id="promptLabel" for="promptInput"></label>
+        <input type="text" id="promptInput" autocomplete="off" required>
+      </div>
+      <div class="confirm-actions">
+        <button type="button" class="btn btn-ghost" id="promptCancel">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="promptOk">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <i class="ph ph-check-circle" id="toastIcon"></i>
+  <span id="toastMsg"></span>
+  <button type="button" class="toast-undo" id="toastUndo">Deshacer</button>
+  <button type="button" class="toast-close" id="toastClose" aria-label="Cerrar aviso"><i class="ph ph-x"></i></button>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/wizard.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
