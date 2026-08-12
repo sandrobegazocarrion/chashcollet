@@ -20,6 +20,12 @@ const { sanitizeInputMiddleware } = require('./sanitize');
 const app = express();
 const PORT = process.env.PORT || 4173;
 
+// Railway/Render ponen la app detrás de un proxy inverso que agrega X-Forwarded-For;
+// sin esto, express-rate-limit no puede identificar la IP real del cliente y lanza un
+// error de validación en cada request. En local no hay proxy, pero confiar en el primer
+// hop es inofensivo ahí también (no hay X-Forwarded-For que falsificar sin acceso a la red).
+app.set('trust proxy', 1);
+
 let activeBot = null;
 
 // Fase 7: en producción, frontend (Vercel) y backend (Railway/Render) viven en
