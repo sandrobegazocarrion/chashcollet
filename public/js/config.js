@@ -5,10 +5,11 @@
  * En desarrollo local, frontend y backend corren en el mismo origen (mismo puerto
  * de Express sirviendo public/), así que apiBase se deja vacío y las rutas relativas
  * ("/api/...") funcionan solas. En producción, el frontend vive en Vercel y el
- * backend en Railway/Render — dominios distintos — así que acá se pone la URL
- * pública del backend. Es el único archivo que hay que tocar al desplegar el
- * frontend a un dominio real; no hay paso de build.
+ * backend en Railway — dominios distintos — así que ahí se necesita la URL pública
+ * del backend. Detectamos el caso local por hostname para no tener que editar este
+ * archivo cada vez que se prueba en la PC vs. en Vercel.
  */
+const isLocal = ['localhost', '127.0.0.1'].includes(location.hostname);
 window.NUVA_CONFIG = {
-  apiBase: '' // ej. en producción: 'https://nuva-api.up.railway.app' (sin / al final)
+  apiBase: isLocal ? '' : 'https://chashcollet-production.up.railway.app'
 };
