@@ -107,9 +107,7 @@
     const step = STEPS[stepIndex];
     if(step.center || !targetEl){
       highlightEl.style.display = 'none';
-      const tw = tooltipEl.offsetWidth, th = tooltipEl.offsetHeight;
-      tooltipEl.style.left = Math.round(window.innerWidth/2 - tw/2) + 'px';
-      tooltipEl.style.top = Math.round(window.innerHeight/2 - th/2) + 'px';
+      centerTooltip();
       return;
     }
     const pad = 6;
@@ -120,18 +118,58 @@
     highlightEl.style.width = (r.width + pad*2) + 'px';
     highlightEl.style.height = (r.height + pad*2) + 'px';
 
+    // Si el objetivo está dentro de un modal (ej. Configuración), la tarjeta del tour
+    // NO se pega al campo específico — se coloca por fuera de todo el modal. Si no,
+    // podía terminar flotando encima del botón "Guardar" y bloquear el clic real
+    // (bug reportado: "clic en Guardar y no pasa nada").
+    const modalBox = targetEl.closest('.modal');
+    if(modalBox) positionTooltipOutside(modalBox.getBoundingClientRect());
+    else positionTooltipNear(r);
+
+    targetEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function clampToViewport(top, left, tw, th){
+    if(top + th > window.innerHeight - 10) top = window.innerHeight - th - 10;
+    if(top < 10) top = 10;
+    if(left + tw > window.innerWidth - 10) left = window.innerWidth - tw - 10;
+    if(left < 10) left = 10;
+    return { top, left };
+  }
+
+  function centerTooltip(){
+    const tw = tooltipEl.offsetWidth, th = tooltipEl.offsetHeight;
+    tooltipEl.style.left = Math.round(window.innerWidth/2 - tw/2) + 'px';
+    tooltipEl.style.top = Math.round(window.innerHeight/2 - th/2) + 'px';
+  }
+
+  function positionTooltipNear(r){
     const margin = 14;
     const tw = tooltipEl.offsetWidth, th = tooltipEl.offsetHeight;
     let top = r.bottom + margin;
     let left = r.left;
     if(top + th > window.innerHeight - 10) top = r.top - th - margin;
-    if(top < 10) top = 10;
-    if(left + tw > window.innerWidth - 10) left = window.innerWidth - tw - 10;
-    if(left < 10) left = 10;
-    tooltipEl.style.left = left + 'px';
-    tooltipEl.style.top = top + 'px';
+    const pos = clampToViewport(top, left, tw, th);
+    tooltipEl.style.top = pos.top + 'px';
+    tooltipEl.style.left = pos.left + 'px';
+  }
 
-    targetEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  // Coloca la tarjeta pegada al costado del recuadro dado (ej. el modal completo),
+  // nunca encima de él — a la derecha si hay espacio, si no abajo del todo.
+  function positionTooltipOutside(r){
+    const margin = 14;
+    const tw = tooltipEl.offsetWidth, th = tooltipEl.offsetHeight;
+    let top, left;
+    if(r.right + margin + tw <= window.innerWidth - 10){
+      left = r.right + margin;
+      top = r.top;
+    } else {
+      left = r.left;
+      top = r.bottom + margin;
+    }
+    const pos = clampToViewport(top, left, tw, th);
+    tooltipEl.style.top = pos.top + 'px';
+    tooltipEl.style.left = pos.left + 'px';
   }
 
   function escapeHtml(s){
