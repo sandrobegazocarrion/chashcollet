@@ -167,6 +167,7 @@
       <button class="nav-item" data-tab="servicios"><span class="ni"><i class="ph ph-receipt"></i></span><span class="nav-label">Servicios</span></button>
       <button class="nav-item" data-tab="bolsillos" title="Metas"><span class="ni"><i class="ph ph-piggy-bank"></i></span><span class="nav-label">Metas</span></button>
       <button class="nav-item" data-tab="calendario"><span class="ni"><i class="ph ph-calendar-blank"></i></span><span class="nav-label">Pagos</span></button>
+      <button class="nav-item nav-admin-only" data-tab="admin" title="Administración" style="display:none;"><span class="ni"><i class="ph ph-shield-check"></i></span><span class="nav-label">Admin</span></button>
     </nav>
     <div class="sb-footer">
       <button class="sb-add-btn" data-action="open-add-tx" title="Añadir registro"><i class="ph ph-plus"></i> <span class="sb-add-label">Añadir registro</span></button>
@@ -448,6 +449,14 @@
         <div class="cal-event-section-title">Todos los pagos de <span id="calListMonthLabel"></span></div>
         <div id="calEventsList"></div>
         <div id="calEventsEmpty" class="muted" style="display:none;padding:10px 0;">No hay pagos programados este mes.</div>
+      </div>
+    </section>
+
+    <section id="tab-admin" class="tab-panel">
+      <h1 class="section-title">Administración</h1>
+      <div class="card" style="margin-bottom:16px;">
+        <div id="adminUsersList"></div>
+        <div id="adminUsersEmpty" class="muted" style="display:none;padding:10px 0;">No hay usuarios registrados todavía.</div>
       </div>
     </section>
 

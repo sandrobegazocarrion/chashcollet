@@ -11,7 +11,8 @@ const rateLimit = require('express-rate-limit');
 const db = require('./db');
 const finance = require('./finance');
 const { isPackaged, PUBLIC_DIR, ENV_FILE } = require('./paths');
-const { requireAuth, supabaseAdmin } = require('./auth');
+const { requireAuth, requireAdmin, supabaseAdmin } = require('./auth');
+const admin = require('./admin');
 const dataStore = require('./dataStore');
 const { userClient } = require('./supabaseClient');
 const telegramLink = require('./telegramLink');
@@ -329,6 +330,15 @@ app.delete('/api/telegram/link', requireAuth, async (req, res) => {
 
 app.get('/api/network-info', (req, res) => {
   res.json({ port: PORT, ips: localIps() });
+});
+
+/* ---------------- Admin (solo lectura por ahora) ---------------- */
+app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    res.json({ users: await admin.listUsers(supabaseAdmin) });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
 function localIps() {

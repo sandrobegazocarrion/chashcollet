@@ -240,7 +240,7 @@
   const PAGE_TITLES = {
     dashboard:'Inicio', transacciones:'Historial', cuentas:'Cuentas',
     tarjeta:'Tarjetas de crédito', bolsillos:'Metas', servicios:'Servicios',
-    prestamos:'Préstamos', calendario:'Pagos'
+    prestamos:'Préstamos', calendario:'Pagos', admin:'Administración'
   };
 
   function greetingText(){
@@ -259,7 +259,47 @@
     if(panel) panel.classList.add('active');
     const titleEl = document.getElementById('pageTitle');
     if(titleEl) titleEl.textContent = tabKey === 'dashboard' ? greetingText() : (PAGE_TITLES[tabKey] || tabKey);
+    if(tabKey === 'admin') renderAdminUsers();
     if(window.innerWidth < 860) closeSidebar();
+  }
+
+  /* ---------------- Admin (solo visible/usable si data.profile.isAdmin) ---------------- */
+  function renderAdminNav(){
+    const navBtn = document.querySelector('.nav-admin-only');
+    if(navBtn) navBtn.style.display = (data.profile && data.profile.isAdmin) ? 'flex' : 'none';
+  }
+  let _adminUsersLoaded = false;
+  async function renderAdminUsers(force){
+    if(_adminUsersLoaded && !force) return;
+    const listEl = document.getElementById('adminUsersList');
+    const emptyEl = document.getElementById('adminUsersEmpty');
+    if(!listEl) return;
+    try{
+      const { users } = await apiCall('GET', '/api/admin/users');
+      _adminUsersLoaded = true;
+      if(!users.length){
+        listEl.innerHTML = '';
+        emptyEl.style.display = 'block';
+        return;
+      }
+      emptyEl.style.display = 'none';
+      listEl.innerHTML = users.map(u => `
+        <div class="admin-user-row">
+          <div class="aur-main">
+            <div class="aur-email">${escapeHtml(u.email || '(sin correo)')}</div>
+            <div class="aur-sub">${escapeHtml(u.ownerName || 'Sin nombre')} · Registrado ${formatDate((u.createdAt||'').slice(0,10))}</div>
+          </div>
+          <div class="aur-badges">
+            <span class="status-pill ${u.setupCompleted?'success':''}">${u.setupCompleted?'Perfil completo':'Perfil incompleto'}</span>
+            ${u.isAdmin ? '<span class="status-pill success">Admin</span>' : ''}
+          </div>
+        </div>
+      `).join('');
+    }catch(err){
+      listEl.innerHTML = '';
+      emptyEl.textContent = err.message || 'No se pudo cargar la lista de usuarios.';
+      emptyEl.style.display = 'block';
+    }
   }
 
   document.getElementById('sbNav').addEventListener('click', (e)=>{
@@ -4133,6 +4173,7 @@
     try{ renderPrestamos(); }catch(e){ console.error('Error en préstamos', e); }
     try{ renderReminders(); }catch(e){ console.error('Error en calendario', e); }
     try{ updateAvatar(); updateNotifDot(); }catch(e){ console.error('Error en topbar', e); }
+    try{ renderAdminNav(); }catch(e){ console.error('Error en nav admin', e); }
   }
 
   // El refresco automático reconstruye listas y gráficos por completo; si el usuario

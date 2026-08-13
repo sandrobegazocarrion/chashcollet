@@ -288,7 +288,8 @@ async function loadUserStore(sb, userId) {
     profile: {
       ownerName: profileRow ? profileRow.owner_name : null,
       birthDate: profileRow ? profileRow.birth_date : null,
-      gender: profileRow ? profileRow.gender : null
+      gender: profileRow ? profileRow.gender : null,
+      isAdmin: profileRow ? !!profileRow.is_admin : false
     },
     setupCompleted: profileRow ? !!profileRow.setup_completed : false
   };
