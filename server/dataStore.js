@@ -285,7 +285,11 @@ async function loadUserStore(sb, userId) {
       notifyDaysBefore: profileRow && profileRow.notify_days_before != null ? profileRow.notify_days_before : 2,
       incomeDays: profileRow ? (profileRow.income_days || []) : []
     },
-    profile: { ownerName: profileRow ? profileRow.owner_name : null },
+    profile: {
+      ownerName: profileRow ? profileRow.owner_name : null,
+      birthDate: profileRow ? profileRow.birth_date : null,
+      gender: profileRow ? profileRow.gender : null
+    },
     setupCompleted: profileRow ? !!profileRow.setup_completed : false
   };
 }
@@ -931,7 +935,11 @@ function profileRowToFakeStore(row) {
       notifyDaysBefore: row && row.notify_days_before != null ? row.notify_days_before : 2,
       incomeDays: row ? (row.income_days || []) : []
     },
-    profile: { ownerName: row ? row.owner_name : null }
+    profile: {
+      ownerName: row ? row.owner_name : null,
+      birthDate: row ? row.birth_date : null,
+      gender: row ? row.gender : null
+    }
   };
 }
 
@@ -955,7 +963,9 @@ async function updateProfile(sb, userId, patch) {
   const profile = finance.updateProfile(fakeStore, patch);
   const { error } = await sb.from('user_profile').upsert({
     user_id: userId,
-    owner_name: profile.ownerName
+    owner_name: profile.ownerName,
+    birth_date: profile.birthDate,
+    gender: profile.gender
   }, { onConflict: 'user_id' });
   must(error);
   return profile;

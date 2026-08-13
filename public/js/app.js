@@ -43,6 +43,50 @@
     setConn(true);
   }
 
+  // Obligatorio tras el primer login (correo o Google, Google no entrega estos datos
+  // de forma confiable) — bloquea el dashboard hasta completarse.
+  let _profileGateWired = false;
+  function needsProfileCompletion(){
+    return !data.profile || !data.profile.birthDate || !data.profile.gender;
+  }
+  function showProfileGate(){
+    const overlay = document.getElementById('profileOverlay');
+    if(!overlay) return;
+    const dateInput = document.getElementById('profileBirthDate');
+    const maxDate = new Date();
+    maxDate.setFullYear(maxDate.getFullYear() - 18);
+    dateInput.max = maxDate.toISOString().slice(0, 10);
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+    if(_profileGateWired) return;
+    _profileGateWired = true;
+    const form = document.getElementById('profileForm');
+    const errorBox = document.getElementById('profileError');
+    const submitBtn = document.getElementById('profileSubmitBtn');
+    const spinner = document.getElementById('profileSubmitSpinner');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      errorBox.style.display = 'none';
+      submitBtn.disabled = true;
+      spinner.style.display = 'inline-block';
+      try{
+        const birthDate = dateInput.value;
+        const gender = document.getElementById('profileGender').value;
+        await apiCall('PUT', '/api/profile', { birthDate, gender });
+        overlay.classList.remove('open');
+        document.body.style.overflow = '';
+        await fetchState();
+        window.NUVA_TOUR && window.NUVA_TOUR.maybeStart(data);
+      }catch(err){
+        errorBox.textContent = err.message || 'No se pudo guardar tu perfil.';
+        errorBox.style.display = 'block';
+      }finally{
+        submitBtn.disabled = false;
+        spinner.style.display = 'none';
+      }
+    });
+  }
+
   let _wizardChecked = false;
   async function refreshAndRender(){
     try{
@@ -55,7 +99,8 @@
     renderAll();
     if(!_wizardChecked){
       _wizardChecked = true;
-      window.NUVA_TOUR && window.NUVA_TOUR.maybeStart(data);
+      if(needsProfileCompletion()) showProfileGate();
+      else window.NUVA_TOUR && window.NUVA_TOUR.maybeStart(data);
     }
   }
 

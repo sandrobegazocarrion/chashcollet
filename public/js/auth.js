@@ -5,6 +5,9 @@
   let mode = 'login'; // 'login' | 'signup' | 'forgot' | 'reset'
   let failedAttempts = 0;
   let cooldownTimer = null;
+  let captchaSiteKey = null;
+  let captchaToken = null;
+  let captchaWidgetId = null;
 
   const overlay = document.getElementById('authOverlay');
   const shell = document.getElementById('appShell');
@@ -35,14 +38,72 @@
   const forgotBtn = document.getElementById('authForgotBtn');
   const googleBtn = document.getElementById('authGoogleBtn');
   const divider = document.getElementById('authDivider');
+  const captchaField = document.getElementById('authCaptchaField');
+  const nameField = document.getElementById('authNameField');
+  const nameInput = document.getElementById('authName');
+  const birthField = document.getElementById('authBirthField');
+  const birthInput = document.getElementById('authBirthDate');
+  const genderField = document.getElementById('authGenderField');
+  const genderInput = document.getElementById('authGender');
+
+  const PENDING_PROFILE_KEY = 'nuva_pending_profile';
+  const MIN_AGE_YEARS = 18;
+
+  function ageFromBirthDate(raw){
+    const d = new Date(raw + 'T00:00:00');
+    if(isNaN(d.getTime())) return null;
+    const today = new Date();
+    let age = today.getFullYear() - d.getFullYear();
+    const hadBirthdayThisYear = (today.getMonth() > d.getMonth()) ||
+      (today.getMonth() === d.getMonth() && today.getDate() >= d.getDate());
+    if(!hadBirthdayThisYear) age--;
+    return age;
+  }
+
+  // Valida nombre/fecha/género del formulario de registro — se usa tanto para el
+  // signup por correo como antes de mandar al usuario a Google, porque en ambos
+  // casos queremos pedir estos datos al momento de registrarse, no después.
+  function validateSignupProfileFields(){
+    const name = nameInput.value.trim();
+    if(!name) return { error: 'Escribe tu nombre.' };
+    const birthDate = birthInput.value;
+    if(!birthDate) return { error: 'Escribe tu fecha de nacimiento.' };
+    const age = ageFromBirthDate(birthDate);
+    if(age === null) return { error: 'Fecha de nacimiento inválida.' };
+    if(age < MIN_AGE_YEARS) return { error: `Debes tener al menos ${MIN_AGE_YEARS} años para usar NUVA.` };
+    const gender = genderInput.value;
+    if(!gender) return { error: 'Selecciona una opción de género.' };
+    return { data: { ownerName: name, birthDate, gender } };
+  }
+
+  // Google no entrega fecha de nacimiento/género de forma confiable, y la sesión
+  // recién existe DESPUÉS de volver del redirect a Google — por eso estos datos se
+  // guardan en sessionStorage antes de salir, y se aplican apenas vuelve con sesión.
+  function stashPendingProfile(profileData){
+    try{ sessionStorage.setItem(PENDING_PROFILE_KEY, JSON.stringify(profileData)); }catch(e){}
+  }
+  async function applyPendingProfileIfAny(){
+    let raw = null;
+    try{ raw = sessionStorage.getItem(PENDING_PROFILE_KEY); }catch(e){}
+    if(!raw || !window.NUVA_API) return;
+    try{
+      await window.NUVA_API('PUT', '/api/profile', JSON.parse(raw));
+      sessionStorage.removeItem(PENDING_PROFILE_KEY);
+    }catch(e){
+      // Si falla (ej. sin red), no se borra — se reintenta en el próximo login, y
+      // como red de respaldo, el formulario "Completa tu perfil" de app.js lo
+      // vuelve a pedir si de plano nunca se pudo guardar.
+    }
+  }
 
   function showAuth(){
     overlay.classList.add('open');
     if(shell) shell.style.display = 'none';
   }
-  function showApp(){
+  async function showApp(){
     overlay.classList.remove('open');
     if(shell) shell.style.display = '';
+    await applyPendingProfileIfAny();
     window.__startNuvaApp && window.__startNuvaApp();
   }
   function setError(msg){
@@ -90,6 +151,29 @@
     pwToggle.setAttribute('aria-label', showing ? 'Mostrar contraseña' : 'Ocultar contraseña');
   });
 
+  /* ---------------- CAPTCHA (Cloudflare Turnstile) ---------------- */
+  // Se renderiza una sola vez, perezoso (recién al entrar a modo 'signup'), y se
+  // resetea (nuevo token) cada vez que se vuelve a mostrar o tras cada intento —
+  // el token de Turnstile es de un solo uso.
+  function ensureCaptchaWidget(){
+    if(!captchaSiteKey) return;
+    if(captchaWidgetId !== null){
+      if(window.turnstile) window.turnstile.reset(captchaWidgetId);
+      captchaToken = null;
+      return;
+    }
+    const tryRender = () => {
+      if(!window.turnstile){ setTimeout(tryRender, 150); return; }
+      captchaWidgetId = window.turnstile.render('#authCaptcha', {
+        sitekey: captchaSiteKey,
+        callback: (token) => { captchaToken = token; },
+        'expired-callback': () => { captchaToken = null; },
+        'error-callback': () => { captchaToken = null; }
+      });
+    };
+    tryRender();
+  }
+
   function setMode(next){
     mode = next;
     setError(null);
@@ -108,9 +192,16 @@
     backWrap.style.display = 'none';
     googleBtn.style.display = 'none';
     divider.style.display = 'none';
+    captchaField.style.display = 'none';
+    nameField.style.display = 'none';
+    birthField.style.display = 'none';
+    genderField.style.display = 'none';
     emailInput.required = false;
     passInput.required = false;
     termsCheck.checked = false;
+    nameInput.value = '';
+    birthInput.value = '';
+    genderInput.value = '';
 
     if(mode === 'login'){
       subtitle.textContent = 'Inicia sesión para ver tus finanzas.';
@@ -130,12 +221,17 @@
       switchLabel.textContent = '¿Ya tienes cuenta?';
       switchBtn.textContent = 'Inicia sesión';
       passInput.setAttribute('autocomplete', 'new-password');
+      nameField.style.display = 'block';
       emailField.style.display = 'block'; emailInput.required = true;
       passField.style.display = 'block'; passInput.required = true;
+      birthField.style.display = 'block';
+      genderField.style.display = 'block';
+      { const max = new Date(); max.setFullYear(max.getFullYear() - MIN_AGE_YEARS); birthInput.max = max.toISOString().slice(0, 10); }
       termsField.style.display = 'flex';
       switchWrap.style.display = 'flex';
       googleBtn.style.display = 'flex';
       divider.style.display = 'flex';
+      if(captchaSiteKey){ captchaField.style.display = 'block'; ensureCaptchaWidget(); }
     } else if(mode === 'forgot'){
       subtitle.textContent = 'Te mandamos un link para volver a entrar.';
       submitLabel.textContent = 'Enviar link de recuperación';
@@ -211,6 +307,7 @@
       return;
     }
     sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    captchaSiteKey = cfg.turnstileSiteKey || null;
 
     sb.auth.onAuthStateChange((event, session) => {
       // Supabase abre una sesión temporal al volver del link de recuperación de
@@ -236,18 +333,42 @@
     const password = passInput.value;
     try{
       if(mode === 'signup'){
+        const profileCheck = validateSignupProfileFields();
+        if(profileCheck.error){ setError(profileCheck.error); return; }
+        if(passwordStrength(password) < 3){
+          setError('Tu contraseña es muy débil. Usa al menos 8 caracteres con mayúscula, número y símbolo.');
+          return;
+        }
         if(!termsCheck.checked){
           setError('Debes aceptar los Términos y la Política de Privacidad para crear tu cuenta.');
           return;
         }
-        const { data, error } = await withTimeout(sb.auth.signUp({ email, password }));
+        if(captchaSiteKey && !captchaToken){
+          setError('Completa la verificación de seguridad para continuar.');
+          return;
+        }
+        const signUpOptions = {};
+        if(captchaToken) signUpOptions.captchaToken = captchaToken;
+        signUpOptions.data = { full_name: profileCheck.data.ownerName };
+        const { data, error } = await withTimeout(sb.auth.signUp({ email, password, options: signUpOptions }));
+        ensureCaptchaWidget(); // token de un solo uso: renovar apenas se usa, haya salido bien o mal
         if(error) throw error;
-        if(!data.session){
-          // El proyecto pide confirmar el correo antes de poder entrar.
+        if(data.session){
+          // Ya hay sesión de una: se puede guardar el perfil ahora mismo, en vez de
+          // dejarlo pendiente para cuando vuelva a entrar.
+          if(window.NUVA_API){
+            try{ await window.NUVA_API('PUT', '/api/profile', profileCheck.data); }catch(e){}
+          } else {
+            stashPendingProfile(profileCheck.data);
+          }
+          // onAuthStateChange ya se encarga de mostrar la app.
+        } else {
+          // El proyecto pide confirmar el correo antes de poder entrar — el perfil
+          // se guarda recién cuando vuelva con sesión real (ver showApp/init).
+          stashPendingProfile(profileCheck.data);
           setError('Cuenta creada. Revisa tu correo para confirmarla antes de iniciar sesión.');
           setMode('login');
         }
-        // Si data.session existe, onAuthStateChange ya se encarga de mostrar la app.
       } else if(mode === 'forgot'){
         const { error } = await withTimeout(sb.auth.resetPasswordForEmail(email, {
           redirectTo: location.origin + location.pathname
@@ -293,6 +414,19 @@
   googleBtn.addEventListener('click', async () => {
     if(!sb) return;
     setError(null);
+    // Google no entrega fecha de nacimiento/género, y queremos pedirlos al momento
+    // de registrarse igual que por correo — se validan y se guardan pendientes
+    // ANTES de salir a Google (la página se recarga al volver, se pierde todo lo
+    // que no esté en sessionStorage).
+    if(mode === 'signup'){
+      const profileCheck = validateSignupProfileFields();
+      if(profileCheck.error){ setError(profileCheck.error); return; }
+      if(!termsCheck.checked){
+        setError('Debes aceptar los Términos y la Política de Privacidad para crear tu cuenta.');
+        return;
+      }
+      stashPendingProfile(profileCheck.data);
+    }
     try{
       const { error } = await sb.auth.signInWithOAuth({
         provider: 'google',

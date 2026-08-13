@@ -74,7 +74,8 @@ const linkCodeLimiter = rateLimit({
 app.get('/api/config', (req, res) => {
   res.json({
     supabaseUrl: process.env.SUPABASE_URL || null,
-    supabaseAnonKey: process.env.SUPABASE_ANON_KEY || null
+    supabaseAnonKey: process.env.SUPABASE_ANON_KEY || null,
+    turnstileSiteKey: process.env.TURNSTILE_SITE_KEY || null
   });
 });
 

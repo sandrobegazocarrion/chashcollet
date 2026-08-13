@@ -922,11 +922,35 @@ function deleteCardPayment(store, id) {
 }
 
 /* ---------------- Asistente de primera configuración ---------------- */
+const GENDER_VALID = ['femenino', 'masculino', 'otro', 'prefiero_no_decir'];
+const MIN_AGE_YEARS = 18;
+
 function updateProfile(store, patch) {
-  if (!store.profile) store.profile = { ownerName: null };
+  if (!store.profile) store.profile = { ownerName: null, birthDate: null, gender: null };
   if (patch.ownerName !== undefined) {
     const name = (patch.ownerName || '').toString().trim();
     store.profile.ownerName = name || null;
+  }
+  if (patch.birthDate !== undefined) {
+    const raw = (patch.birthDate || '').toString().trim();
+    if (!raw) {
+      store.profile.birthDate = null;
+    } else {
+      const d = new Date(raw + 'T00:00:00');
+      if (isNaN(d.getTime())) throw new Error('Fecha de nacimiento inválida');
+      const today = new Date();
+      let age = today.getFullYear() - d.getFullYear();
+      const hadBirthdayThisYear = (today.getMonth() > d.getMonth()) ||
+        (today.getMonth() === d.getMonth() && today.getDate() >= d.getDate());
+      if (!hadBirthdayThisYear) age--;
+      if (age < MIN_AGE_YEARS) throw new Error(`Debes tener al menos ${MIN_AGE_YEARS} años para usar NUVA`);
+      store.profile.birthDate = raw;
+    }
+  }
+  if (patch.gender !== undefined) {
+    const g = (patch.gender || '').toString().trim();
+    if (g && !GENDER_VALID.includes(g)) throw new Error('Género inválido');
+    store.profile.gender = g || null;
   }
   return store.profile;
 }
@@ -938,6 +962,7 @@ function completeSetup(store) {
 
 module.exports = {
   DEFAULT_CATEGORIES, CARD_NETWORKS, LIQUID_TYPES, DEUDA_TYPES_VALID, LENDER_TYPES, ACCOUNT_COLORS,
+  GENDER_VALID, MIN_AGE_YEARS,
   genId, todayStr, currentYYYYMM, daysInMonth, formatMoney,
   emptyStore, normalizeStore,
   getSettings, updateSettings,

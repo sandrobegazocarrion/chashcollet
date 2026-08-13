@@ -10,6 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script type="module" src="https://unpkg.com/@phosphor-icons/web"></script>
 <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -54,6 +55,10 @@
     <div class="auth-divider" id="authDivider"><span>o con tu correo</span></div>
 
     <form class="auth-body" id="authForm">
+      <div class="field" id="authNameField" style="display:none;">
+        <label for="authName">Nombre</label>
+        <input type="text" id="authName" autocomplete="name" placeholder="Ej: Sandro">
+      </div>
       <div class="field" id="authEmailField">
         <label for="authEmail">Correo</label>
         <input type="email" id="authEmail" autocomplete="email" required>
@@ -73,10 +78,27 @@
         <label for="authPasswordConfirm">Confirmar contraseña</label>
         <input type="password" id="authPasswordConfirm" autocomplete="new-password">
       </div>
+      <div class="field" id="authBirthField" style="display:none;">
+        <label for="authBirthDate">Fecha de nacimiento</label>
+        <input type="date" id="authBirthDate">
+      </div>
+      <div class="field" id="authGenderField" style="display:none;">
+        <label for="authGender">Género</label>
+        <select id="authGender">
+          <option value="" disabled selected>Selecciona una opción</option>
+          <option value="femenino">Femenino</option>
+          <option value="masculino">Masculino</option>
+          <option value="otro">Otro</option>
+          <option value="prefiero_no_decir">Prefiero no decir</option>
+        </select>
+      </div>
       <label class="field" id="authTermsField" style="display:none;flex-direction:row;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--text-dim);">
         <input type="checkbox" id="authTerms" style="margin-top:2px;">
         <span>Acepto los <a href="terms.html" target="_blank" rel="noopener">Términos y Condiciones</a> y la <a href="privacy.html" target="_blank" rel="noopener">Política de Privacidad</a>.</span>
       </label>
+      <div id="authCaptchaField" style="display:none;">
+        <div id="authCaptcha"></div>
+      </div>
       <div class="auth-error" id="authError" style="display:none;" aria-live="polite"></div>
       <div class="auth-forgot-link" id="authForgotLinkWrap">
         <button type="button" class="auth-link-btn" id="authForgotBtn">¿Olvidaste tu contraseña?</button>
@@ -93,6 +115,38 @@
     <div class="auth-switch" id="authBackWrap" style="display:none;">
       <button type="button" class="auth-switch-btn" id="authBackBtn">← Volver a iniciar sesión</button>
     </div>
+  </div>
+</div>
+
+<!-- ════ COMPLETAR PERFIL (obligatorio tras el primer login, por correo o Google) ════ -->
+<div class="auth-overlay" id="profileOverlay">
+  <div class="auth-box">
+    <div class="auth-head">
+      <p class="auth-subtitle" style="margin-bottom:4px;">Un último paso</p>
+      <h2 style="font-size:19px;font-weight:800;color:var(--ink);margin:0 0 4px;">Completa tu perfil</h2>
+      <p class="auth-subtitle">Lo necesitamos para verificar tu cuenta y personalizar NUVA.</p>
+    </div>
+    <form class="auth-body" id="profileForm">
+      <div class="field">
+        <label for="profileBirthDate">Fecha de nacimiento</label>
+        <input type="date" id="profileBirthDate" required>
+      </div>
+      <div class="field">
+        <label for="profileGender">Género</label>
+        <select id="profileGender" required>
+          <option value="" disabled selected>Selecciona una opción</option>
+          <option value="femenino">Femenino</option>
+          <option value="masculino">Masculino</option>
+          <option value="otro">Otro</option>
+          <option value="prefiero_no_decir">Prefiero no decir</option>
+        </select>
+      </div>
+      <div class="auth-error" id="profileError" style="display:none;" aria-live="polite"></div>
+      <button type="submit" class="btn btn-primary auth-submit" id="profileSubmitBtn">
+        <span class="btn-spinner" id="profileSubmitSpinner" style="display:none;"></span>
+        <span>Continuar</span>
+      </button>
+    </form>
   </div>
 </div>
 
