@@ -357,6 +357,15 @@ app.post('/api/admin/users/:id/unsuspend', requireAuth, requireAdmin, async (req
     res.status(400).json({ error: e.message });
   }
 });
+app.delete('/api/admin/users/:id', requireAuth, requireAdmin, async (req, res) => {
+  if (req.params.id === req.userId) return res.status(400).json({ error: 'No puedes eliminar tu propia cuenta.' });
+  try {
+    await admin.deleteUser(supabaseAdmin, req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
 
 function localIps() {
   const nets = os.networkInterfaces();

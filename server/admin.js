@@ -62,4 +62,14 @@ async function unsuspendUser(supabaseAdmin, userId) {
   must(error);
 }
 
-module.exports = { listUsers, suspendUser, unsuspendUser };
+// Borra la cuenta de auth.users; todas las tablas de negocio tienen
+// `references auth.users(id) on delete cascade` (ver supabase/schema.sql), así que
+// esto se lleva en cascada TODO lo del usuario (cuentas, movimientos, metas, etc.)
+// sin tener que borrar tabla por tabla acá. Irreversible.
+async function deleteUser(supabaseAdmin, userId) {
+  if (!supabaseAdmin) throw new Error('Supabase no está configurado en el servidor.');
+  const { error } = await supabaseAdmin.auth.admin.deleteUser(userId);
+  must(error);
+}
+
+module.exports = { listUsers, suspendUser, unsuspendUser, deleteUser };

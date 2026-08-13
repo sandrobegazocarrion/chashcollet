@@ -306,6 +306,7 @@
             ${u.isAdmin ? '<span class="status-pill success">Admin</span>' : ''}
             ${u.suspended ? '<span class="status-pill danger">Suspendida</span>' : ''}
             <button type="button" class="btn btn-ghost btn-sm" data-action="${u.suspended?'admin-unsuspend':'admin-suspend'}" data-user-id="${escapeHtml(u.id)}" data-email="${escapeHtml(u.email||'')}">${u.suspended?'Reactivar':'Suspender'}</button>
+            <button type="button" class="btn btn-danger btn-sm" data-action="admin-delete" data-user-id="${escapeHtml(u.id)}" data-email="${escapeHtml(u.email||'')}">Eliminar</button>
           </div>
         </div>
       `;
@@ -315,6 +316,9 @@
       });
       listEl.querySelectorAll('[data-action="admin-unsuspend"]').forEach(btn => {
         btn.addEventListener('click', () => handleAdminSuspendClick(btn, false));
+      });
+      listEl.querySelectorAll('[data-action="admin-delete"]').forEach(btn => {
+        btn.addEventListener('click', () => handleAdminDeleteClick(btn));
       });
     }catch(err){
       listEl.innerHTML = '';
@@ -330,6 +334,29 @@
     try{
       await apiCall('POST', `/api/admin/users/${userId}/${suspending?'suspend':'unsuspend'}`);
       toast(suspending ? 'Cuenta suspendida' : 'Cuenta reactivada');
+      await renderAdminUsers(true);
+    }catch(err){
+      toast(err.message, 'error');
+      btn.disabled = false;
+    }
+  }
+  async function handleAdminDeleteClick(btn){
+    const userId = btn.dataset.userId;
+    const email = btn.dataset.email;
+    const typed = await promptDialog({
+      title: 'Eliminar cuenta permanentemente',
+      label: `Esto borra TODOS los datos de ${email} (cuentas, movimientos, metas, todo) sin poder deshacerlo. Escribe el correo exacto para confirmar:`,
+      placeholder: email,
+      confirmLabel: 'Eliminar'
+    });
+    if(typed !== email) {
+      if(typed !== null) toast('El correo no coincide, no se eliminó nada.', 'error');
+      return;
+    }
+    btn.disabled = true;
+    try{
+      await apiCall('DELETE', `/api/admin/users/${userId}`);
+      toast('Cuenta eliminada');
       await renderAdminUsers(true);
     }catch(err){
       toast(err.message, 'error');
