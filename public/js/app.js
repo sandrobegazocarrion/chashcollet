@@ -268,6 +268,15 @@
     const navBtn = document.querySelector('.nav-admin-only');
     if(navBtn) navBtn.style.display = (data.profile && data.profile.isAdmin) ? 'flex' : 'none';
   }
+  const SUB_STATUS_LABELS = {
+    sin_suscripcion: { label: 'Sin suscripción', cls: '' },
+    trialing: { label: 'Período de prueba', cls: '' },
+    active: { label: 'Pagado', cls: 'success' },
+    past_due: { label: 'Pago vencido', cls: 'danger' },
+    canceled: { label: 'Cancelada', cls: 'danger' },
+    inactive: { label: 'Sin suscripción', cls: '' }
+  };
+
   let _adminUsersLoaded = false;
   async function renderAdminUsers(force){
     if(_adminUsersLoaded && !force) return;
@@ -283,22 +292,48 @@
         return;
       }
       emptyEl.style.display = 'none';
-      listEl.innerHTML = users.map(u => `
-        <div class="admin-user-row">
+      listEl.innerHTML = users.map(u => {
+        const sub = SUB_STATUS_LABELS[u.subscriptionStatus] || SUB_STATUS_LABELS.sin_suscripcion;
+        return `
+        <div class="admin-user-row" data-user-id="${escapeHtml(u.id)}">
           <div class="aur-main">
             <div class="aur-email">${escapeHtml(u.email || '(sin correo)')}</div>
             <div class="aur-sub">${escapeHtml(u.ownerName || 'Sin nombre')} · Registrado ${formatDate((u.createdAt||'').slice(0,10))}</div>
           </div>
           <div class="aur-badges">
             <span class="status-pill ${u.setupCompleted?'success':''}">${u.setupCompleted?'Perfil completo':'Perfil incompleto'}</span>
+            <span class="status-pill ${sub.cls}">${sub.label}</span>
             ${u.isAdmin ? '<span class="status-pill success">Admin</span>' : ''}
+            ${u.suspended ? '<span class="status-pill danger">Suspendida</span>' : ''}
+            <button type="button" class="btn btn-ghost btn-sm" data-action="${u.suspended?'admin-unsuspend':'admin-suspend'}" data-user-id="${escapeHtml(u.id)}" data-email="${escapeHtml(u.email||'')}">${u.suspended?'Reactivar':'Suspender'}</button>
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
+      listEl.querySelectorAll('[data-action="admin-suspend"]').forEach(btn => {
+        btn.addEventListener('click', () => handleAdminSuspendClick(btn, true));
+      });
+      listEl.querySelectorAll('[data-action="admin-unsuspend"]').forEach(btn => {
+        btn.addEventListener('click', () => handleAdminSuspendClick(btn, false));
+      });
     }catch(err){
       listEl.innerHTML = '';
       emptyEl.textContent = err.message || 'No se pudo cargar la lista de usuarios.';
       emptyEl.style.display = 'block';
+    }
+  }
+  async function handleAdminSuspendClick(btn, suspending){
+    const userId = btn.dataset.userId;
+    const email = btn.dataset.email;
+    if(suspending && !confirm(`¿Suspender la cuenta de ${email}? No podrá iniciar sesión hasta que la reactives.`)) return;
+    btn.disabled = true;
+    try{
+      await apiCall('POST', `/api/admin/users/${userId}/${suspending?'suspend':'unsuspend'}`);
+      toast(suspending ? 'Cuenta suspendida' : 'Cuenta reactivada');
+      await renderAdminUsers(true);
+    }catch(err){
+      toast(err.message, 'error');
+      btn.disabled = false;
     }
   }
 

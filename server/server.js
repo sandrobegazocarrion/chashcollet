@@ -332,10 +332,27 @@ app.get('/api/network-info', (req, res) => {
   res.json({ port: PORT, ips: localIps() });
 });
 
-/* ---------------- Admin (solo lectura por ahora) ---------------- */
+/* ---------------- Admin ---------------- */
 app.get('/api/admin/users', requireAuth, requireAdmin, async (req, res) => {
   try {
     res.json({ users: await admin.listUsers(supabaseAdmin) });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+app.post('/api/admin/users/:id/suspend', requireAuth, requireAdmin, async (req, res) => {
+  if (req.params.id === req.userId) return res.status(400).json({ error: 'No puedes suspender tu propia cuenta.' });
+  try {
+    await admin.suspendUser(supabaseAdmin, req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+app.post('/api/admin/users/:id/unsuspend', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await admin.unsuspendUser(supabaseAdmin, req.params.id);
+    res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
