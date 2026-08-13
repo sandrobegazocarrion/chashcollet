@@ -922,9 +922,24 @@
   .cal-event-section-title{font-size:13px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;padding-top:4px;}
 
   /* ── Login / registro ── */
-  .auth-overlay{position:fixed;inset:0;z-index:600;display:none;align-items:center;justify-content:center;padding:24px;background:var(--bg);overflow-y:auto;}
+  .auth-overlay{position:fixed;inset:0;z-index:600;display:none;align-items:center;justify-content:center;padding:24px;background:var(--bg);overflow-y:auto;overflow-x:hidden;}
   .auth-overlay.open{display:flex;}
-  .auth-box{width:100%;max-width:380px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin:auto;padding:30px 28px;}
+  /* Fondo ambiental: dos manchas de gradiente muy difuminadas que derivan lentamente
+     — le da vida a la pantalla de login sin competir con el formulario ni sentirse
+     como una animación decorativa gratuita (opacidad baja, movimiento lento y sutil). */
+  .auth-overlay::before,.auth-overlay::after{
+    content:'';position:absolute;border-radius:50%;filter:blur(70px);pointer-events:none;z-index:0;
+    width:56vmax;height:56vmax;opacity:.28;
+    will-change:transform;
+  }
+  .auth-overlay::before{background:var(--brand);top:-22vmax;left:-18vmax;animation:authBlobA 24s ease-in-out infinite alternate;}
+  .auth-overlay::after{background:var(--accent2);bottom:-24vmax;right:-16vmax;animation:authBlobB 28s ease-in-out infinite alternate;}
+  @keyframes authBlobA{0%{transform:translate(0,0) scale(1);}100%{transform:translate(7vmax,9vmax) scale(1.15);}}
+  @keyframes authBlobB{0%{transform:translate(0,0) scale(1);}100%{transform:translate(-8vmax,-6vmax) scale(1.12);}}
+  @media (prefers-reduced-motion: reduce){
+    .auth-overlay::before,.auth-overlay::after{animation:none;}
+  }
+  .auth-box{position:relative;z-index:1;width:100%;max-width:380px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin:auto;padding:30px 28px;}
   .auth-head .brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;color:var(--ink);margin-bottom:10px;}
   /* .brand-mark trae color blanco de fábrica (pensado para el fondo negro del
      sidebar) — sobre una tarjeta blanca como el login queda invisible. */
