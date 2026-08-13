@@ -936,8 +936,35 @@
   .auth-overlay::after{background:var(--accent2);bottom:-24vmax;right:-16vmax;animation:authBlobB 28s ease-in-out infinite alternate;}
   @keyframes authBlobA{0%{transform:translate(0,0) scale(1);}100%{transform:translate(7vmax,9vmax) scale(1.15);}}
   @keyframes authBlobB{0%{transform:translate(0,0) scale(1);}100%{transform:translate(-8vmax,-6vmax) scale(1.12);}}
+  /* Motivo de fondo: una línea de crecimiento (tipo gráfico bursátil) que se desliza
+     despacio, más partículas que suben como monedas de luz — un guiño temático a
+     finanzas, sin competir visualmente con el formulario (opacidad baja, detrás de
+     la tarjeta). */
+  .auth-fx{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;color:var(--brand);}
+  .auth-chart{position:absolute;left:-5%;bottom:0;width:110%;height:38%;opacity:.55;animation:authChartDrift 40s ease-in-out infinite alternate;}
+  @keyframes authChartDrift{0%{transform:translateX(-2%) scaleY(1);}100%{transform:translateX(2%) scaleY(1.06);}}
+  .auth-particle{
+    position:absolute;bottom:-6vh;width:7px;height:7px;border-radius:50%;
+    background:var(--brand);opacity:0;
+    animation:authParticleRise linear infinite;
+  }
+  @keyframes authParticleRise{
+    0%{transform:translateY(0) scale(.8);opacity:0;}
+    12%{opacity:.55;}
+    88%{opacity:.4;}
+    100%{transform:translateY(-92vh) scale(1.1);opacity:0;}
+  }
+  .auth-particle:nth-child(2){left:8%;width:5px;height:5px;animation-duration:26s;animation-delay:-2s;background:var(--accent2);}
+  .auth-particle:nth-child(3){left:18%;width:8px;height:8px;animation-duration:31s;animation-delay:-11s;}
+  .auth-particle:nth-child(4){left:31%;width:6px;height:6px;animation-duration:22s;animation-delay:-6s;background:var(--accent2);}
+  .auth-particle:nth-child(5){left:47%;width:9px;height:9px;animation-duration:34s;animation-delay:-18s;}
+  .auth-particle:nth-child(6){left:62%;width:5px;height:5px;animation-duration:24s;animation-delay:-9s;background:var(--accent2);}
+  .auth-particle:nth-child(7){left:78%;width:7px;height:7px;animation-duration:29s;animation-delay:-14s;}
+  .auth-particle:nth-child(8){left:90%;width:6px;height:6px;animation-duration:27s;animation-delay:-4s;background:var(--accent2);}
+  .auth-particle:nth-child(1){left:2%;animation-duration:20s;animation-delay:-16s;}
   @media (prefers-reduced-motion: reduce){
-    .auth-overlay::before,.auth-overlay::after{animation:none;}
+    .auth-overlay::before,.auth-overlay::after,.auth-chart,.auth-particle{animation:none;}
+    .auth-particle{display:none;}
   }
   .auth-box{position:relative;z-index:1;width:100%;max-width:380px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin:auto;padding:30px 28px;}
   .auth-head .brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;color:var(--ink);margin-bottom:10px;}
