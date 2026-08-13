@@ -55,7 +55,7 @@
     renderAll();
     if(!_wizardChecked){
       _wizardChecked = true;
-      window.NUVA_WIZARD && window.NUVA_WIZARD.maybeShow(data);
+      window.NUVA_TOUR && window.NUVA_TOUR.maybeStart(data);
     }
   }
 
@@ -3753,6 +3753,7 @@
     let linked = false;
     try{ const st = await apiCall('GET', '/api/telegram/link-status'); linked = !!st.linked; }catch(_){}
     const ownerName = (data.profile && data.profile.ownerName) || '';
+    const monthlyGoal = data.monthlyGoal || '';
     openModal(`
       <h2><i class="ph ph-gear"></i> Configuración</h2>
       <div style="margin-bottom:20px;">
@@ -3761,6 +3762,15 @@
           <div class="field" style="grid-column:1/-1;">
             <label>Cómo te saluda la app</label>
             <input type="text" id="settingOwnerName" value="${escapeHtml(ownerName)}" placeholder="Ej: Sandro">
+          </div>
+        </div>
+      </div>
+      <div style="margin-bottom:20px;">
+        <div style="font-size:12.5px;color:var(--text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Meta de ahorro</div>
+        <div class="form-grid">
+          <div class="field" style="grid-column:1/-1;">
+            <label>Meta de ahorro mensual (S/)</label>
+            <input type="number" min="0" step="0.01" id="settingGoalAmount" value="${escapeHtml(monthlyGoal)}" placeholder="Ej: 500">
           </div>
         </div>
       </div>
@@ -3860,9 +3870,11 @@
       const notifyDaysBefore = parseInt(document.getElementById('settingDays').value,10)||2;
       const incomeDays = document.getElementById('settingIncomeDays').value.split(',').map(s=>parseInt(s.trim(),10)).filter(n=>n>=1 && n<=31);
       const ownerNameVal = document.getElementById('settingOwnerName').value.trim();
+      const goalAmount = parseFloat(document.getElementById('settingGoalAmount').value) || 0;
       try{
         await apiCall('PUT', '/api/settings', { telegramNotifications, notifyDaysBefore, incomeDays });
         await apiCall('PUT', '/api/profile', { ownerName: ownerNameVal });
+        await apiCall('PUT', '/api/goal', { amount: goalAmount });
         closeModal();
         toast('Configuración guardada');
         await refreshAndRender();

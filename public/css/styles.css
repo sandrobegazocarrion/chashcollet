@@ -921,28 +921,14 @@
   .cal-notif-bar input[type="number"].cnb-days-input{width:54px;padding:5px 8px;font-size:13px;text-align:center;}
   .cal-event-section-title{font-size:13px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;padding-top:4px;}
 
-  /* ── Asistente de primera configuración ── */
-  .wiz-overlay{position:fixed;inset:0;z-index:500;display:none;align-items:center;justify-content:center;padding:24px;
-    background:var(--bg);
-    overflow-y:auto;}
-  .wiz-overlay.open{display:flex;}
-  .wiz-box{width:100%;max-width:560px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin:auto;}
-  .wiz-head{padding:22px 26px 0;}
-  .wiz-head .brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;color:var(--ink);margin-bottom:16px;}
-  /* .brand-mark trae color blanco de fábrica (pensado para el fondo negro del
-     sidebar) — sobre una tarjeta blanca como el wizard o el login queda invisible. */
-  .wiz-head .brand-mark,.auth-head .brand-mark{color:var(--ink);}
-  .wiz-steps{display:flex;gap:5px;margin-bottom:20px;}
-  .wiz-steps .wiz-dot{height:4px;flex:1;border-radius:999px;background:var(--bg-soft);border:1px solid var(--border);}
-  .wiz-steps .wiz-dot.done{background:var(--green);border-color:var(--green);}
-  .wiz-steps .wiz-dot.active{background:var(--accent2);border-color:var(--accent2);}
-  .wiz-body{padding:0 26px 26px;}
-
   /* ── Login / registro ── */
   .auth-overlay{position:fixed;inset:0;z-index:600;display:none;align-items:center;justify-content:center;padding:24px;background:var(--bg);overflow-y:auto;}
   .auth-overlay.open{display:flex;}
   .auth-box{width:100%;max-width:380px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin:auto;padding:30px 28px;}
   .auth-head .brand{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;color:var(--ink);margin-bottom:10px;}
+  /* .brand-mark trae color blanco de fábrica (pensado para el fondo negro del
+     sidebar) — sobre una tarjeta blanca como el login queda invisible. */
+  .auth-head .brand-mark{color:var(--ink);}
   .auth-subtitle{font-size:13px;color:var(--text-dim);margin:0 0 20px;}
   .auth-body{display:flex;flex-direction:column;gap:14px;}
   .auth-error{font-size:12.5px;color:var(--red);background:color-mix(in srgb, var(--red) 10%, transparent);border:1px solid color-mix(in srgb, var(--red) 25%, transparent);border-radius:10px;padding:9px 12px;line-height:1.5;}
@@ -969,54 +955,31 @@
   .btn-spinner{display:inline-block;width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:auth-spin .7s linear infinite;margin-right:8px;vertical-align:middle;}
   @keyframes auth-spin{to{transform:rotate(360deg);}}
   @media (prefers-reduced-motion: reduce){.btn-spinner{animation-duration:1.4s;}}
-  .wiz-eyebrow{font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
-  .wiz-title{font-size:19px;font-weight:800;color:var(--ink);margin-bottom:6px;}
-  .wiz-sub{font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:20px;}
-  .wiz-choice-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px;}
-  .wiz-choice{border:1px solid var(--border);border-radius:var(--radius-sm);padding:18px 16px;background:var(--bg-soft);cursor:pointer;text-align:left;font-family:inherit;color:var(--text);transition:all .12s ease;}
-  .wiz-choice:hover{border-color:var(--brand);transform:translateY(-1px);}
-  .wiz-choice .ph{font-size:22px;color:var(--brand);margin-bottom:8px;display:block;}
-  .wiz-choice .wc-title{font-size:13.5px;font-weight:700;color:var(--ink);margin-bottom:3px;}
-  .wiz-choice .wc-sub{font-size:11.5px;color:var(--text-dim);line-height:1.4;}
-  .wiz-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
-  .wiz-list-item{display:flex;align-items:center;gap:10px;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;font-size:13px;}
-  .wiz-list-item .wli-main{flex:1;font-weight:600;color:var(--ink);}
-  .wiz-list-item .wli-sub{color:var(--text-dim);font-size:11.5px;}
-  .wiz-list-item .wli-remove{appearance:none;border:none;background:transparent;color:var(--text-dim);cursor:pointer;font-size:15px;line-height:1;padding:4px;}
-  .wiz-list-item .wli-remove:hover{color:var(--red);}
-  .wiz-chip-row{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
-  .wiz-chip{background:var(--bg-soft);border:1px solid var(--border);border-radius:999px;padding:6px 12px;font-size:12px;font-weight:600;color:var(--text-dim);}
-  .wiz-inline-add{display:flex;gap:8px;margin-bottom:16px;}
-  .wiz-inline-add input{flex:1;}
-  .wiz-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:8px;}
-  .wiz-actions .wiz-actions-right{display:flex;gap:8px;margin-left:auto;}
-  .wiz-skip{appearance:none;border:none;background:transparent;color:var(--text-dim);font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;text-decoration:underline;}
-  .wiz-skip:hover{color:var(--text);}
-  .wiz-note{display:flex;gap:8px;background:rgba(226,166,59,.14);border:1px solid rgba(226,166,59,.35);border-radius:var(--radius-sm);padding:10px 12px;font-size:12px;color:var(--ink);line-height:1.5;margin-bottom:16px;}
-  .wiz-note .ph{color:var(--yellow-text);flex-shrink:0;margin-top:1px;}
-  .wiz-steps-list{margin:0 0 16px;padding-left:18px;font-size:12.5px;color:var(--text-dim);line-height:1.7;}
-  .wiz-link-box{display:flex;align-items:center;gap:10px;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;margin-bottom:14px;}
-  .wiz-link-box .wlb-url{flex:1;font-family:ui-monospace,Consolas,monospace;font-size:14px;font-weight:700;color:var(--ink);word-break:break-all;}
-  .wiz-status-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text-dim);margin-bottom:16px;}
-  .wiz-status-dot{width:8px;height:8px;border-radius:50%;background:var(--text-dimmer);flex-shrink:0;}
-  .wiz-status-dot.ok{background:var(--green);}
-  .wiz-status-dot.pulse{background:var(--yellow);animation:wizPulse 1.2s infinite;}
-  @keyframes wizPulse{0%,100%{opacity:1;}50%{opacity:.35;}}
-  .wiz-summary{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
-  .wiz-summary-row{display:flex;justify-content:space-between;font-size:13px;padding:10px 12px;background:var(--bg-soft);border:1px solid var(--border);border-radius:var(--radius-sm);}
-  .wiz-summary-row .wsr-label{color:var(--text-dim);font-weight:600;}
-  .wiz-summary-row .wsr-val{color:var(--ink);font-weight:700;}
-  .wiz-file-drop{border:1.5px dashed var(--border-strong);border-radius:var(--radius-sm);padding:24px 16px;text-align:center;cursor:pointer;margin-bottom:16px;}
-  .wiz-file-drop:hover{border-color:var(--brand);}
-  .wiz-file-drop .ph{font-size:26px;color:var(--text-dim);margin-bottom:8px;display:block;}
-  .wiz-file-drop .wfd-text{font-size:13px;font-weight:600;color:var(--ink);}
-  .wiz-file-drop .wfd-sub{font-size:11.5px;color:var(--text-dim);margin-top:2px;}
-  .wiz-error{color:var(--red);font-size:12.5px;font-weight:600;margin-bottom:12px;}
+  /* ── Recorrido guiado (spotlight) ── */
+  .tour-root{position:fixed;inset:0;z-index:700;pointer-events:none;}
+  .tour-highlight{
+    position:fixed;display:none;border-radius:12px;
+    box-shadow:0 0 0 4px var(--brand), 0 0 0 9999px rgba(10,10,10,.55);
+    pointer-events:none;
+    transition:left .25s cubic-bezier(.16,1,.3,1),top .25s cubic-bezier(.16,1,.3,1),width .25s cubic-bezier(.16,1,.3,1),height .25s cubic-bezier(.16,1,.3,1);
+  }
+  .tour-tooltip{
+    position:fixed;width:100%;max-width:320px;background:var(--card);border:1px solid var(--border);
+    border-radius:var(--radius-sm);box-shadow:var(--shadow);padding:18px 20px;pointer-events:auto;
+    transition:left .25s cubic-bezier(.16,1,.3,1),top .25s cubic-bezier(.16,1,.3,1);
+  }
+  .tour-eyebrow{font-size:11px;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;}
+  .tour-title{font-size:16px;font-weight:800;color:var(--ink);margin-bottom:6px;}
+  .tour-body{font-size:13px;color:var(--text-dim);line-height:1.5;margin-bottom:16px;}
+  .tour-actions{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .tour-actions-right{display:flex;gap:8px;margin-left:auto;}
+  .tour-skip{appearance:none;border:none;background:transparent;color:var(--text-dim);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;text-decoration:underline;padding:0;}
+  .tour-skip:hover{color:var(--text);}
+  @media (prefers-reduced-motion: reduce){
+    .tour-highlight,.tour-tooltip{transition:none;}
+  }
   @media (max-width:520px){
-    .wiz-choice-grid{grid-template-columns:1fr;}
-    .wiz-box{max-width:100%;}
-    .wiz-head{padding:18px 18px 0;}
-    .wiz-body{padding:0 18px 22px;}
+    .tour-tooltip{max-width:calc(100% - 24px);}
   }
 
   /* ── Dashboard 3-columna layout ── */
