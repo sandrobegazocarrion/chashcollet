@@ -18,19 +18,29 @@
 <!-- ════ LOGIN / REGISTRO ════ -->
 <div class="auth-overlay" id="authOverlay">
   <div class="auth-fx" aria-hidden="true">
-    <svg class="auth-chart" viewBox="0 0 800 300" preserveAspectRatio="none">
-      <path d="M0,220 C40,210 70,150 110,160 C150,170 170,90 210,95 C250,100 270,180 310,170 C350,160 380,60 420,70 C460,80 480,140 520,120 C560,100 590,40 630,55 C670,70 690,130 730,110 C760,95 780,100 800,90 L800,300 L0,300 Z" fill="url(#authChartFill)"/>
-      <path d="M0,220 C40,210 70,150 110,160 C150,170 170,90 210,95 C250,100 270,180 310,170 C350,160 380,60 420,70 C460,80 480,140 520,120 C560,100 590,40 630,55 C670,70 690,130 730,110 C760,95 780,100 800,90" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
-      <defs>
-        <linearGradient id="authChartFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="currentColor" stop-opacity=".18"/>
-          <stop offset="100%" stop-color="currentColor" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-    </svg>
+    <div class="auth-grid"></div>
+    <div class="auth-chart-wrap auth-chart-wrap--back">
+      <svg class="auth-chart" viewBox="0 0 800 300" preserveAspectRatio="none">
+        <path d="M0,180 C50,190 90,110 140,120 C190,130 220,60 270,75 C320,90 350,150 400,130 C450,110 480,50 530,65 C580,80 610,140 660,115 C700,95 730,50 800,60" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div class="auth-chart-wrap">
+      <svg class="auth-chart" viewBox="0 0 800 300" preserveAspectRatio="none">
+        <path d="M0,220 C40,210 70,150 110,160 C150,170 170,90 210,95 C250,100 270,180 310,170 C350,160 380,60 420,70 C460,80 480,140 520,120 C560,100 590,40 630,55 C670,70 690,130 730,110 C760,95 780,100 800,90 L800,300 L0,300 Z" fill="url(#authChartFill)"/>
+        <path d="M0,220 C40,210 70,150 110,160 C150,170 170,90 210,95 C250,100 270,180 310,170 C350,160 380,60 420,70 C460,80 480,140 520,120 C560,100 590,40 630,55 C670,70 690,130 730,110 C760,95 780,100 800,90" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+        <defs>
+          <linearGradient id="authChartFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="currentColor" stop-opacity=".18"/>
+            <stop offset="100%" stop-color="currentColor" stop-opacity="0"/>
+          </linearGradient>
+        </defs>
+      </svg>
+      <span class="auth-livedot"></span>
+    </div>
     <span class="auth-particle"></span><span class="auth-particle"></span><span class="auth-particle"></span>
     <span class="auth-particle"></span><span class="auth-particle"></span><span class="auth-particle"></span>
-    <span class="auth-particle"></span><span class="auth-particle"></span>
+    <span class="auth-particle"></span><span class="auth-particle"></span><span class="auth-particle"></span>
+    <span class="auth-particle"></span><span class="auth-particle"></span><span class="auth-particle"></span>
   </div>
   <div class="auth-box">
     <div class="auth-head">
