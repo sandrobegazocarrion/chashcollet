@@ -10,6 +10,17 @@ function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 }
 
+// Límites por tipo de campo de texto libre (defensa en profundidad además del
+// saneado genérico de sanitize.js — acá el límite es específico al significado
+// del campo: un nombre no necesita el mismo margen que una nota o descripción).
+const LEN_NAME = 80;      // nombre de cuenta/meta/deuda/persona/recordatorio/categoría
+const LEN_NOTE = 300;     // descripción/nota libre
+const LEN_PHONE = 30;     // teléfono
+
+function capLen(str, max) {
+  return (str || '').toString().trim().slice(0, max);
+}
+
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -258,7 +269,7 @@ function addReminder(store, { name, amount, dueDay, accountId, notifyDaysBefore,
   if (installments && installments < 1) throw new Error('El número de cuotas debe ser mayor a 0');
   const reminder = {
     id: genId(),
-    name: name.trim(),
+    name: capLen(name, LEN_NAME),
     amount: amount ? Number(amount) : null,
     dueDay: day,
     accountId: accountId || null,
@@ -277,7 +288,7 @@ function updateReminder(store, id, { name, amount, dueDay, accountId, notifyDays
   if (!r) throw new Error('Recordatorio no encontrado');
   if (name !== undefined) {
     if (!name.trim()) throw new Error('El nombre es obligatorio');
-    r.name = name.trim();
+    r.name = capLen(name, LEN_NAME);
   }
   if (amount !== undefined) r.amount = amount ? Number(amount) : null;
   if (dueDay !== undefined) {
@@ -393,7 +404,7 @@ function addAccount(store, { type, name, balance, network, bank, creditLimit, bi
   if (!['ahorro', 'corriente', 'efectivo', 'tarjeta'].includes(type)) throw new Error('Tipo de cuenta inválido');
   if (!name || !name.trim()) throw new Error('El nombre es obligatorio');
   if (type === 'efectivo' && Number(balance) < 0) throw new Error('El efectivo no puede empezar en negativo');
-  const acc = { id: genId(), type, name: name.trim(), balance: Number(balance) || 0 };
+  const acc = { id: genId(), type, name: capLen(name, LEN_NAME), balance: Number(balance) || 0 };
   if (type === 'tarjeta') {
     acc.network = CARD_NETWORKS.includes(network) ? network : 'otra';
     if (creditLimit) acc.creditLimit = Number(creditLimit) || null;
@@ -405,7 +416,7 @@ function addAccount(store, { type, name, balance, network, bank, creditLimit, bi
     acc.monthlyDeposit = monthlyDeposit ? Number(monthlyDeposit) : null;
     acc.lastInterestMonth = currentYYYYMM();
   }
-  if (bank && type !== 'efectivo') acc.bank = bank;
+  if (bank && type !== 'efectivo') acc.bank = capLen(bank, LEN_NAME);
   if (ACCOUNT_COLORS.includes(color)) acc.color = color;
   store.accounts.push(acc);
   return acc;
@@ -416,14 +427,14 @@ function updateAccount(store, id, { name, balance, network, bank, creditLimit, b
   if (!acc) throw new Error('Cuenta no encontrada');
   if (name !== undefined) {
     if (!name.trim()) throw new Error('El nombre es obligatorio');
-    acc.name = name.trim();
+    acc.name = capLen(name, LEN_NAME);
   }
   if (balance !== undefined) {
     if (acc.type === 'efectivo' && Number(balance) < 0) throw new Error('El efectivo no puede quedar en negativo');
     acc.balance = Number(balance) || 0;
   }
   if (network !== undefined && acc.type === 'tarjeta') acc.network = CARD_NETWORKS.includes(network) ? network : 'otra';
-  if (bank !== undefined && acc.type !== 'efectivo') acc.bank = bank || null;
+  if (bank !== undefined && acc.type !== 'efectivo') acc.bank = bank ? capLen(bank, LEN_NAME) : null;
   if (color !== undefined) acc.color = ACCOUNT_COLORS.includes(color) ? color : null;
   if (acc.type === 'tarjeta') {
     if (creditLimit !== undefined) acc.creditLimit = creditLimit ? Number(creditLimit) : null;
@@ -448,7 +459,7 @@ function deleteAccount(store, id) {
 
 /* ---------------- Categories ---------------- */
 function ensureCategory(store, name) {
-  const clean = (name || '').trim();
+  const clean = capLen(name, LEN_NAME);
   if (!clean) return 'Otros';
   if (!store.categories.some(c => c.toLowerCase() === clean.toLowerCase())) {
     store.categories.push(clean);
@@ -479,7 +490,7 @@ function addTransaction(store, { type, amount, date, description, category, acco
     type,
     amount: amt,
     date: date || todayStr(),
-    description: (description || '').trim(),
+    description: capLen(description, LEN_NOTE),
     category: cat,
     accountId
   };
@@ -511,7 +522,7 @@ function updateTransaction(store, id, patch) {
   if (patch.type !== undefined) tx.type = patch.type;
   if (patch.amount !== undefined) tx.amount = newAmount;
   if (patch.date !== undefined) tx.date = patch.date;
-  if (patch.description !== undefined) tx.description = patch.description.trim();
+  if (patch.description !== undefined) tx.description = capLen(patch.description, LEN_NOTE);
   if (patch.category !== undefined) tx.category = ensureCategory(store, patch.category);
   if (patch.accountId !== undefined) tx.accountId = patch.accountId;
   applyTxEffect(store, tx, 1);
@@ -544,7 +555,7 @@ function addPocket(store, { name, balance, rate, target, targetDate, monthlyTarg
   assertAccountLinkable(store, linkedAccountId || null);
   const pocket = {
     id: genId(),
-    name: name.trim(),
+    name: capLen(name, LEN_NAME),
     balance: Number(balance) || 0,
     rate: (r && r > 0) ? r : null,
     lastMonth: currentYYYYMM(),
@@ -567,7 +578,7 @@ function updatePocket(store, id, { name, rate, target, targetDate, monthlyTarget
   if (!p) throw new Error('Bolsillo no encontrado');
   if (name !== undefined) {
     if (!name.trim()) throw new Error('El nombre es obligatorio');
-    p.name = name.trim();
+    p.name = capLen(name, LEN_NAME);
   }
   if (rate !== undefined) {
     const r = rate ? Number(rate) : null;
@@ -604,12 +615,12 @@ function movePocket(store, id, direction, amount, { date, note } = {}) {
   if (direction === 'meter') {
     p.balance += amt;
     if (!p.contributions) p.contributions = [];
-    p.contributions.push({ id: genId(), amount: amt, date: date || todayStr(), note: (note || '').trim() || null });
+    p.contributions.push({ id: genId(), amount: amt, date: date || todayStr(), note: capLen(note, LEN_NOTE) || null });
   } else if (direction === 'sacar') {
     if (amt > p.balance) throw new Error('No hay suficiente saldo en el bolsillo');
     p.balance -= amt;
     if (!p.contributions) p.contributions = [];
-    p.contributions.push({ id: genId(), amount: -amt, date: date || todayStr(), note: (note || '').trim() || null });
+    p.contributions.push({ id: genId(), amount: -amt, date: date || todayStr(), note: capLen(note, LEN_NOTE) || null });
   } else {
     throw new Error('Dirección inválida');
   }
@@ -635,18 +646,18 @@ function addDeuda(store, { name, type, amount, dueDay, accountId, description, v
   const isPrestamo = t === 'prestamo';
   const deuda = {
     id: genId(),
-    name: name.trim(),
+    name: capLen(name, LEN_NAME),
     type: t,
     amount: amount ? Number(amount) : null,
     dueDay: Number(dueDay) || 1,
     accountId: accountId || null,
-    description: (description || '').trim(),
+    description: capLen(description, LEN_NOTE),
     variableAmount: !isPrestamo && !!variableAmount,
     autoDebit: !isPrestamo && !!autoDebit
   };
   if (isPrestamo) {
     deuda.lenderType = LENDER_TYPES.includes(lenderType) ? lenderType : 'banco';
-    deuda.lenderName = (lenderName || '').trim() || null;
+    deuda.lenderName = capLen(lenderName, LEN_NAME) || null;
     deuda.interestRate = interestRate ? Number(interestRate) : null;
     deuda.principal = principal ? Number(principal) : null;
     deuda.remainingBalance = (remainingBalance !== undefined && remainingBalance !== null && remainingBalance !== '')
@@ -661,16 +672,16 @@ function addDeuda(store, { name, type, amount, dueDay, accountId, description, v
 function updateDeuda(store, id, patch) {
   const d = store.deudas.find(x => x.id === id);
   if (!d) throw new Error('Compromiso no encontrado');
-  if (patch.name !== undefined) { if (!patch.name.trim()) throw new Error('El nombre es obligatorio'); d.name = patch.name.trim(); }
+  if (patch.name !== undefined) { if (!patch.name.trim()) throw new Error('El nombre es obligatorio'); d.name = capLen(patch.name, LEN_NAME); }
   if (patch.type !== undefined) d.type = DEUDA_TYPES_VALID.includes(patch.type) ? patch.type : 'otro';
   if (patch.amount !== undefined) d.amount = patch.amount ? Number(patch.amount) : null;
   if (patch.dueDay !== undefined) d.dueDay = Number(patch.dueDay) || 1;
   if (patch.accountId !== undefined) d.accountId = patch.accountId || null;
-  if (patch.description !== undefined) d.description = (patch.description || '').trim();
+  if (patch.description !== undefined) d.description = capLen(patch.description, LEN_NOTE);
   if (d.type === 'prestamo') {
     d.variableAmount = false;
     if (patch.lenderType !== undefined) d.lenderType = LENDER_TYPES.includes(patch.lenderType) ? patch.lenderType : 'banco';
-    if (patch.lenderName !== undefined) d.lenderName = (patch.lenderName || '').trim() || null;
+    if (patch.lenderName !== undefined) d.lenderName = capLen(patch.lenderName, LEN_NAME) || null;
     if (patch.interestRate !== undefined) d.interestRate = patch.interestRate ? Number(patch.interestRate) : null;
     if (patch.principal !== undefined) d.principal = patch.principal ? Number(patch.principal) : null;
     if (patch.remainingBalance !== undefined) {
@@ -753,12 +764,12 @@ function addPersonLoan(store, { direction, personName, amount, date, dueDate, no
   const loan = {
     id: genId(),
     direction: direction === 'me_deben' ? 'me_deben' : 'debo',
-    personName: personName.trim(),
+    personName: capLen(personName, LEN_NAME),
     amount: amt,
     date: date || todayStr(),
     dueDate: dueDate || null,
-    note: (note || '').trim(),
-    phone: (phone || '').trim() || null,
+    note: capLen(note, LEN_NOTE),
+    phone: capLen(phone, LEN_PHONE) || null,
     paid: false,
     paidDate: null
   };
@@ -772,7 +783,7 @@ function updatePersonLoan(store, id, patch) {
   if (patch.direction !== undefined) p.direction = patch.direction === 'me_deben' ? 'me_deben' : 'debo';
   if (patch.personName !== undefined) {
     if (!patch.personName.trim()) throw new Error('El nombre de la persona es obligatorio');
-    p.personName = patch.personName.trim();
+    p.personName = capLen(patch.personName, LEN_NAME);
   }
   if (patch.amount !== undefined) {
     const amt = Number(patch.amount);
@@ -781,8 +792,8 @@ function updatePersonLoan(store, id, patch) {
   }
   if (patch.date !== undefined) p.date = patch.date || todayStr();
   if (patch.dueDate !== undefined) p.dueDate = patch.dueDate || null;
-  if (patch.note !== undefined) p.note = (patch.note || '').trim();
-  if (patch.phone !== undefined) p.phone = (patch.phone || '').trim() || null;
+  if (patch.note !== undefined) p.note = capLen(patch.note, LEN_NOTE);
+  if (patch.phone !== undefined) p.phone = capLen(patch.phone, LEN_PHONE) || null;
   return p;
 }
 
@@ -852,7 +863,7 @@ function addCardCharge(store, { cardId, description, totalAmount, totalInstallme
   const amt = Number(totalAmount);
   if (!amt || amt <= 0) throw new Error('Monto inválido');
   const installments = Math.max(1, Math.round(Number(totalInstallments)) || 1);
-  const desc = (description || 'Compra').trim();
+  const desc = capLen(description, LEN_NOTE) || 'Compra';
   const cat = ensureCategory(store, 'Compras en cuotas');
   const tx = addTransaction(store, {
     type: 'gasto',
@@ -928,8 +939,7 @@ const MIN_AGE_YEARS = 18;
 function updateProfile(store, patch) {
   if (!store.profile) store.profile = { ownerName: null, birthDate: null, gender: null };
   if (patch.ownerName !== undefined) {
-    const name = (patch.ownerName || '').toString().trim();
-    store.profile.ownerName = name || null;
+    store.profile.ownerName = capLen(patch.ownerName, LEN_NAME) || null;
   }
   if (patch.birthDate !== undefined) {
     const raw = (patch.birthDate || '').toString().trim();

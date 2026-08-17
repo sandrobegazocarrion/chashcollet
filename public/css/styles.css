@@ -56,6 +56,23 @@
     --glass-bg:rgba(255,255,255,.55);
     --glass-border:rgba(10,10,10,.06);
     --topbar-bg:rgba(255,255,255,.72);
+    /* transitions-dev — número que re-entra con blur cuando un KPI del dashboard cambia. */
+    --digit-dur:500ms;
+    --digit-distance:8px;
+    --digit-stagger:70ms;
+    --digit-blur:2px;
+    --digit-ease:cubic-bezier(0.34, 1.45, 0.64, 1);
+    --digit-dir-x:0;
+    --digit-dir-y:1;
+    /* Reveal de las tarjetas del dashboard al reemplazar su esqueleto de carga. */
+    --reveal-dur:420ms;
+    --reveal-translate-y:6px;
+    --reveal-blur:3px;
+    --reveal-ease:cubic-bezier(0.22, 1, 0.36, 1);
+    /* Hover sutil en las tarjetas del dashboard (elevación + sombra, no layout). */
+    --card-lift:-3px;
+    --card-lift-dur:200ms;
+    --card-lift-ease:cubic-bezier(0.22, 1, 0.36, 1);
   }
   :root[data-theme="dark"]{
     --bg:#0d0d0f;
@@ -276,6 +293,46 @@
   .muted{color:var(--text-dim);font-size:13px;}
   .num{font-variant-numeric:tabular-nums;letter-spacing:.01em;}
 
+  /* Number pop-in (transitions-dev) — cada carácter re-entra con blur cuando se
+     re-renderiza un KPI (patrimonio, balance del mes, tasa de ahorro, etc.). Como
+     el HTML se reemplaza por completo en cada render, .is-animating ya viene puesto
+     en el marcado nuevo y el navegador la reproduce sola al insertar los nodos —
+     no hace falta reflow manual ni JS de orquestación. */
+  @keyframes t-digit-pop-in{
+    0%{transform:translate(calc(var(--digit-distance) * var(--digit-dir-x)),calc(var(--digit-distance) * var(--digit-dir-y)));opacity:0;filter:blur(var(--digit-blur));}
+    100%{transform:translate(0,0);opacity:1;filter:blur(0);}
+  }
+  .t-digit-group{display:inline-flex;align-items:baseline;}
+  .t-digit{display:inline-block;will-change:transform,opacity,filter;}
+  .t-digit-group.is-animating .t-digit{animation:t-digit-pop-in var(--digit-dur) var(--digit-ease) both;}
+  .t-digit-group.is-animating .t-digit[data-stagger="1"]{animation-delay:var(--digit-stagger);}
+  .t-digit-group.is-animating .t-digit[data-stagger="2"]{animation-delay:calc(var(--digit-stagger) * 2);}
+  @media (prefers-reduced-motion: reduce){
+    .t-digit-group .t-digit{animation:none !important;}
+  }
+
+  /* Esqueleto de carga del dashboard (shimmer) — visible en el HTML antes de que
+     JS traiga los datos reales; se reemplaza por el contenido real con .dash-reveal. */
+  @keyframes t-skel-shimmer{
+    0%{background-position:150% 0;}
+    100%{background-position:-150% 0;}
+  }
+  .skel-line{
+    height:14px;border-radius:7px;
+    background:linear-gradient(90deg, var(--bg-soft) 25%, var(--card-hover) 50%, var(--bg-soft) 75%);
+    background-size:250% 100%;
+    animation:t-skel-shimmer 1.6s ease-in-out infinite;
+  }
+  @keyframes t-dash-reveal{
+    0%{opacity:0;transform:translateY(var(--reveal-translate-y));filter:blur(var(--reveal-blur));}
+    100%{opacity:1;transform:translateY(0);filter:blur(0);}
+  }
+  .dash-reveal{animation:t-dash-reveal var(--reveal-dur) var(--reveal-ease) both;will-change:transform,opacity,filter;}
+  @media (prefers-reduced-motion: reduce){
+    .skel-line{animation:none !important;}
+    .dash-reveal{animation:none !important;}
+  }
+
   .card{
     background:var(--card);
     border:1px solid var(--border);
@@ -313,7 +370,9 @@
   /* Dashboard — "widgets de datos clave" (resúmenes, totales): misma tarjeta blanca
      que el resto, se destacan por tipografía (números grandes), no por un fondo propio. */
   .summary-grid{display:grid;grid-template-columns:2.2fr 1fr 1fr;gap:14px;margin-bottom:36px;}
-  .summary-card{padding:20px;position:relative;overflow:hidden;background:var(--widget-bg);border-color:var(--border);box-shadow:var(--shadow);}
+  /* padding:22px — antes 20px, distinto del resto de tarjetas (.card usa 22px);
+     unificado para que el ritmo de espaciado del dashboard sea consistente. */
+  .summary-card{padding:22px;position:relative;overflow:hidden;background:var(--widget-bg);border-color:var(--border);box-shadow:var(--shadow);}
   .summary-card .label{font-size:12px;color:var(--widget-text-dim);font-weight:600;margin-bottom:10px;text-transform:uppercase;letter-spacing:.4px;}
   .summary-card .value{font-size:26px;font-weight:800;letter-spacing:-.6px;color:var(--widget-text);}
   .summary-card.income .value{color:var(--green);}
@@ -324,7 +383,16 @@
   .summary-card.clickable{cursor:pointer;}
   .summary-card.clickable:hover{filter:brightness(1.12);}
   /* Month comparison card */
-  .month-compare-card{padding:20px 22px;background:var(--widget-bg);border-color:var(--border);box-shadow:var(--shadow);}
+  .month-compare-card{padding:22px;background:var(--widget-bg);border-color:var(--border);box-shadow:var(--shadow);}
+  /* Hover sutil (transform + shadow, compositor-friendly) en las tarjetas del
+     dashboard — todas menos .clickable, que ya tiene su propio feedback de brillo. */
+  .summary-card,.month-compare-card,.mini-card{transition:transform var(--card-lift-dur) var(--card-lift-ease), box-shadow var(--card-lift-dur) var(--card-lift-ease);}
+  .summary-card:hover,.month-compare-card:hover,.mini-card:hover{transform:translateY(var(--card-lift));box-shadow:0 20px 40px -22px rgba(10,10,10,.22);}
+  :root[data-theme="dark"] .summary-card:hover,:root[data-theme="dark"] .month-compare-card:hover,:root[data-theme="dark"] .mini-card:hover{box-shadow:0 20px 40px -20px rgba(0,0,0,.5);}
+  @media (prefers-reduced-motion: reduce){
+    .summary-card,.month-compare-card,.mini-card{transition:box-shadow var(--card-lift-dur) var(--card-lift-ease);}
+    .summary-card:hover,.month-compare-card:hover,.mini-card:hover{transform:none;}
+  }
   .mc-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
   .mc-title{font-size:12px;color:var(--widget-text-dim);font-weight:700;text-transform:uppercase;letter-spacing:.4px;}
   .mc-balance{font-size:22px;font-weight:800;letter-spacing:-.6px;color:var(--widget-text);}

@@ -217,9 +217,33 @@
 
         <!-- Contenido principal (columna derecha) -->
         <div class="dash-main-col">
-          <section class="card hero-card" id="netWorthHero"></section>
+          <!-- Esqueletos de carga: se ven un instante mientras llega la respuesta del
+               servidor y renderDashboard() los reemplaza por el contenido real (que
+               entra con .dash-reveal, ver styles.css). Dimensionados para no causar
+               salto de layout cuando se reemplazan. -->
+          <section class="card hero-card" id="netWorthHero">
+            <div class="hero-main">
+              <div class="skel-line" style="width:120px;height:12px;margin-bottom:14px;"></div>
+              <div class="skel-line" style="width:220px;height:34px;margin-bottom:14px;"></div>
+              <div class="skel-line" style="width:180px;height:20px;border-radius:999px;"></div>
+            </div>
+          </section>
 
-          <section class="summary-grid" id="statsRow"></section>
+          <section class="summary-grid" id="statsRow">
+            <div class="card month-compare-card">
+              <div class="skel-line" style="width:90px;height:11px;margin-bottom:16px;"></div>
+              <div class="skel-line" style="width:100%;height:8px;border-radius:999px;margin-bottom:14px;"></div>
+              <div class="skel-line" style="width:70%;height:14px;"></div>
+            </div>
+            <div class="card summary-card">
+              <div class="skel-line" style="width:80px;height:11px;margin-bottom:12px;"></div>
+              <div class="skel-line" style="width:100px;height:24px;"></div>
+            </div>
+            <div class="card summary-card">
+              <div class="skel-line" style="width:80px;height:11px;margin-bottom:12px;"></div>
+              <div class="skel-line" style="width:70px;height:24px;"></div>
+            </div>
+          </section>
 
           <!-- Gráficos y números primero: son el contenido con más valor de la
                pantalla, así que van justo después del resumen, antes de cualquier
@@ -244,7 +268,18 @@
             </div>
           </div>
 
-          <div class="dash-mini-row" id="dashMiniRow"></div>
+          <div class="dash-mini-row" id="dashMiniRow">
+            <div class="mini-card">
+              <div class="skel-line" style="width:26px;height:26px;border-radius:50%;margin-bottom:12px;"></div>
+              <div class="skel-line" style="width:100px;height:13px;margin-bottom:8px;"></div>
+              <div class="skel-line" style="width:80%;height:12px;"></div>
+            </div>
+            <div class="mini-card dark">
+              <div class="skel-line" style="width:26px;height:26px;border-radius:50%;margin-bottom:12px;"></div>
+              <div class="skel-line" style="width:110px;height:13px;margin-bottom:8px;"></div>
+              <div class="skel-line" style="width:80%;height:12px;"></div>
+            </div>
+          </div>
 
           <div class="tip-banner" id="tipBanner"></div>
 

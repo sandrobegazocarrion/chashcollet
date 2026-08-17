@@ -2,15 +2,13 @@
 require('./env');
 
 const os = require('os');
-const fs = require('fs');
 const { execFile } = require('child_process');
 const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 
-const db = require('./db');
 const finance = require('./finance');
-const { isPackaged, PUBLIC_DIR, ENV_FILE } = require('./paths');
+const { isPackaged, PUBLIC_DIR } = require('./paths');
 const { requireAuth, requireAdmin, supabaseAdmin } = require('./auth');
 const admin = require('./admin');
 const dataStore = require('./dataStore');
@@ -44,7 +42,13 @@ app.use(cors({
 
 app.use(express.json());
 app.use(sanitizeInputMiddleware);
-app.use(express.static(PUBLIC_DIR));
+// maxAge corto (5 min) + ETag/Last-Modified (activados por defecto en express.static):
+// bajo muchas conexiones a la vez, la mayoría de pedidos de CSS/JS/imágenes se resuelven
+// con un 304 (el navegador ya tiene el archivo y solo confirma que sigue vigente) en vez
+// de reenviar el archivo completo. No usamos un maxAge largo porque los nombres de
+// archivo no llevan hash de contenido — uno largo serviría JS desactualizado tras un
+// deploy hasta que venciera el caché.
+app.use(express.static(PUBLIC_DIR, { maxAge: '5m', etag: true, lastModified: true }));
 
 // Fase 6: límite general sobre toda la API pública — por IP, generoso para uso
 // normal de la app (varias pestañas, refresco automático) pero corta un abuso claro.
@@ -73,6 +77,10 @@ const linkCodeLimiter = rateLimit({
 // para ser visible en el cliente, el RLS es la protección real) — el frontend
 // la pide antes de poder iniciar sesión.
 app.get('/api/config', (req, res) => {
+  // Cada cliente la pide al abrir la app y es idéntica para todos (no varía por
+  // usuario) — cachearla 5 minutos evita que cada carga de página le pegue a Node
+  // por un valor que casi nunca cambia (solo cuando se rota una key en el dashboard).
+  res.set('Cache-Control', 'public, max-age=300');
   res.json({
     supabaseUrl: process.env.SUPABASE_URL || null,
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY || null,
@@ -80,18 +88,6 @@ app.get('/api/config', (req, res) => {
   });
 });
 
-function withStore(res, fn) {
-  try {
-    const store = db.getStore();
-    const result = fn(store);
-    db.save();
-    res.json(result === undefined ? { ok: true } : result);
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
-}
-
-// Fase 3: equivalente async de withStore(), para las rutas ya migradas a Postgres.
 // req.accessToken lo deja requireAuth — arma un cliente por-request con el JWT del
 // usuario, así que además del filtro user_id explícito en dataStore.js, el propio
 // RLS de Postgres es una segunda barrera si algo se filtrara sin querer.
@@ -252,55 +248,6 @@ app.post('/api/setup/complete', requireAuth, (req, res) => {
   withUserData(req, res, (sb, userId) => dataStore.completeSetup(sb, userId));
 });
 
-// Reemplaza todo el store por un data.json importado (backup/config de otra instalación).
-app.post('/api/setup/import', (req, res) => {
-  try {
-    const incoming = finance.normalizeStore(req.body || {});
-    incoming.setupCompleted = true;
-    db.replaceStore(incoming);
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-function writeEnvToken(token) {
-  let lines = [];
-  if (fs.existsSync(ENV_FILE)) {
-    lines = fs.readFileSync(ENV_FILE, 'utf8').split(/\r?\n/);
-  }
-  let found = false;
-  lines = lines.map(line => {
-    if (/^\s*TELEGRAM_BOT_TOKEN\s*=/.test(line)) {
-      found = true;
-      return `TELEGRAM_BOT_TOKEN=${token}`;
-    }
-    return line;
-  });
-  if (!found) lines.push(`TELEGRAM_BOT_TOKEN=${token}`);
-  fs.writeFileSync(ENV_FILE, lines.join('\n'), 'utf8');
-}
-
-app.post('/api/setup/telegram', async (req, res) => {
-  const token = (req.body && req.body.token || '').trim();
-  if (!token) return res.status(400).json({ error: 'Falta el token del bot' });
-  try {
-    writeEnvToken(token);
-    process.env.TELEGRAM_BOT_TOKEN = token;
-    if (activeBot) { try { await activeBot.stopPolling(); } catch (e) {} }
-    activeBot = require('./bot').start(token);
-    startReminderScheduler(activeBot);
-    res.json({ ok: true });
-  } catch (e) {
-    res.status(400).json({ error: 'No se pudo iniciar el bot: ' + e.message });
-  }
-});
-
-app.get('/api/setup/telegram-status', (req, res) => {
-  const store = db.getStore();
-  res.json({ configured: !!process.env.TELEGRAM_BOT_TOKEN, running: !!activeBot, linked: !!store.ownerChatId });
-});
-
 /* ---------------- Fase 4: vinculación del bot compartido con la cuenta del usuario ----------------
  * El bot de Telegram es uno solo para todos los usuarios (no un token por persona). Un
  * usuario logueado en la web pide un código de 6 dígitos, válido 10 minutos y de un solo
@@ -326,10 +273,6 @@ app.delete('/api/telegram/link', requireAuth, async (req, res) => {
   } catch (e) {
     res.status(400).json({ error: e.message });
   }
-});
-
-app.get('/api/network-info', (req, res) => {
-  res.json({ port: PORT, ips: localIps() });
 });
 
 /* ---------------- Admin ---------------- */
@@ -385,7 +328,6 @@ app.listen(PORT, '0.0.0.0', () => {
   console.log(`  En este computador: http://localhost:${PORT}`);
   localIps().forEach(ip => console.log(`  Desde tu celular (misma WiFi): http://${ip}:${PORT}`));
   console.log('  --------------------------------');
-  console.log(`  Datos guardados en: ${db.DATA_FILE}`);
   console.log('');
 
   // Solo al correr como .exe instalado: al no haber terminal visible para el usuario,

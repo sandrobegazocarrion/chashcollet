@@ -329,11 +329,15 @@ async function deleteAccount(sb, userId, id) {
 
 /* ---------------- Transacciones ---------------- */
 async function addTransaction(sb, userId, body) {
-  const { data: accRows, error: e0 } = await sb.from('accounts').select('*').eq('user_id', userId);
-  must(e0);
+  // accounts y categories son lecturas independientes — en paralelo en vez de una
+  // tras otra, para no pagar dos round-trips secuenciales en la ruta de escritura
+  // más frecuente de toda la app (cada ingreso/gasto que registra un usuario).
+  const [{ data: accRows, error: e0 }, catRes] = await Promise.all([
+    sb.from('accounts').select('*').eq('user_id', userId),
+    sb.from('user_categories').select('*').eq('user_id', userId)
+  ]);
+  must(e0); must(catRes.error);
   const fakeStore = { accounts: accRows.map(rowToAccount), categories: [], transactions: [] };
-  const catRes = await sb.from('user_categories').select('*').eq('user_id', userId);
-  must(catRes.error);
   fakeStore.categories = catRes.data.length ? catRes.data.map(c => c.name) : finance.DEFAULT_CATEGORIES.slice();
   const categoriesBefore = fakeStore.categories.slice();
 
@@ -358,14 +362,13 @@ async function addTransaction(sb, userId, body) {
 }
 
 async function updateTransaction(sb, userId, id, patch) {
-  const [{ data: txRow, error: e0 }, { data: accRows, error: e1 }] = await Promise.all([
+  const [{ data: txRow, error: e0 }, { data: accRows, error: e1 }, catRes] = await Promise.all([
     sb.from('transactions').select('*').eq('id', id).eq('user_id', userId).maybeSingle(),
-    sb.from('accounts').select('*').eq('user_id', userId)
+    sb.from('accounts').select('*').eq('user_id', userId),
+    sb.from('user_categories').select('*').eq('user_id', userId)
   ]);
-  must(e0); must(e1);
+  must(e0); must(e1); must(catRes.error);
   if (!txRow) throw new Error('Transacción no encontrada');
-  const catRes = await sb.from('user_categories').select('*').eq('user_id', userId);
-  must(catRes.error);
 
   const fakeStore = {
     accounts: accRows.map(rowToAccount),

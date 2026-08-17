@@ -121,6 +121,27 @@
     return `${d}/${m}/${y}`;
   }
 
+  // Number pop-in (transitions-dev): envuelve cada carácter en su propio .t-digit
+  // para que re-entre con blur al insertarse. .is-animating ya va puesto en el
+  // marcado, así que el navegador reproduce la animación sola en cuanto renderDashboard()
+  // reemplaza el innerHTML — no hace falta reflow manual (son nodos nuevos, no un replay).
+  //
+  // `key`, si se pasa, evita que la animación se repita en cada auto-refresh (cada 15s,
+  // ver __startNuvaApp): solo anima cuando el valor de ESE key cambió desde el último
+  // render. Sin key, siempre anima (para valores que solo se pintan una vez).
+  const _kpiLastValues = {};
+  function digitSpans(str, key){
+    str = String(str);
+    const changed = key === undefined || _kpiLastValues[key] !== str;
+    if(key !== undefined) _kpiLastValues[key] = str;
+    const chars = str.split('');
+    const n = chars.length;
+    return `<span class="t-digit-group${changed ? ' is-animating' : ''}">` + chars.map((ch,i)=>{
+      const stagger = (i===n-2) ? ' data-stagger="1"' : (i===n-1) ? ' data-stagger="2"' : '';
+      return `<span class="t-digit"${stagger}>${escapeHtml(ch)}</span>`;
+    }).join('') + '</span>';
+  }
+
   // Los toasts de éxito/info se cierran solos (rango recomendado 3-5s); un error
   // sobre un guardado que falló no se autodestruye — se queda hasta que el usuario
   // lo cierra o hasta el siguiente aviso, porque perder el motivo del error es un
@@ -678,7 +699,14 @@
     return { items, total: items.reduce((s,i)=>s+i.amount,0) };
   }
 
+  // El reveal (fade + blur + leve subida) solo tiene sentido la primera vez que se
+  // reemplaza el esqueleto de carga por contenido real — en los auto-refresh
+  // siguientes (cada 15s, ver __startNuvaApp) las tarjetas ya están visibles, así
+  // que repetir la animación se ve como un parpadeo/salto en vez de una carga.
+  let _dashboardRevealed = false;
   function renderDashboard(){
+    const revealClass = _dashboardRevealed ? '' : ' dash-reveal';
+    _dashboardRevealed = true;
     const titleEl = document.getElementById('pageTitle');
     if(titleEl && document.getElementById('tab-dashboard').classList.contains('active')) titleEl.textContent = greetingText();
     const t = computeTotals();
@@ -697,10 +725,10 @@
     // La deuda de tarjeta y de préstamos ya no se resta acá: cada una vive en su
     // propia pestaña, y mezclarlas aquí era justo lo repetitivo que se quería evitar.
     document.getElementById('netWorthHero').innerHTML = `
-      <div class="hero-main">
+      <div class="hero-main${revealClass}">
         <p class="hero-label">Lo que tengo</p>
-        <p class="hero-value num">${formatMoney(t.totalLiquid)}</p>
-        <span class="delta-chip ${monthNet>=0?'up':'down'}"><i class="ph ${monthNet>=0?'ph-trend-up':'ph-trend-down'}"></i><span class="num">${monthNet>=0?'+':''}${formatMoney(monthNet)}</span> · flujo neto de este mes</span>
+        <p class="hero-value num">${digitSpans(formatMoney(t.totalLiquid), 'heroValue')}</p>
+        <span class="delta-chip ${monthNet>=0?'up':'down'}"><i class="ph ${monthNet>=0?'ph-trend-up':'ph-trend-down'}"></i><span class="num">${digitSpans((monthNet>=0?'+':'')+formatMoney(monthNet), 'heroDelta')}</span> · flujo neto de este mes</span>
       </div>
     `;
 
@@ -717,13 +745,13 @@
           ? `${escapeHtml(urgent.name)} vence hoy · ${formatMoney(urgent.amount)}.`
           : `${escapeHtml(urgent.name)} vence en ${urgent.days} día${urgent.days===1?'':'s'} · ${formatMoney(urgent.amount)}.`;
     document.getElementById('dashMiniRow').innerHTML = `
-      <button type="button" class="mini-card" data-action="switch-tab" data-tab="${urgent?urgent.tab:'calendario'}">
+      <button type="button" class="mini-card${revealClass}" data-action="switch-tab" data-tab="${urgent?urgent.tab:'calendario'}">
         <span class="mini-icon"><i class="ph ph-calendar-blank"></i></span>
         <p class="mini-title">${urgent ? 'Vence pronto' : 'Al día'}</p>
         <p class="mini-text">${alertText}</p>
         <span class="mini-link">Ir al calendario <i class="ph ph-arrow-right"></i></span>
       </button>
-      <button type="button" class="mini-card dark" data-action="open-settings">
+      <button type="button" class="mini-card dark${revealClass}" data-action="open-settings">
         <span class="mini-icon"><i class="ph ph-telegram-logo"></i></span>
         <p class="mini-title">Bot de Telegram</p>
         <p class="mini-text">Registra gastos y consulta tu resumen sin abrir la app.</p>
@@ -749,25 +777,25 @@
     const safeToSpend = t.totalLiquid - t.totalDeuda - pocketsRemaining;
 
     document.getElementById('statsRow').innerHTML = `
-      <div class="card month-compare-card">
+      <div class="card month-compare-card${revealClass}">
         <div class="mc-head">
           <span class="mc-title">${monthLabel.charAt(0).toUpperCase()+monthLabel.slice(1)}</span>
-          <button type="button" class="mc-balance" style="color:${monthNet>=0?'var(--green)':'var(--red)'};background:none;border:none;font-family:inherit;cursor:pointer;" data-action="open-subview" data-view="balance">${monthNet>=0?'+':''}${formatMoney(monthNet)}</button>
+          <button type="button" class="mc-balance" style="color:${monthNet>=0?'var(--green)':'var(--red)'};background:none;border:none;font-family:inherit;cursor:pointer;" data-action="open-subview" data-view="balance">${digitSpans((monthNet>=0?'+':'')+formatMoney(monthNet), 'mcBalance')}</button>
         </div>
         <div class="mc-bar-wrap">
           <div class="mc-bar-in" style="width:${inPct}%"></div>
           <div class="mc-bar-out" style="width:${outPct}%"></div>
         </div>
         <div class="mc-labels">
-          <button type="button" class="mc-label in" data-action="open-subview" data-view="ingresos">↑ <span class="num">${formatMoney(monthIn)}</span><span class="mc-sub">Ingresos del mes</span></button>
-          <button type="button" class="mc-label out" style="text-align:right;" data-action="open-subview" data-view="gastos">↓ <span class="num">${formatMoney(monthOut)}</span><span class="mc-sub">Gastos del mes</span></button>
+          <button type="button" class="mc-label in" data-action="open-subview" data-view="ingresos">↑ <span class="num">${digitSpans(formatMoney(monthIn), 'monthIn')}</span><span class="mc-sub">Ingresos del mes</span></button>
+          <button type="button" class="mc-label out" style="text-align:right;" data-action="open-subview" data-view="gastos">↓ <span class="num">${digitSpans(formatMoney(monthOut), 'monthOut')}</span><span class="mc-sub">Gastos del mes</span></button>
         </div>
       </div>
-      <div class="card summary-card safe" title="Líquido − pagos pendientes del mes − ahorro que aún falta apartar en tus chanchitos">
+      <div class="card summary-card safe${revealClass}" title="Líquido − pagos pendientes del mes − ahorro que aún falta apartar en tus chanchitos">
         <div class="label">Balance disponible</div>
-        <div class="value num" style="color:${safeToSpend>=0?'var(--green)':'var(--red)'}">${formatMoney(safeToSpend)}</div>
+        <div class="value num" style="color:${safeToSpend>=0?'var(--green)':'var(--red)'}">${digitSpans(formatMoney(safeToSpend), 'safeToSpend')}</div>
       </div>
-      <div class="card summary-card rate"><div class="label">Tasa de ahorro</div><div class="value num">${savingsRate===null?'—':savingsRate+'%'}</div></div>
+      <div class="card summary-card rate${revealClass}"><div class="label">Tasa de ahorro</div><div class="value num">${digitSpans(savingsRate===null?'—':savingsRate+'%', 'savingsRate')}</div></div>
     `;
 
     renderTip();
