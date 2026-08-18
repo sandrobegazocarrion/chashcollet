@@ -145,6 +145,17 @@ app.delete('/api/transactions/:id', requireAuth, (req, res) => {
   withUserData(req, res, (sb, userId) => dataStore.deleteTransaction(sb, userId, req.params.id));
 });
 
+// Importación masiva (Excel/PDF ya revisados por el usuario en el navegador — acá solo
+// llegan las filas que la persona confirmó, nunca el archivo original). Tope propio de
+// 500 filas por request, independiente del rate limit general, para que nadie mande un
+// payload gigante de una sola vez.
+app.post('/api/transactions/bulk', requireAuth, (req, res) => {
+  const items = Array.isArray(req.body && req.body.items) ? req.body.items : null;
+  if (!items || !items.length) return res.status(400).json({ error: 'No hay movimientos para importar.' });
+  if (items.length > 500) return res.status(400).json({ error: 'Máximo 500 movimientos por importación.' });
+  withUserData(req, res, (sb, userId) => dataStore.addTransactionsBulk(sb, userId, items));
+});
+
 /* ---------------- Pockets ---------------- */
 app.post('/api/pockets', requireAuth, (req, res) => {
   withUserData(req, res, (sb, userId) => dataStore.addPocket(sb, userId, req.body));

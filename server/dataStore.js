@@ -361,6 +361,56 @@ async function addTransaction(sb, userId, body) {
   return tx;
 }
 
+/* ---------------- Importación masiva (Excel / PDF revisados por el usuario) ----------------
+ * A diferencia de addTransaction (una fila = un round-trip completo), acá se trae accounts/
+ * categories UNA sola vez, se validan y aplican todas las filas en memoria con la misma
+ * finance.addTransaction() de siempre (misma validación, mismos límites de campo), y recién
+ * al final se hace un solo insert masivo + se persisten los saldos de cuenta que cambiaron.
+ * Fila con error no aborta el resto — se reporta en `failed` para que el usuario la corrija
+ * y reintente, en vez de perder una importación completa por una sola fila mala. */
+async function addTransactionsBulk(sb, userId, items) {
+  const [{ data: accRows, error: e0 }, catRes] = await Promise.all([
+    sb.from('accounts').select('*').eq('user_id', userId),
+    sb.from('user_categories').select('*').eq('user_id', userId)
+  ]);
+  must(e0); must(catRes.error);
+  const fakeStore = {
+    accounts: accRows.map(rowToAccount),
+    categories: catRes.data.length ? catRes.data.map(c => c.name) : finance.DEFAULT_CATEGORIES.slice(),
+    transactions: []
+  };
+  const categoriesBefore = fakeStore.categories.slice();
+
+  const created = [];
+  const failed = [];
+  items.forEach((item, index) => {
+    try {
+      created.push(finance.addTransaction(fakeStore, item));
+    } catch (e) {
+      failed.push({ index, error: e.message });
+    }
+  });
+
+  if (created.length) {
+    const { error: e1 } = await sb.from('transactions').insert(created.map(tx => transactionToRow(tx, userId)));
+    must(e1);
+  }
+  const touchedIds = new Set(created.map(tx => tx.accountId));
+  await Promise.all(Array.from(touchedIds).map(async (accId) => {
+    const acc = fakeStore.accounts.find(a => a.id === accId);
+    const row = accountToRow(acc, userId); delete row.id; delete row.user_id;
+    const { error } = await sb.from('accounts').update(row).eq('id', accId).eq('user_id', userId);
+    must(error);
+  }));
+  const newCats = fakeStore.categories.filter(c => !categoriesBefore.includes(c));
+  if (newCats.length) {
+    const { error } = await sb.from('user_categories').insert(newCats.map(name => ({ id: finance.genId(), user_id: userId, name })));
+    must(error);
+  }
+
+  return { imported: created.length, failed };
+}
+
 async function updateTransaction(sb, userId, id, patch) {
   const [{ data: txRow, error: e0 }, { data: accRows, error: e1 }, catRes] = await Promise.all([
     sb.from('transactions').select('*').eq('id', id).eq('user_id', userId).maybeSingle(),
@@ -984,7 +1034,7 @@ async function completeSetup(sb, userId) {
 module.exports = {
   loadUserStore,
   addAccount, updateAccount, deleteAccount,
-  addTransaction, updateTransaction, deleteTransaction,
+  addTransaction, updateTransaction, deleteTransaction, addTransactionsBulk,
   addPocket, updatePocket, deletePocket, movePocket, deletePocketContribution,
   addCardCharge, deleteCardCharge, markCardChargeInstallment, payCard, deleteCardPayment,
   addDeuda, updateDeuda, deleteDeuda, payDeuda, unPayDeuda,

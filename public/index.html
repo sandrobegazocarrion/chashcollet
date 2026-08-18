@@ -7,8 +7,15 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'%3E%3Cpath d='M48 162 C38 118, 38 62, 78 52 C120 42, 98 116, 126 120 C155 124, 164 88, 158 42' stroke='%231a2338' stroke-width='30' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<!-- Solo el grid de Bootstrap (container/row/col-*), sin su reboot ni sus componentes —
+     así no pisa ninguno de los estilos propios de NUVA (botones, inputs, tarjetas, etc.).
+     Se usa para estandarizar el layout responsive en vez de media queries sueltas. -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap-grid.min.css">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- Lee el texto de PDFs de estados de cuenta enteramente en el navegador — el PDF nunca
+     se sube al servidor, solo los movimientos que el usuario revisa y confirma. -->
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <script type="module" src="https://unpkg.com/@phosphor-icons/web"></script>
@@ -73,6 +80,12 @@
           <div class="pw-strength-bar"><div class="pw-strength-fill" id="authPwStrengthFill"></div></div>
           <span class="pw-strength-label" id="authPwStrengthLabel"></span>
         </div>
+        <ul class="pw-rules" id="authPwRules" style="display:none;">
+          <li id="authPwRuleLen"><i class="ph ph-circle"></i> Mínimo 8 caracteres</li>
+          <li id="authPwRuleUpper"><i class="ph ph-circle"></i> Una letra mayúscula</li>
+          <li id="authPwRuleNum"><i class="ph ph-circle"></i> Un número</li>
+          <li id="authPwRuleSym"><i class="ph ph-circle"></i> Un símbolo (ej. ! @ # $ %)</li>
+        </ul>
       </div>
       <div class="field" id="authPasswordConfirmField" style="display:none;">
         <label for="authPasswordConfirm">Confirmar contraseña</label>
@@ -233,19 +246,25 @@
             </div>
           </section>
 
-          <section class="summary-grid" id="statsRow">
-            <div class="card month-compare-card">
-              <div class="skel-line" style="width:90px;height:11px;margin-bottom:16px;"></div>
-              <div class="skel-line" style="width:100%;height:8px;border-radius:999px;margin-bottom:14px;"></div>
-              <div class="skel-line" style="width:70%;height:14px;"></div>
+          <section class="summary-grid row g-3" id="statsRow">
+            <div class="col-12 col-lg-6">
+              <div class="card month-compare-card">
+                <div class="skel-line" style="width:90px;height:11px;margin-bottom:16px;"></div>
+                <div class="skel-line" style="width:100%;height:8px;border-radius:999px;margin-bottom:14px;"></div>
+                <div class="skel-line" style="width:70%;height:14px;"></div>
+              </div>
             </div>
-            <div class="card summary-card">
-              <div class="skel-line" style="width:80px;height:11px;margin-bottom:12px;"></div>
-              <div class="skel-line" style="width:100px;height:24px;"></div>
+            <div class="col-12 col-sm-6 col-lg-3">
+              <div class="card summary-card">
+                <div class="skel-line" style="width:80px;height:11px;margin-bottom:12px;"></div>
+                <div class="skel-line" style="width:100px;height:24px;"></div>
+              </div>
             </div>
-            <div class="card summary-card">
-              <div class="skel-line" style="width:80px;height:11px;margin-bottom:12px;"></div>
-              <div class="skel-line" style="width:70px;height:24px;"></div>
+            <div class="col-12 col-sm-6 col-lg-3">
+              <div class="card summary-card">
+                <div class="skel-line" style="width:80px;height:11px;margin-bottom:12px;"></div>
+                <div class="skel-line" style="width:70px;height:24px;"></div>
+              </div>
             </div>
           </section>
 
@@ -253,35 +272,43 @@
                pantalla, así que van justo después del resumen, antes de cualquier
                alerta o consejo (que son de apoyo, no el motivo por el que alguien
                entra a Inicio). -->
-          <div class="charts-grid">
-            <div class="card chart-card">
-              <div class="chart-head">
-                <h2>Ingresos vs. gastos</h2>
-                <div class="chart-legend" id="lineChartLegend"></div>
+          <div class="charts-grid row g-3">
+            <div class="col-12 col-lg-7">
+              <div class="card chart-card">
+                <div class="chart-head">
+                  <h2>Ingresos vs. gastos</h2>
+                  <div class="chart-legend" id="lineChartLegend"></div>
+                </div>
+                <div class="view-switch sm" role="tablist" id="lineChartModeSwitch" style="margin-bottom:10px;">
+                  <button type="button" class="view-tab active" data-action="set-linechart-mode" data-mode="month" role="tab" aria-selected="true">6 meses</button>
+                  <button type="button" class="view-tab" data-action="set-linechart-mode" data-mode="week" role="tab" aria-selected="false">Por semana</button>
+                  <button type="button" class="view-tab" data-action="set-linechart-mode" data-mode="day" role="tab" aria-selected="false">Por día</button>
+                </div>
+                <div class="chart-wrap" id="lineChartWrap"><canvas id="lineChart"></canvas></div>
               </div>
-              <div class="view-switch sm" role="tablist" id="lineChartModeSwitch" style="margin-bottom:10px;">
-                <button type="button" class="view-tab active" data-action="set-linechart-mode" data-mode="month" role="tab" aria-selected="true">6 meses</button>
-                <button type="button" class="view-tab" data-action="set-linechart-mode" data-mode="week" role="tab" aria-selected="false">Por semana</button>
-                <button type="button" class="view-tab" data-action="set-linechart-mode" data-mode="day" role="tab" aria-selected="false">Por día</button>
-              </div>
-              <div class="chart-wrap" id="lineChartWrap"><canvas id="lineChart"></canvas></div>
             </div>
-            <div class="card chart-card">
-              <h2>Gastos por categoría</h2>
-              <div class="donut-wrap" id="doughnutChartWrap"></div>
+            <div class="col-12 col-lg-5">
+              <div class="card chart-card">
+                <h2>Gastos por categoría</h2>
+                <div class="donut-wrap" id="doughnutChartWrap"></div>
+              </div>
             </div>
           </div>
 
-          <div class="dash-mini-row" id="dashMiniRow">
-            <div class="mini-card">
-              <div class="skel-line" style="width:26px;height:26px;border-radius:50%;margin-bottom:12px;"></div>
-              <div class="skel-line" style="width:100px;height:13px;margin-bottom:8px;"></div>
-              <div class="skel-line" style="width:80%;height:12px;"></div>
+          <div class="dash-mini-row row g-3" id="dashMiniRow">
+            <div class="col-12 col-sm-6">
+              <div class="mini-card">
+                <div class="skel-line" style="width:26px;height:26px;border-radius:50%;margin-bottom:12px;"></div>
+                <div class="skel-line" style="width:100px;height:13px;margin-bottom:8px;"></div>
+                <div class="skel-line" style="width:80%;height:12px;"></div>
+              </div>
             </div>
-            <div class="mini-card dark">
-              <div class="skel-line" style="width:26px;height:26px;border-radius:50%;margin-bottom:12px;"></div>
-              <div class="skel-line" style="width:110px;height:13px;margin-bottom:8px;"></div>
-              <div class="skel-line" style="width:80%;height:12px;"></div>
+            <div class="col-12 col-sm-6">
+              <div class="mini-card dark">
+                <div class="skel-line" style="width:26px;height:26px;border-radius:50%;margin-bottom:12px;"></div>
+                <div class="skel-line" style="width:110px;height:13px;margin-bottom:8px;"></div>
+                <div class="skel-line" style="width:80%;height:12px;"></div>
+              </div>
             </div>
           </div>
 
@@ -299,7 +326,12 @@
     <!-- TRANSACCIONES -->
     <section id="tab-transacciones" class="tab-panel">
       <h1 class="section-title">Transacciones
-        <button class="btn btn-primary" data-action="open-add-tx">+ Nueva transacción</button>
+        <span class="section-title-actions">
+          <button class="btn btn-ghost" data-action="open-import">
+            <i class="ph ph-upload-simple"></i> Importar
+          </button>
+          <button class="btn btn-primary" data-action="open-add-tx">+ Nueva transacción</button>
+        </span>
       </h1>
 
       <div class="filter-bar">

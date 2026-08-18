@@ -406,8 +406,9 @@
     )).filter(el => el.offsetParent !== null);
   }
 
-  function openModal(html){
+  function openModal(html, opts){
     modalBody.innerHTML = html;
+    modalDialog.classList.toggle('import-modal', !!(opts && opts.wide));
     modalOverlay.classList.add('open');
     _modalReturnFocusTo = document.activeElement;
     const heading = modalBody.querySelector('h3, h2');
@@ -745,18 +746,22 @@
           ? `${escapeHtml(urgent.name)} vence hoy · ${formatMoney(urgent.amount)}.`
           : `${escapeHtml(urgent.name)} vence en ${urgent.days} día${urgent.days===1?'':'s'} · ${formatMoney(urgent.amount)}.`;
     document.getElementById('dashMiniRow').innerHTML = `
-      <button type="button" class="mini-card${revealClass}" data-action="switch-tab" data-tab="${urgent?urgent.tab:'calendario'}">
-        <span class="mini-icon"><i class="ph ph-calendar-blank"></i></span>
-        <p class="mini-title">${urgent ? 'Vence pronto' : 'Al día'}</p>
-        <p class="mini-text">${alertText}</p>
-        <span class="mini-link">Ir al calendario <i class="ph ph-arrow-right"></i></span>
-      </button>
-      <button type="button" class="mini-card dark${revealClass}" data-action="open-settings">
-        <span class="mini-icon"><i class="ph ph-telegram-logo"></i></span>
-        <p class="mini-title">Bot de Telegram</p>
-        <p class="mini-text">Registra gastos y consulta tu resumen sin abrir la app.</p>
-        <span class="mini-link">Ver cómo conectarlo <i class="ph ph-arrow-right"></i></span>
-      </button>
+      <div class="col-12 col-sm-6">
+        <button type="button" class="mini-card${revealClass}" data-action="switch-tab" data-tab="${urgent?urgent.tab:'calendario'}">
+          <span class="mini-icon"><i class="ph ph-calendar-blank"></i></span>
+          <p class="mini-title">${urgent ? 'Vence pronto' : 'Al día'}</p>
+          <p class="mini-text">${alertText}</p>
+          <span class="mini-link">Ir al calendario <i class="ph ph-arrow-right"></i></span>
+        </button>
+      </div>
+      <div class="col-12 col-sm-6">
+        <button type="button" class="mini-card dark${revealClass}" data-action="open-settings">
+          <span class="mini-icon"><i class="ph ph-telegram-logo"></i></span>
+          <p class="mini-title">Bot de Telegram</p>
+          <p class="mini-text">Registra gastos y consulta tu resumen sin abrir la app.</p>
+          <span class="mini-link">Ver cómo conectarlo <i class="ph ph-arrow-right"></i></span>
+        </button>
+      </div>
     `;
 
     // Fila secundaria: comparación de ingresos/gastos, gasto seguro hoy, tasa de ahorro
@@ -777,25 +782,31 @@
     const safeToSpend = t.totalLiquid - t.totalDeuda - pocketsRemaining;
 
     document.getElementById('statsRow').innerHTML = `
-      <div class="card month-compare-card${revealClass}">
-        <div class="mc-head">
-          <span class="mc-title">${monthLabel.charAt(0).toUpperCase()+monthLabel.slice(1)}</span>
-          <button type="button" class="mc-balance" style="color:${monthNet>=0?'var(--green)':'var(--red)'};background:none;border:none;font-family:inherit;cursor:pointer;" data-action="open-subview" data-view="balance">${digitSpans((monthNet>=0?'+':'')+formatMoney(monthNet), 'mcBalance')}</button>
-        </div>
-        <div class="mc-bar-wrap">
-          <div class="mc-bar-in" style="width:${inPct}%"></div>
-          <div class="mc-bar-out" style="width:${outPct}%"></div>
-        </div>
-        <div class="mc-labels">
-          <button type="button" class="mc-label in" data-action="open-subview" data-view="ingresos">↑ <span class="num">${digitSpans(formatMoney(monthIn), 'monthIn')}</span><span class="mc-sub">Ingresos del mes</span></button>
-          <button type="button" class="mc-label out" style="text-align:right;" data-action="open-subview" data-view="gastos">↓ <span class="num">${digitSpans(formatMoney(monthOut), 'monthOut')}</span><span class="mc-sub">Gastos del mes</span></button>
+      <div class="col-12 col-lg-6">
+        <div class="card month-compare-card${revealClass}">
+          <div class="mc-head">
+            <span class="mc-title">${monthLabel.charAt(0).toUpperCase()+monthLabel.slice(1)}</span>
+            <button type="button" class="mc-balance" style="color:${monthNet>=0?'var(--green)':'var(--red)'};background:none;border:none;font-family:inherit;cursor:pointer;" data-action="open-subview" data-view="balance">${digitSpans((monthNet>=0?'+':'')+formatMoney(monthNet), 'mcBalance')}</button>
+          </div>
+          <div class="mc-bar-wrap">
+            <div class="mc-bar-in" style="width:${inPct}%"></div>
+            <div class="mc-bar-out" style="width:${outPct}%"></div>
+          </div>
+          <div class="mc-labels">
+            <button type="button" class="mc-label in" data-action="open-subview" data-view="ingresos">↑ <span class="num">${digitSpans(formatMoney(monthIn), 'monthIn')}</span><span class="mc-sub">Ingresos del mes</span></button>
+            <button type="button" class="mc-label out" style="text-align:right;" data-action="open-subview" data-view="gastos">↓ <span class="num">${digitSpans(formatMoney(monthOut), 'monthOut')}</span><span class="mc-sub">Gastos del mes</span></button>
+          </div>
         </div>
       </div>
-      <div class="card summary-card safe${revealClass}" title="Líquido − pagos pendientes del mes − ahorro que aún falta apartar en tus chanchitos">
-        <div class="label">Balance disponible</div>
-        <div class="value num" style="color:${safeToSpend>=0?'var(--green)':'var(--red)'}">${digitSpans(formatMoney(safeToSpend), 'safeToSpend')}</div>
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="card summary-card safe${revealClass}" title="Líquido − pagos pendientes del mes − ahorro que aún falta apartar en tus chanchitos">
+          <div class="label">Balance disponible</div>
+          <div class="value num" style="color:${safeToSpend>=0?'var(--green)':'var(--red)'}">${digitSpans(formatMoney(safeToSpend), 'safeToSpend')}</div>
+        </div>
       </div>
-      <div class="card summary-card rate${revealClass}"><div class="label">Tasa de ahorro</div><div class="value num">${digitSpans(savingsRate===null?'—':savingsRate+'%', 'savingsRate')}</div></div>
+      <div class="col-12 col-sm-6 col-lg-3">
+        <div class="card summary-card rate${revealClass}"><div class="label">Tasa de ahorro</div><div class="value num">${digitSpans(savingsRate===null?'—':savingsRate+'%', 'savingsRate')}</div></div>
+      </div>
     `;
 
     renderTip();
@@ -4123,6 +4134,631 @@
     toast('Excel descargado ✅');
   }
 
+  /* ---------------- Importar movimientos (Excel/CSV/PDF) ----------------
+   * Todo el parseo pasa en el navegador — el archivo original nunca se sube al
+   * servidor, solo los movimientos que el usuario revisó y confirmó en la tabla
+   * de esta pantalla (ver POST /api/transactions/bulk). */
+  const IMPORT_FIELD_OPTIONS = [
+    { v: 'ignore', label: 'Ignorar' },
+    { v: 'date', label: 'Fecha' },
+    { v: 'description', label: 'Descripción' },
+    { v: 'amount', label: 'Monto' },
+    { v: 'type', label: 'Tipo (ingreso/gasto)' },
+    { v: 'category', label: 'Categoría' }
+  ];
+  let _importAccountId = null;
+
+  function guessFieldForHeader(h){
+    const s = String(h||'').toLowerCase();
+    if(/fecha|date/.test(s)) return 'date';
+    if(/descrip|concepto|detalle|glosa/.test(s)) return 'description';
+    if(/monto|importe|amount|valor/.test(s)) return 'amount';
+    if(/^tipo$|type/.test(s)) return 'type';
+    if(/categor/.test(s)) return 'category';
+    return 'ignore';
+  }
+
+  // Perú usa punto decimal y coma de miles (igual que formatMoney) — se quitan
+  // las comas y símbolos, y se detectan negativos con "-" o entre paréntesis
+  // (formato contable típico de estados de cuenta: "(150.00)" = -150.00).
+  function importParseAmount(raw){
+    if(raw === null || raw === undefined) return null;
+    if(typeof raw === 'number') return raw;
+    let s = String(raw).trim();
+    if(!s) return null;
+    let neg = false;
+    if(/^\(.*\)$/.test(s)){ neg = true; s = s.slice(1, -1); }
+    if(/^-/.test(s)) neg = true;
+    s = s.replace(/[^\d.,-]/g, '').replace(/^-/, '').replace(/,/g, '');
+    const n = parseFloat(s);
+    if(isNaN(n)) return null;
+    return neg ? -Math.abs(n) : n;
+  }
+
+  function importParseDate(raw){
+    if(raw === null || raw === undefined || raw === '') return null;
+    if(typeof raw === 'number'){
+      if(!window.XLSX || !XLSX.SSF) return null;
+      const d = XLSX.SSF.parse_date_code(raw);
+      return d ? `${d.y}-${String(d.m).padStart(2,'0')}-${String(d.d).padStart(2,'0')}` : null;
+    }
+    const s = String(raw).trim();
+    let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(m) return `${m[1]}-${m[2].padStart(2,'0')}-${m[3].padStart(2,'0')}`;
+    // dd/mm/yyyy — Perú usa día primero, no formato estadounidense mm/dd.
+    m = s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+    if(m){
+      let [, d, mo, y] = m;
+      if(y.length === 2) y = (Number(y) < 50 ? '20' : '19') + y;
+      return `${y}-${mo.padStart(2,'0')}-${d.padStart(2,'0')}`;
+    }
+    return null;
+  }
+
+  function importNormalizeType(raw, amount){
+    const s = String(raw||'').toLowerCase();
+    if(/ingreso|abono|cr[eé]dito|dep[oó]sito|\bdep\b/.test(s)) return 'ingreso';
+    if(/gasto|cargo|d[eé]bito|retiro|compra/.test(s)) return 'gasto';
+    if(amount != null) return amount < 0 ? 'gasto' : 'ingreso';
+    return 'gasto';
+  }
+
+  function importNormalizeCandidate(raw){
+    return {
+      date: raw.date || '',
+      description: String(raw.description || '').trim().slice(0, 300),
+      amount: raw.amount == null ? null : Math.abs(raw.amount),
+      type: importNormalizeType(raw.type, raw.amount),
+      category: raw.category || 'Otros'
+    };
+  }
+
+  function categoryOptionsSimple(selected){
+    const cats = data.categories.length ? data.categories : ['Otros'];
+    const sel = cats.includes(selected) ? selected : (cats.includes('Otros') ? 'Otros' : cats[0]);
+    return cats.map(c => `<option value="${escapeHtml(c)}" ${c===sel?'selected':''}>${escapeHtml(c)}</option>`).join('');
+  }
+
+  // 'accounts' (cuentas + saldo inicial, sirve para migrar lo que el cliente ya
+  // tenía en su Excel) o 'transactions' (movimientos con fecha) — son datos de
+  // forma completamente distinta, así que cada uno tiene su propio mapeo/tabla.
+  let _importMode = 'transactions';
+
+  function openImportModal(){
+    openModal(`
+      <h2>Importar desde Excel/PDF</h2>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px;">¿Qué quieres traer a NUVA?</p>
+      <div class="field" style="gap:10px;">
+        <button type="button" class="btn btn-ghost" id="importPickAccounts" style="justify-content:flex-start;padding:16px;height:auto;text-align:left;">
+          <i class="ph ph-bank" style="font-size:20px;margin-right:10px;"></i>
+          <span><strong style="display:block;">Mis cuentas y saldos actuales</strong><span style="font-size:12px;color:var(--text-dim);font-weight:400;">Para arrancar en NUVA sin partir de cero — crea cuentas con el saldo de hoy.</span></span>
+        </button>
+        <button type="button" class="btn btn-ghost" id="importPickTx" style="justify-content:flex-start;padding:16px;height:auto;text-align:left;">
+          <i class="ph ph-receipt" style="font-size:20px;margin-right:10px;"></i>
+          <span><strong style="display:block;">Historial de movimientos</strong><span style="font-size:12px;color:var(--text-dim);font-weight:400;">Ingresos/gastos con fecha, de un Excel/CSV o un PDF de estado de cuenta.</span></span>
+        </button>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="importCancelBtn0">Cancelar</button>
+      </div>
+    `, { wide: true });
+    document.getElementById('importCancelBtn0').addEventListener('click', closeModal);
+    document.getElementById('importPickAccounts').addEventListener('click', () => { _importMode = 'accounts'; openImportAccountsUploadStep(); });
+    document.getElementById('importPickTx').addEventListener('click', () => { _importMode = 'transactions'; openImportTxUploadStep(); });
+  }
+
+  function openImportAccountsUploadStep(){
+    openModal(`
+      <h2>Importar cuentas y saldos</h2>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">
+        Sube el Excel/CSV donde tienes tus cuentas con su saldo (ej: "Cuenta de ahorros, 2500").
+        Vas a poder revisar y corregir cada una antes de crear nada — el archivo nunca se sube
+        a ningún servidor, todo se procesa en tu navegador.
+      </p>
+      <label class="import-dropzone" for="importFileInput" id="importDropzone">
+        <div class="big"><i class="ph ph-upload-simple"></i></div>
+        <p><strong>Haz clic para elegir un archivo</strong> o arrástralo aquí</p>
+        <p>Excel (.xlsx, .xls) o CSV</p>
+        <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv" style="display:none;">
+      </label>
+      <div class="auth-error" id="importUploadError" style="display:none;margin-top:12px;"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="importBackBtn0">Atrás</button>
+      </div>
+    `, { wide: true });
+    document.getElementById('importBackBtn0').addEventListener('click', openImportModal);
+    wireImportDropzone();
+  }
+
+  function openImportTxUploadStep(){
+    if(data.accounts.length === 0){ toast('Primero crea una cuenta', 'error'); openImportModal(); return; }
+    openModal(`
+      <h2>Importar movimientos</h2>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px;">
+        Sube un Excel/CSV con tus movimientos, o un PDF de tu estado de cuenta. Vas a poder
+        revisar y corregir cada movimiento antes de guardar nada — el archivo nunca se sube
+        a ningún servidor, todo se procesa en tu navegador.
+      </p>
+      <div class="field" style="margin-bottom:14px;">
+        <label>Cuenta destino</label>
+        <select id="importAccountSelect">${accountOptionsHtml()}</select>
+      </div>
+      <label class="import-dropzone" for="importFileInput" id="importDropzone">
+        <div class="big"><i class="ph ph-upload-simple"></i></div>
+        <p><strong>Haz clic para elegir un archivo</strong> o arrástralo aquí</p>
+        <p>Excel (.xlsx, .xls), CSV o PDF</p>
+        <input type="file" id="importFileInput" accept=".xlsx,.xls,.csv,.pdf" style="display:none;">
+      </label>
+      <div class="auth-error" id="importUploadError" style="display:none;margin-top:12px;"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="importBackBtn0">Atrás</button>
+      </div>
+    `, { wide: true });
+    _importAccountId = document.getElementById('importAccountSelect').value;
+    document.getElementById('importAccountSelect').addEventListener('change', (e)=>{ _importAccountId = e.target.value; });
+    document.getElementById('importBackBtn0').addEventListener('click', openImportModal);
+    wireImportDropzone();
+  }
+
+  function wireImportDropzone(){
+    const dropzone = document.getElementById('importDropzone');
+    const fileInput = document.getElementById('importFileInput');
+    ['dragover','dragleave','drop'].forEach(evt=>{
+      dropzone.addEventListener(evt, (e)=>{
+        e.preventDefault();
+        dropzone.classList.toggle('drag', evt === 'dragover');
+        if(evt === 'drop' && e.dataTransfer.files[0]) handleImportFile(e.dataTransfer.files[0]);
+      });
+    });
+    fileInput.addEventListener('change', ()=>{ if(fileInput.files[0]) handleImportFile(fileInput.files[0]); });
+  }
+
+  async function handleImportFile(file){
+    const name = file.name.toLowerCase();
+    try{
+      if(name.endsWith('.pdf')){
+        if(_importMode === 'accounts') throw new Error('Para cuentas y saldos usa un Excel/CSV, no un PDF.');
+        await handleImportPdf(file);
+      }
+      else if(name.endsWith('.xlsx') || name.endsWith('.xls') || name.endsWith('.csv')) await handleImportExcel(file);
+      else throw new Error('Formato no soportado. Usa Excel (.xlsx/.xls), CSV o PDF.');
+    }catch(e){
+      const errBox = document.getElementById('importUploadError');
+      if(errBox){ errBox.textContent = e.message; errBox.style.display = 'block'; }
+      else toast(e.message, 'error');
+    }
+  }
+
+  async function handleImportExcel(file){
+    if(typeof XLSX === 'undefined') throw new Error('Librería Excel no disponible (revisa tu conexión).');
+    const isCsv = file.name.toLowerCase().endsWith('.csv');
+    const wb = isCsv
+      ? XLSX.read(await file.text(), { type: 'string' })
+      : XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: false });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+    if(!rows.length) throw new Error('El archivo está vacío.');
+    const headerRow = rows[0].map(h => String(h == null ? '' : h).trim());
+    const dataRows = rows.slice(1).filter(r => r.some(c => c !== '' && c !== null && c !== undefined));
+    if(!dataRows.length) throw new Error('No se encontraron filas de datos debajo del encabezado.');
+    if(_importMode === 'accounts') renderImportAccountsMappingStep(headerRow, dataRows);
+    else renderImportMappingStep(headerRow, dataRows);
+  }
+
+  function renderImportMappingStep(headers, rows){
+    openModal(`
+      <h2>Importar movimientos — mapear columnas</h2>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:10px;">
+        Dile a NUVA qué es cada columna de tu archivo (<b>${rows.length}</b> fila${rows.length===1?'':'s'} detectada${rows.length===1?'':'s'}).
+      </p>
+      <div class="import-map-grid" id="importMapGrid">
+        ${headers.map((h, i) => `
+          <div class="import-map-row">
+            <select data-col="${i}">
+              ${IMPORT_FIELD_OPTIONS.map(o=>`<option value="${o.v}" ${guessFieldForHeader(h)===o.v?'selected':''}>${o.label}</option>`).join('')}
+            </select>
+            <span class="sample" title="${escapeHtml(h)}">${escapeHtml(h || `Columna ${i+1}`)} — ej: "${escapeHtml(String(rows[0][i] == null ? '' : rows[0][i]))}"</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="auth-error" id="importMapError" style="display:none;"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="importBackBtn">Atrás</button>
+        <button type="button" class="btn btn-primary" id="importMapNextBtn">Continuar</button>
+      </div>
+    `, { wide: true });
+    document.getElementById('importBackBtn').addEventListener('click', openImportTxUploadStep);
+    document.getElementById('importMapNextBtn').addEventListener('click', ()=>{
+      const mapping = {};
+      document.querySelectorAll('#importMapGrid select').forEach(sel => { mapping[sel.dataset.col] = sel.value; });
+      const mapped = Object.values(mapping);
+      if(!mapped.includes('date') || !mapped.includes('amount')){
+        const err = document.getElementById('importMapError');
+        err.textContent = 'Tienes que mapear al menos una columna de Fecha y una de Monto.';
+        err.style.display = 'block';
+        return;
+      }
+      const candidates = rows.map(r => {
+        const item = { date: '', description: '', amount: null, type: '', category: '' };
+        Object.entries(mapping).forEach(([colIdx, field]) => {
+          if(field === 'ignore') return;
+          const raw = r[Number(colIdx)];
+          if(field === 'amount') item.amount = importParseAmount(raw);
+          else if(field === 'date') item.date = importParseDate(raw) || '';
+          else item[field] = String(raw == null ? '' : raw).trim();
+        });
+        return item;
+      });
+      renderImportStagingStep(candidates);
+    });
+  }
+
+  async function handleImportPdf(file){
+    if(typeof pdfjsLib === 'undefined') throw new Error('No se pudo cargar el lector de PDF (revisa tu conexión).');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/legacy/build/pdf.worker.min.js';
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
+    const lines = [];
+    for(let p = 1; p <= pdf.numPages; p++){
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      const byY = new Map();
+      content.items.forEach(it => {
+        const y = Math.round(it.transform[5]);
+        if(!byY.has(y)) byY.set(y, []);
+        byY.get(y).push(it);
+      });
+      Array.from(byY.entries())
+        .sort((a, b) => b[0] - a[0])
+        .forEach(([, items]) => {
+          const line = items.sort((a, b) => a.transform[4] - b.transform[4]).map(it => it.str).join(' ').replace(/\s+/g, ' ').trim();
+          if(line) lines.push(line);
+        });
+    }
+    const candidates = parseGenericBankLines(lines);
+    if(!candidates.length) throw new Error('No se detectaron movimientos en el PDF. Prueba con un Excel/CSV, o revisa que el PDF tenga texto seleccionable (no una imagen escaneada).');
+    renderImportStagingStep(candidates);
+  }
+
+  // Extracción genérica (sin reglas por banco): busca en cada línea una fecha y un
+  // monto; lo que sobra de la línea es la descripción. Es best-effort a propósito —
+  // por eso el paso siguiente siempre es una tabla editable, nunca un import directo.
+  const IMPORT_DATE_RE = /(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})/;
+  const IMPORT_AMOUNT_RE = /-?\(?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})\)?/g;
+
+  function parseGenericBankLines(lines){
+    const out = [];
+    lines.forEach(line => {
+      const dateMatch = line.match(IMPORT_DATE_RE);
+      if(!dateMatch) return;
+      const withoutDate = line.replace(dateMatch[0], ' ');
+      const amounts = withoutDate.match(IMPORT_AMOUNT_RE);
+      if(!amounts || !amounts.length) return;
+      let desc = withoutDate;
+      amounts.forEach(a => { desc = desc.replace(a, ' '); });
+      desc = desc.replace(/\s+/g, ' ').trim();
+      const amount = importParseAmount(amounts[0]);
+      if(amount === null || amount === 0) return;
+      out.push({ date: importParseDate(dateMatch[0]), description: desc, amount, type: '', category: '' });
+    });
+    return out;
+  }
+
+  function importRowHtml(r, i){
+    return `
+      <tr data-i="${i}">
+        <td><input type="checkbox" checked></td>
+        <td><input type="date" value="${escapeHtml(r.date || '')}"></td>
+        <td>
+          <div class="import-type-toggle" data-value="${r.type}">
+            <button type="button" class="${r.type==='ingreso'?'active ingreso':''}" data-v="ingreso">Ingreso</button>
+            <button type="button" class="${r.type==='gasto'?'active gasto':''}" data-v="gasto">Gasto</button>
+          </div>
+        </td>
+        <td><input type="text" value="${escapeHtml(r.description || '')}" maxlength="300"></td>
+        <td><input type="number" min="0" step="0.01" value="${r.amount != null ? r.amount : ''}"></td>
+        <td><select class="import-cat">${categoryOptionsSimple(r.category)}</select></td>
+        <td><button type="button" class="icon-btn xs" data-import-remove title="Quitar fila" aria-label="Quitar fila"><i class="ph ph-x"></i></button></td>
+      </tr>`;
+  }
+
+  function updateImportCount(){
+    const total = document.querySelectorAll('#importTableBody tr').length;
+    const included = document.querySelectorAll('#importTableBody tr input[type="checkbox"]:checked').length;
+    const elIncluded = document.getElementById('importCountIncluded');
+    const elTotal = document.getElementById('importCountTotal');
+    if(elIncluded) elIncluded.textContent = included;
+    if(elTotal) elTotal.textContent = total;
+  }
+
+  function renderImportStagingStep(candidates){
+    const normalized = candidates.map(importNormalizeCandidate);
+    const accName = (data.accounts.find(a => a.id === _importAccountId) || {}).name || '';
+    openModal(`
+      <h2>Importar movimientos — revisa antes de guardar</h2>
+      <div class="import-summary">
+        <span><b id="importCountIncluded">0</b> de <b id="importCountTotal">0</b> incluidos</span>
+        <span>Cuenta destino: <b>${escapeHtml(accName)}</b></span>
+      </div>
+      <div class="import-table-wrap">
+        <table class="import-table">
+          <thead><tr><th></th><th>Fecha</th><th>Tipo</th><th>Descripción</th><th>Monto</th><th>Categoría</th><th></th></tr></thead>
+          <tbody id="importTableBody">${normalized.map(importRowHtml).join('')}</tbody>
+        </table>
+      </div>
+      <div class="auth-error" id="importStageError" style="display:none;margin-top:10px;"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="importBackBtn2">Atrás</button>
+        <button type="button" class="btn btn-primary" id="importConfirmBtn">
+          <span class="btn-spinner" id="importConfirmSpinner" style="display:none;"></span>
+          Importar movimientos
+        </button>
+      </div>
+    `, { wide: true });
+
+    document.getElementById('importBackBtn2').addEventListener('click', openImportTxUploadStep);
+
+    const tbody = document.getElementById('importTableBody');
+    tbody.addEventListener('click', (e) => {
+      const delBtn = e.target.closest('[data-import-remove]');
+      if(delBtn){ delBtn.closest('tr').remove(); updateImportCount(); }
+    });
+    tbody.addEventListener('change', (e) => {
+      if(e.target.matches('input[type="checkbox"]')){
+        e.target.closest('tr').classList.toggle('row-excluded', !e.target.checked);
+        updateImportCount();
+      }
+    });
+    tbody.querySelectorAll('.import-type-toggle button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const wrap = btn.closest('.import-type-toggle');
+        wrap.querySelectorAll('button').forEach(b => b.classList.remove('active', 'ingreso', 'gasto'));
+        btn.classList.add('active', btn.dataset.v);
+        wrap.dataset.value = btn.dataset.v;
+      });
+    });
+    updateImportCount();
+
+    document.getElementById('importConfirmBtn').addEventListener('click', async () => {
+      const errBox = document.getElementById('importStageError');
+      errBox.style.display = 'none';
+      const rows = Array.from(document.querySelectorAll('#importTableBody tr'));
+      const items = [];
+      let invalidCount = 0;
+      rows.forEach(tr => {
+        tr.classList.remove('row-invalid');
+        if(!tr.querySelector('input[type="checkbox"]').checked) return;
+        const date = tr.querySelector('input[type="date"]').value;
+        const type = tr.querySelector('.import-type-toggle').dataset.value;
+        const description = tr.querySelector('input[type="text"]').value.trim();
+        const amount = parseFloat(tr.querySelector('input[type="number"]').value);
+        const category = tr.querySelector('select.import-cat').value;
+        if(!date || !amount || amount <= 0){
+          tr.classList.add('row-invalid');
+          invalidCount++;
+          return;
+        }
+        items.push({ type, amount, date, description, category, accountId: _importAccountId });
+      });
+      if(invalidCount){
+        errBox.textContent = `${invalidCount} fila(s) tienen fecha o monto inválido — corrígelas o desmárcalas.`;
+        errBox.style.display = 'block';
+        return;
+      }
+      if(!items.length){
+        errBox.textContent = 'No hay movimientos marcados para importar.';
+        errBox.style.display = 'block';
+        return;
+      }
+      const btn = document.getElementById('importConfirmBtn');
+      const spinner = document.getElementById('importConfirmSpinner');
+      btn.disabled = true; spinner.style.display = 'inline-block';
+      try{
+        const res = await apiCall('POST', '/api/transactions/bulk', { items });
+        closeModal();
+        if(res.failed && res.failed.length){
+          toast(`${res.imported} importados, ${res.failed.length} con error.`, 'error');
+        } else {
+          toast(`${res.imported} movimiento${res.imported===1?'':'s'} importado${res.imported===1?'':'s'} ✅`);
+        }
+        await refreshAndRender();
+      }catch(err){
+        errBox.textContent = err.message;
+        errBox.style.display = 'block';
+      }finally{
+        btn.disabled = false; spinner.style.display = 'none';
+      }
+    });
+  }
+
+  /* ---------------- Importar cuentas y saldos (migración desde Excel) ---------------- */
+  const IMPORT_ACCOUNT_FIELD_OPTIONS = [
+    { v: 'ignore', label: 'Ignorar' },
+    { v: 'name', label: 'Nombre de la cuenta' },
+    { v: 'balance', label: 'Saldo' },
+    { v: 'type', label: 'Tipo de cuenta' }
+  ];
+
+  function guessFieldForAccountHeader(h){
+    const s = String(h||'').toLowerCase();
+    if(/nombre|cuenta/.test(s)) return 'name';
+    if(/saldo|monto|balance/.test(s)) return 'balance';
+    if(/^tipo$|tipo de cuenta/.test(s)) return 'type';
+    return 'ignore';
+  }
+
+  function guessAccountType(text){
+    const s = String(text||'').toLowerCase();
+    if(/tarjeta|cr[eé]dito/.test(s)) return 'tarjeta';
+    if(/efectivo|cash|caja/.test(s)) return 'efectivo';
+    if(/corriente/.test(s)) return 'corriente';
+    return 'ahorro';
+  }
+
+  function renderImportAccountsMappingStep(headers, rows){
+    openModal(`
+      <h2>Importar cuentas — mapear columnas</h2>
+      <p style="font-size:13px;color:var(--text-dim);margin-bottom:10px;">
+        Dile a NUVA qué es cada columna de tu archivo (<b>${rows.length}</b> fila${rows.length===1?'':'s'} detectada${rows.length===1?'':'s'}).
+      </p>
+      <div class="import-map-grid" id="importMapGrid">
+        ${headers.map((h, i) => `
+          <div class="import-map-row">
+            <select data-col="${i}">
+              ${IMPORT_ACCOUNT_FIELD_OPTIONS.map(o=>`<option value="${o.v}" ${guessFieldForAccountHeader(h)===o.v?'selected':''}>${o.label}</option>`).join('')}
+            </select>
+            <span class="sample" title="${escapeHtml(h)}">${escapeHtml(h || `Columna ${i+1}`)} — ej: "${escapeHtml(String(rows[0][i] == null ? '' : rows[0][i]))}"</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="auth-error" id="importMapError" style="display:none;"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="importBackBtn">Atrás</button>
+        <button type="button" class="btn btn-primary" id="importMapNextBtn">Continuar</button>
+      </div>
+    `, { wide: true });
+    document.getElementById('importBackBtn').addEventListener('click', openImportAccountsUploadStep);
+    document.getElementById('importMapNextBtn').addEventListener('click', ()=>{
+      const mapping = {};
+      document.querySelectorAll('#importMapGrid select').forEach(sel => { mapping[sel.dataset.col] = sel.value; });
+      const mapped = Object.values(mapping);
+      if(!mapped.includes('name') || !mapped.includes('balance')){
+        const err = document.getElementById('importMapError');
+        err.textContent = 'Tienes que mapear al menos una columna de Nombre y una de Saldo.';
+        err.style.display = 'block';
+        return;
+      }
+      const candidates = rows.map(r => {
+        const item = { name: '', balance: null, type: '' };
+        Object.entries(mapping).forEach(([colIdx, field]) => {
+          if(field === 'ignore') return;
+          const raw = r[Number(colIdx)];
+          if(field === 'balance') item.balance = importParseAmount(raw);
+          else item[field] = String(raw == null ? '' : raw).trim();
+        });
+        // Normaliza SIEMPRE (no solo cuando falta): la columna "Tipo" del Excel trae
+        // texto libre ("Ahorro", "Efectivo"...), no el código interno que espera el
+        // <select> (ahorro/efectivo/tarjeta/corriente) — sin esto, ninguna opción
+        // coincidía con el texto crudo y el <select> caía siempre en la primera.
+        item.type = guessAccountType(item.type || item.name);
+        return item;
+      }).filter(item => item.name || item.balance != null);
+      renderImportAccountsStagingStep(candidates);
+    });
+  }
+
+  function importAccountRowHtml(r, i){
+    return `
+      <tr data-i="${i}">
+        <td><input type="checkbox" checked></td>
+        <td><input type="text" value="${escapeHtml(r.name || '')}" maxlength="80" placeholder="Nombre de la cuenta"></td>
+        <td>
+          <select class="import-acc-type">
+            ${Object.entries(ACC_TYPE_LABEL).map(([v,label])=>`<option value="${v}" ${r.type===v?'selected':''}>${label}</option>`).join('')}
+          </select>
+        </td>
+        <td><input type="number" step="0.01" value="${r.balance != null ? r.balance : ''}"></td>
+        <td><button type="button" class="icon-btn xs" data-import-remove title="Quitar fila" aria-label="Quitar fila"><i class="ph ph-x"></i></button></td>
+      </tr>`;
+  }
+
+  function renderImportAccountsStagingStep(candidates){
+    openModal(`
+      <h2>Importar cuentas — revisa antes de crear</h2>
+      <div class="import-summary">
+        <span><b id="importCountIncluded">0</b> de <b id="importCountTotal">0</b> incluidas</span>
+      </div>
+      <div class="import-table-wrap">
+        <table class="import-table">
+          <thead><tr><th></th><th>Nombre</th><th>Tipo</th><th>Saldo</th><th></th></tr></thead>
+          <tbody id="importTableBody">${candidates.map(importAccountRowHtml).join('')}</tbody>
+        </table>
+      </div>
+      <div class="auth-error" id="importStageError" style="display:none;margin-top:10px;"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" id="importBackBtn2">Atrás</button>
+        <button type="button" class="btn btn-primary" id="importConfirmBtn">
+          <span class="btn-spinner" id="importConfirmSpinner" style="display:none;"></span>
+          Crear cuentas
+        </button>
+      </div>
+    `, { wide: true });
+
+    document.getElementById('importBackBtn2').addEventListener('click', openImportAccountsUploadStep);
+
+    const tbody = document.getElementById('importTableBody');
+    tbody.addEventListener('click', (e) => {
+      const delBtn = e.target.closest('[data-import-remove]');
+      if(delBtn){ delBtn.closest('tr').remove(); updateImportCount(); }
+    });
+    tbody.addEventListener('change', (e) => {
+      if(e.target.matches('input[type="checkbox"]')){
+        e.target.closest('tr').classList.toggle('row-excluded', !e.target.checked);
+        updateImportCount();
+      }
+    });
+    updateImportCount();
+
+    document.getElementById('importConfirmBtn').addEventListener('click', async () => {
+      const errBox = document.getElementById('importStageError');
+      errBox.style.display = 'none';
+      const rows = Array.from(document.querySelectorAll('#importTableBody tr'));
+      const items = [];
+      let invalidCount = 0;
+      rows.forEach(tr => {
+        tr.classList.remove('row-invalid');
+        if(!tr.querySelector('input[type="checkbox"]').checked) return;
+        const name = tr.querySelector('input[type="text"]').value.trim();
+        const type = tr.querySelector('select.import-acc-type').value;
+        const balanceRaw = tr.querySelector('input[type="number"]').value;
+        const balance = balanceRaw === '' ? 0 : parseFloat(balanceRaw);
+        if(!name || isNaN(balance) || (type === 'efectivo' && balance < 0)){
+          tr.classList.add('row-invalid');
+          invalidCount++;
+          return;
+        }
+        items.push({ type, name, balance });
+      });
+      if(invalidCount){
+        errBox.textContent = `${invalidCount} fila(s) tienen nombre o saldo inválido — corrígelas o desmárcalas.`;
+        errBox.style.display = 'block';
+        return;
+      }
+      if(!items.length){
+        errBox.textContent = 'No hay cuentas marcadas para crear.';
+        errBox.style.display = 'block';
+        return;
+      }
+      const btn = document.getElementById('importConfirmBtn');
+      const spinner = document.getElementById('importConfirmSpinner');
+      btn.disabled = true; spinner.style.display = 'inline-block';
+      let created = 0;
+      const failed = [];
+      for(const item of items){
+        try{
+          await apiCall('POST', '/api/accounts', item);
+          created++;
+        }catch(err){
+          failed.push({ name: item.name, error: err.message });
+        }
+      }
+      btn.disabled = false; spinner.style.display = 'none';
+      if(failed.length){
+        if(created === 0){
+          errBox.textContent = 'No se pudo crear ninguna cuenta: ' + failed[0].error;
+          errBox.style.display = 'block';
+        } else {
+          closeModal();
+          toast(`${created} cuenta(s) creada(s), ${failed.length} con error.`, 'error');
+        }
+      } else {
+        closeModal();
+        toast(`${created} cuenta${created===1?'':'s'} creada${created===1?'':'s'} ✅`);
+      }
+      if(created > 0) await refreshAndRender();
+    });
+  }
+
   /* ---------------- Global click delegation ---------------- */
   document.body.addEventListener('click', (e)=>{
     const el = e.target.closest('[data-action]');
@@ -4132,6 +4768,7 @@
 
     switch(action){
       case 'next-tip': nextTip(); break;
+      case 'open-import': openImportModal(); break;
       case 'open-add-account': openAddAccountModal(el.dataset.type); break;
       case 'edit-acc': openEditAccountModal(data.accounts.find(a=>a.id===id)); break;
       case 'delete-acc': deleteAccount(id); break;

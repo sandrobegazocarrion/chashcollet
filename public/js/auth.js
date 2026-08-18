@@ -22,6 +22,11 @@
   const pwStrength = document.getElementById('authPwStrength');
   const pwStrengthFill = document.getElementById('authPwStrengthFill');
   const pwStrengthLabel = document.getElementById('authPwStrengthLabel');
+  const pwRules = document.getElementById('authPwRules');
+  const pwRuleLen = document.getElementById('authPwRuleLen');
+  const pwRuleUpper = document.getElementById('authPwRuleUpper');
+  const pwRuleNum = document.getElementById('authPwRuleNum');
+  const pwRuleSym = document.getElementById('authPwRuleSym');
   const errorBox = document.getElementById('authError');
   const submitBtn = document.getElementById('authSubmitBtn');
   const submitLabel = document.getElementById('authSubmitLabel');
@@ -115,17 +120,28 @@
   }
 
   /* ---------------- Fortaleza de contraseña ---------------- */
+  // Reglas obligatorias (no "3 de 4" opcional): mínimo 8 caracteres, mayúscula,
+  // número y símbolo — las cuatro, siempre, por seguridad.
+  const SYMBOL_RE = /[!@#$%^&*(),.?":{}|<>_\-+=]/;
+  function passwordRuleResults(pw){
+    return {
+      len: pw.length >= 8,
+      upper: /[A-Z]/.test(pw),
+      num: /[0-9]/.test(pw),
+      sym: SYMBOL_RE.test(pw)
+    };
+  }
+  function passwordMeetsAllRules(pw){
+    const r = passwordRuleResults(pw);
+    return r.len && r.upper && r.num && r.sym;
+  }
   function passwordStrength(pw){
-    let score = 0;
-    if(pw.length >= 8) score++;
-    if(/[A-Z]/.test(pw)) score++;
-    if(/[0-9]/.test(pw)) score++;
-    if(/[!@#$%^&*(),.?":{}|<>_\-+=]/.test(pw)) score++;
-    return score; // 0-4
+    const r = passwordRuleResults(pw);
+    return (r.len?1:0) + (r.upper?1:0) + (r.num?1:0) + (r.sym?1:0); // 0-4
   }
   function renderPasswordStrength(){
     const pw = passInput.value;
-    if(!pw){ pwStrength.style.display = 'none'; return; }
+    if(!pw){ pwStrength.style.display = 'none'; pwRules.style.display = 'none'; return; }
     pwStrength.style.display = 'flex';
     const score = passwordStrength(pw);
     const levels = [
@@ -139,6 +155,19 @@
     pwStrengthFill.style.background = lvl.color;
     pwStrengthLabel.textContent = lvl.label;
     pwStrengthLabel.style.color = lvl.color;
+
+    // Checklist en vivo: solo tiene sentido en registro (en "reset" ya mostramos
+    // la barra de fuerza, pero el checklist detallado ayuda más al crear la cuenta).
+    if(mode === 'signup'){
+      pwRules.style.display = 'grid';
+      const r = passwordRuleResults(pw);
+      [[pwRuleLen, r.len], [pwRuleUpper, r.upper], [pwRuleNum, r.num], [pwRuleSym, r.sym]].forEach(([el, ok]) => {
+        el.classList.toggle('ok', ok);
+        el.querySelector('i').className = ok ? 'ph ph-check-circle' : 'ph ph-circle';
+      });
+    } else {
+      pwRules.style.display = 'none';
+    }
   }
   passInput.addEventListener('input', () => {
     if(mode === 'signup' || mode === 'reset') renderPasswordStrength();
@@ -183,6 +212,7 @@
     passInput.value = '';
     if(passConfirmInput) passConfirmInput.value = '';
     pwStrength.style.display = 'none';
+    pwRules.style.display = 'none';
 
     // Visibilidad de campos por modo — todos parten ocultos y cada modo prende lo suyo.
     emailField.style.display = 'none';
@@ -346,8 +376,8 @@
       if(mode === 'signup'){
         const profileCheck = validateSignupProfileFields();
         if(profileCheck.error){ setError(profileCheck.error); return; }
-        if(passwordStrength(password) < 3){
-          setError('Tu contraseña es muy débil. Usa al menos 8 caracteres con mayúscula, número y símbolo.');
+        if(!passwordMeetsAllRules(password)){
+          setError('Tu contraseña debe tener al menos 8 caracteres, una mayúscula, un número y un símbolo.');
           return;
         }
         if(password !== passConfirmInput.value){
