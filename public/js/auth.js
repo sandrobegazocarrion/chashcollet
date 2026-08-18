@@ -34,6 +34,8 @@
   const backBtn = document.getElementById('authBackBtn');
   const termsField = document.getElementById('authTermsField');
   const termsCheck = document.getElementById('authTerms');
+  const privacyField = document.getElementById('authPrivacyField');
+  const privacyCheck = document.getElementById('authPrivacy');
   const forgotLinkWrap = document.getElementById('authForgotLinkWrap');
   const forgotBtn = document.getElementById('authForgotBtn');
   const googleBtn = document.getElementById('authGoogleBtn');
@@ -187,6 +189,7 @@
     passField.style.display = 'none';
     passConfirmField.style.display = 'none';
     termsField.style.display = 'none';
+    privacyField.style.display = 'none';
     forgotLinkWrap.style.display = 'none';
     switchWrap.style.display = 'none';
     backWrap.style.display = 'none';
@@ -199,6 +202,7 @@
     emailInput.required = false;
     passInput.required = false;
     termsCheck.checked = false;
+    privacyCheck.checked = false;
     nameInput.value = '';
     birthInput.value = '';
     genderInput.value = '';
@@ -215,6 +219,11 @@
       switchWrap.style.display = 'flex';
       googleBtn.style.display = 'flex';
       divider.style.display = 'flex';
+      // CAPTCHA también en login, no solo en registro: un contador de intentos en
+      // JS se reinicia con solo refrescar la página, así que no protege de verdad
+      // contra fuerza bruta — el token de Turnstile sí, porque lo valida Supabase
+      // en su propio servidor en cada intento, sin importar el estado del cliente.
+      if(captchaSiteKey){ captchaField.style.display = 'block'; ensureCaptchaWidget(); }
     } else if(mode === 'signup'){
       subtitle.textContent = 'Crea tu cuenta para empezar a usar NUVA.';
       submitLabel.textContent = 'Crear cuenta';
@@ -224,10 +233,12 @@
       nameField.style.display = 'block';
       emailField.style.display = 'block'; emailInput.required = true;
       passField.style.display = 'block'; passInput.required = true;
+      passConfirmField.style.display = 'block';
       birthField.style.display = 'block';
       genderField.style.display = 'block';
       { const max = new Date(); max.setFullYear(max.getFullYear() - MIN_AGE_YEARS); birthInput.max = max.toISOString().slice(0, 10); }
       termsField.style.display = 'flex';
+      privacyField.style.display = 'flex';
       switchWrap.style.display = 'flex';
       googleBtn.style.display = 'flex';
       divider.style.display = 'flex';
@@ -339,8 +350,16 @@
           setError('Tu contraseña es muy débil. Usa al menos 8 caracteres con mayúscula, número y símbolo.');
           return;
         }
+        if(password !== passConfirmInput.value){
+          setError('Las contraseñas no coinciden.');
+          return;
+        }
         if(!termsCheck.checked){
-          setError('Debes aceptar los Términos y la Política de Privacidad para crear tu cuenta.');
+          setError('Debes aceptar los Términos y Condiciones para crear tu cuenta.');
+          return;
+        }
+        if(!privacyCheck.checked){
+          setError('Debes aceptar la Política de Privacidad para crear tu cuenta.');
           return;
         }
         if(captchaSiteKey && !captchaToken){
@@ -387,7 +406,14 @@
         // recuperación ya está activa, así que mostramos la app directamente.
         showApp();
       } else {
-        const { error } = await withTimeout(sb.auth.signInWithPassword({ email, password }));
+        if(captchaSiteKey && !captchaToken){
+          setError('Completa la verificación de seguridad para continuar.');
+          return;
+        }
+        const signInOptions = {};
+        if(captchaToken) signInOptions.captchaToken = captchaToken;
+        const { error } = await withTimeout(sb.auth.signInWithPassword({ email, password, options: signInOptions }));
+        ensureCaptchaWidget(); // token de un solo uso: renovar apenas se usa, haya salido bien o mal
         if(error) throw error;
         failedAttempts = 0;
       }
@@ -422,7 +448,11 @@
       const profileCheck = validateSignupProfileFields();
       if(profileCheck.error){ setError(profileCheck.error); return; }
       if(!termsCheck.checked){
-        setError('Debes aceptar los Términos y la Política de Privacidad para crear tu cuenta.');
+        setError('Debes aceptar los Términos y Condiciones para crear tu cuenta.');
+        return;
+      }
+      if(!privacyCheck.checked){
+        setError('Debes aceptar la Política de Privacidad para crear tu cuenta.');
         return;
       }
       stashPendingProfile(profileCheck.data);

@@ -92,9 +92,13 @@
           <option value="prefiero_no_decir">Prefiero no decir</option>
         </select>
       </div>
-      <label class="field" id="authTermsField" style="display:none;flex-direction:row;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--text-dim);">
-        <input type="checkbox" id="authTerms" style="margin-top:2px;">
-        <span>Acepto los <a href="terms.html" target="_blank" rel="noopener">Términos y Condiciones</a> y la <a href="privacy.html" target="_blank" rel="noopener">Política de Privacidad</a>.</span>
+      <label class="field auth-check" id="authTermsField" style="display:none;">
+        <input type="checkbox" id="authTerms">
+        <span>Acepto los <a href="terms.html" target="_blank" rel="noopener">Términos y Condiciones</a>.</span>
+      </label>
+      <label class="field auth-check" id="authPrivacyField" style="display:none;">
+        <input type="checkbox" id="authPrivacy">
+        <span>Acepto la <a href="privacy.html" target="_blank" rel="noopener">Política de Privacidad</a>.</span>
       </label>
       <div id="authCaptchaField" style="display:none;">
         <div id="authCaptcha"></div>

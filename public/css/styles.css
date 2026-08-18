@@ -1084,6 +1084,8 @@
   .btn-google:active{transform:scale(.98);}
   .auth-divider{display:flex;align-items:center;gap:10px;margin:16px 0;font-size:11.5px;color:var(--text-dim);}
   .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+  .auth-check{flex-direction:row;align-items:flex-start;gap:8px;font-size:12.5px;color:var(--text-dim);}
+  .auth-check input{margin-top:2px;}
   .auth-forgot-link{display:flex;justify-content:flex-end;margin-top:-6px;}
   .auth-link-btn{appearance:none;border:none;background:none;color:var(--text-dim);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;padding:0;}
   .auth-link-btn:hover{color:var(--brand);text-decoration:underline;}
