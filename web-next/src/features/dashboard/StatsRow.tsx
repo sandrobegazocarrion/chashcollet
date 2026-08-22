@@ -19,9 +19,13 @@ export function StatsRow({ safeToSpend, savingsRate }: StatsRowProps) {
       </Card>
       <Card>
         <p className="text-sm text-[var(--text-muted)]">Tasa de ahorro</p>
-        <p className="num mt-1 text-xl font-semibold text-[var(--text)]">
-          {savingsRate === null ? '—' : <AnimatedDigits value={`${savingsRate}%`} animationKey="savingsRate" />}
-        </p>
+        {savingsRate === null ? (
+          <p className="mt-1.5 text-[12.5px] leading-relaxed text-[var(--text-faint)]">Registra ingresos este mes para ver tu tasa de ahorro.</p>
+        ) : (
+          <p className="num mt-1 text-xl font-semibold text-[var(--text)]">
+            <AnimatedDigits value={`${savingsRate}%`} animationKey="savingsRate" />
+          </p>
+        )}
       </Card>
     </>
   );

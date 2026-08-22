@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { computeLineChartBuckets, type LineChartMode } from '../../lib/lineChartBuckets';
 import { formatMoney } from '../../lib/finance';
+import { ChartEmptyState } from './ChartEmptyState';
 import type { AppState } from '../../lib/types';
 
 const W = 560;
@@ -68,7 +69,13 @@ export function IncomeExpenseChart({ data }: { data: AppState }) {
       </div>
 
       {data.transactions.length === 0 ? (
-        <p className="py-16 text-center text-sm text-[var(--text-faint)]">Aún no hay transacciones para graficar.</p>
+        <ChartEmptyState icon="ph-chart-line" message="Aún no hay transacciones para graficar." />
+      ) : labels.length < 2 ? (
+        // Con un solo punto (ej. un usuario nuevo con movimientos en un único mes) el
+        // path del SVG queda como un solo "M" sin ningún "L" — no dibuja nada visible,
+        // aunque técnicamente "hay datos". Mejor mostrar un empty-state explícito que
+        // dejar el área en blanco sin explicación.
+        <ChartEmptyState icon="ph-chart-line" message="Con más movimientos aquí verás tu tendencia de ingresos y gastos." />
       ) : (
         <div>
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Ingresos y gastos">

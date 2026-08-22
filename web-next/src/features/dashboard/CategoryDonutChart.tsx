@@ -1,6 +1,7 @@
 import { Card } from '../../components/ui/Card';
 import { categoryColorVar } from '../../lib/categoryColor';
 import { formatMoney } from '../../lib/finance';
+import { ChartEmptyState } from './ChartEmptyState';
 import type { AppState } from '../../lib/types';
 
 // Espeja .donut-wrap (Gastos por categoría): conic-gradient de CSS en vez de
@@ -26,7 +27,7 @@ export function CategoryDonutChart({ data }: { data: AppState }) {
     <Card className="min-h-[320px]">
       <h2 className="mb-3.5 text-sm font-bold text-[var(--text)]">Gastos por categoría</h2>
       {cats.length === 0 ? (
-        <p className="py-16 text-center text-sm text-[var(--text-faint)]">Aún no hay gastos para graficar.</p>
+        <ChartEmptyState icon="ph-chart-donut" message="Aún no hay gastos para graficar." />
       ) : (
         // Layout siempre apilado (nunca en fila): esta tarjeta vive en una grilla de 2
         // columnas dentro de un contenido con max-w-5xl y una columna de Objetivos de

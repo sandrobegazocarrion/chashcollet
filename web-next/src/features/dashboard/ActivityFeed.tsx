@@ -1,5 +1,6 @@
 import { Card } from '../../components/ui/Card';
 import { formatDate, formatMoney } from '../../lib/finance';
+import { ChartEmptyState } from './ChartEmptyState';
 import type { Account, Transaction } from '../../lib/types';
 
 const CATEGORY_ICONS: Record<string, string> = {
@@ -27,7 +28,7 @@ export function ActivityFeed({ transactions, accounts }: ActivityFeedProps) {
     <Card className="col-span-full">
       <h2 className="mb-3 text-sm font-medium text-[var(--text)]">Actividad reciente</h2>
       {list.length === 0 ? (
-        <p className="py-6 text-center text-sm text-[var(--text-muted)]">Todavía no hay movimientos.</p>
+        <ChartEmptyState icon="ph-receipt" message="Todavía no hay movimientos." compact />
       ) : (
         <ul className="flex flex-col divide-y divide-[var(--border)]">
           {list.map((tx) => {
