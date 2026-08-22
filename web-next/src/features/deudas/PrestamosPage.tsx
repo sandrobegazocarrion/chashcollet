@@ -329,12 +329,13 @@ function PrestamosQueDoyTab({ data }: { data: AppState }) {
   const payLoan = useApiMutation<{ id: string; accountId?: string; amount: number; date?: string }, unknown>('POST', (b) => `/api/personloans/${b.id}/pay`);
   const settleLoan = useApiMutation<{ id: string; accountId?: string }, PersonLoan>('POST', (b) => `/api/personloans/${b.id}/settle`);
 
+  const personLoanPayments = data.personLoanPayments || [];
   const loans = data.personLoans.filter((p) => p.direction === 'me_deben');
   const pendingOf = (loan: PersonLoan) => {
-    const paid = data.personLoanPayments.filter((p) => p.personLoanId === loan.id).reduce((s, p) => s + p.amount, 0);
+    const paid = personLoanPayments.filter((p) => p.personLoanId === loan.id).reduce((s, p) => s + p.amount, 0);
     return Math.max(0, Math.round((loan.amount - paid) * 100) / 100);
   };
-  const totalMeDeben = useMemo(() => loans.filter((l) => !l.paid).reduce((s, l) => s + pendingOf(l), 0), [loans, data.personLoanPayments]);
+  const totalMeDeben = useMemo(() => loans.filter((l) => !l.paid).reduce((s, l) => s + pendingOf(l), 0), [loans, personLoanPayments]);
 
   function openCreate() {
     setForm(emptyLoanForm());
@@ -449,7 +450,7 @@ function PrestamosQueDoyTab({ data }: { data: AppState }) {
               key={loan.id}
               loan={loan}
               pending={pendingOf(loan)}
-              payments={data.personLoanPayments}
+              payments={personLoanPayments}
               onPay={() => openPay(loan)}
               onSettle={() => {
                 setSettleAccountId(data.accounts.find((a) => a.type !== 'tarjeta')?.id || '');
