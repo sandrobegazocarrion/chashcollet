@@ -97,12 +97,23 @@ export function computeUpcomingPayments(data: AppState, daysAhead: number): Upco
   (data.personLoans || [])
     .filter((p) => !p.paid && p.dueDate)
     .forEach((p) => {
+      const verbo = p.direction === 'debo' ? 'Pagar a' : 'Cobrar a';
+      if (p.reminderFrequency === 'monthly') {
+        // Recordatorio recurrente ("recordarme cada mes"): el día del mes viene del
+        // mismo dueDate, pero acá se reinterpreta como ancla recurrente, no como una
+        // fecha única — se omite si ya hay un abono registrado este mes.
+        const day = Number(p.dueDate!.slice(8, 10));
+        const date = nextOccurrence(day, today);
+        const occMonthKey = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+        const paidThisCycle = (data.personLoanPayments || []).some((pay) => pay.personLoanId === p.id && pay.date.slice(0, 7) === monthKey);
+        if (occMonthKey === monthKey && paidThisCycle) return;
+        const days = Math.round((date.getTime() - today.getTime()) / 86400000);
+        if (days <= daysAhead) items.push({ name: `${verbo} ${p.personName}`, amount: p.amount, days, kind: 'personloan', tab: KIND_TO_TAB.personloan });
+        return;
+      }
       const date = new Date(p.dueDate + 'T00:00:00');
       const days = Math.round((date.getTime() - today.getTime()) / 86400000);
-      if (days <= daysAhead) {
-        const verbo = p.direction === 'debo' ? 'Pagar a' : 'Cobrar a';
-        items.push({ name: `${verbo} ${p.personName}`, amount: p.amount, days, kind: 'personloan', tab: KIND_TO_TAB.personloan });
-      }
+      if (days <= daysAhead) items.push({ name: `${verbo} ${p.personName}`, amount: p.amount, days, kind: 'personloan', tab: KIND_TO_TAB.personloan });
     });
 
   items.sort((a, b) => a.days - b.days);

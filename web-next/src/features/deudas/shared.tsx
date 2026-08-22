@@ -7,6 +7,7 @@ import { GradientButton } from '../../components/ui/GradientButton';
 import { IconButton } from '../../components/ui/IconButton';
 import { deudaReferenceAmount, formatDate, formatMoney } from '../../lib/finance';
 import { DEUDA_TYPE_ICONS, DEUDA_TYPE_LABELS, LENDER_LABELS, deudaTypeColorVar, deudaUrgencyInfo, personLoanUrgency } from '../../lib/deudaTypes';
+import { summarizeLoan } from '../../lib/loanMath';
 import type { AppState, Deuda, DeudaType, LenderType, PersonLoan } from '../../lib/types';
 
 // Piezas compartidas entre ServiciosPage y PrestamosPage — en la app vieja
@@ -29,9 +30,22 @@ export interface DeudaFormState {
   interestRate: string;
   principal: string;
   totalInstallments: string;
+  startDate: string;
 }
 export function emptyDeudaForm(type: DeudaType): DeudaFormState {
-  return { name: '', type, amount: '', dueDay: '1', variableAmount: false, lenderType: 'banco', lenderName: '', interestRate: '', principal: '', totalInstallments: '' };
+  return {
+    name: '',
+    type,
+    amount: '',
+    dueDay: '1',
+    variableAmount: false,
+    lenderType: 'banco',
+    lenderName: '',
+    interestRate: '',
+    principal: '',
+    totalInstallments: '',
+    startDate: todayStr(),
+  };
 }
 export function deudaToForm(d: Deuda): DeudaFormState {
   return {
@@ -45,6 +59,7 @@ export function deudaToForm(d: Deuda): DeudaFormState {
     interestRate: d.interestRate != null ? String(d.interestRate) : '',
     principal: d.principal != null ? String(d.principal) : '',
     totalInstallments: d.totalInstallments != null ? String(d.totalInstallments) : '',
+    startDate: d.startDate || todayStr(),
   };
 }
 
@@ -347,6 +362,12 @@ export function DeudaFormModal({
   const isPrestamo = form.type === 'prestamo';
   const availableTypes = (Object.keys(DEUDA_TYPE_LABELS) as DeudaType[]).filter((t) => t !== 'prestamo');
 
+  const principalNum = Number(form.principal) || 0;
+  const amountNum = Number(form.amount) || 0;
+  const nNum = Number(form.totalInstallments) || 0;
+  const hasManualRate = form.interestRate.trim() !== '';
+  const estimate = isPrestamo && !hasManualRate && principalNum > 0 && amountNum > 0 && nNum > 0 ? summarizeLoan(principalNum, amountNum, nNum) : null;
+
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? 'Editar compromiso' : forcedType === 'prestamo' ? 'Nuevo préstamo' : 'Nuevo servicio'}>
       <form onSubmit={onSubmit} className="flex flex-col gap-4">
@@ -373,12 +394,28 @@ export function DeudaFormModal({
             <Input label="Nombre del prestamista (opcional)" value={form.lenderName} onChange={(e) => setForm({ ...form, lenderName: e.target.value })} />
             <div className="grid grid-cols-2 gap-3">
               <Input label="Monto del préstamo" type="number" step="0.01" value={form.principal} onChange={(e) => setForm({ ...form, principal: e.target.value })} />
-              <Input label="Tasa de interés % mensual" type="number" step="0.01" value={form.interestRate} onChange={(e) => setForm({ ...form, interestRate: e.target.value })} />
+              <Input label="Tasa de interés % mensual (opcional)" type="number" step="0.01" placeholder="Se calcula sola" value={form.interestRate} onChange={(e) => setForm({ ...form, interestRate: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <Input label="Cuota mensual" type="number" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+              <Input label="Valor de la cuota" type="number" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
               <Input label="N.º de cuotas" type="number" min={1} value={form.totalInstallments} onChange={(e) => setForm({ ...form, totalInstallments: e.target.value })} />
             </div>
+            <Input label="Fecha de inicio" type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
+
+            {estimate && estimate.monthlyRate != null && (
+              <div className="rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface-raised)] px-3.5 py-3 text-[13px]">
+                <p className="font-bold text-[var(--text)]">
+                  Tasa estimada: <span className="num">{(estimate.monthlyRate * 100).toFixed(2)}%</span> mensual
+                  {estimate.teaPct != null && <span className="num text-[var(--text-muted)]"> (~{estimate.teaPct.toFixed(1)}% TEA)</span>}
+                </p>
+                <p className="num mt-1 text-[var(--text-muted)]">
+                  Pagarás {formatMoney(estimate.totalPaid)} en total · {formatMoney(estimate.totalInterest)} de intereses
+                </p>
+                <p className="mt-1.5 text-[11.5px] text-[var(--text-faint)]">
+                  Estimado a partir del monto, la cuota y el número de cuotas, asumiendo cuota fija sin seguros ni comisiones — no reemplaza tu estado de cuenta oficial.
+                </p>
+              </div>
+            )}
           </>
         ) : (
           <>

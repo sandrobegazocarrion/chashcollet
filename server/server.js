@@ -238,6 +238,12 @@ app.delete('/api/personloans/:id', requireAuth, (req, res) => {
 app.post('/api/personloans/:id/settle', requireAuth, (req, res) => {
   withUserData(req, res, (sb, userId) => dataStore.settlePersonLoan(sb, userId, req.params.id, req.body));
 });
+app.post('/api/personloans/:id/pay', requireAuth, (req, res) => {
+  withUserData(req, res, (sb, userId) => dataStore.payPersonLoan(sb, userId, req.params.id, req.body));
+});
+app.delete('/api/personloan-payments/:id', requireAuth, (req, res) => {
+  withUserData(req, res, (sb, userId) => dataStore.deletePersonLoanPayment(sb, userId, req.params.id));
+});
 
 /* ---------------- Compras en cuotas de tarjeta ---------------- */
 app.post('/api/cardcharges', requireAuth, (req, res) => {

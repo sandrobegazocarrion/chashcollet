@@ -41,6 +41,7 @@ function emptyStore() {
     deudas: [],
     deudaPayments: [],
     personLoans: [],
+    personLoanPayments: [],
     cardCharges: [],
     monthlyGoal: 0,
     ownerChatId: null,
@@ -92,7 +93,12 @@ function normalizeStore(store) {
     if (p.notifiedDue === undefined) p.notifiedDue = false;
     if (p.lastOverdueNotify === undefined) p.lastOverdueNotify = null;
     if (p.phone === undefined) p.phone = null;
+    if (p.returnMode === undefined) p.returnMode = 'unico';
+    if (p.installmentAmount === undefined) p.installmentAmount = null;
+    if (p.totalInstallments === undefined) p.totalInstallments = null;
+    if (p.reminderFrequency === undefined) p.reminderFrequency = null;
   });
+  store.personLoanPayments = store.personLoanPayments || [];
   store.cardCharges = store.cardCharges || [];
   store.monthlyGoal = store.monthlyGoal || 0;
   store.deudas.forEach(d => {
@@ -640,7 +646,7 @@ function deletePocketContribution(store, pocketId, contribId) {
 const DEUDA_TYPES_VALID = ['agua', 'luz', 'gas', 'internet', 'prestamo', 'alquiler', 'suscripcion', 'otro'];
 const LENDER_TYPES = ['banco', 'financiera', 'app', 'persona'];
 
-function addDeuda(store, { name, type, amount, dueDay, accountId, description, variableAmount, autoDebit, lenderType, lenderName, interestRate, principal, remainingBalance, totalInstallments }) {
+function addDeuda(store, { name, type, amount, dueDay, accountId, description, variableAmount, autoDebit, lenderType, lenderName, interestRate, principal, remainingBalance, totalInstallments, startDate }) {
   if (!name || !name.trim()) throw new Error('El nombre es obligatorio');
   const t = DEUDA_TYPES_VALID.includes(type) ? type : 'otro';
   const isPrestamo = t === 'prestamo';
@@ -664,6 +670,7 @@ function addDeuda(store, { name, type, amount, dueDay, accountId, description, v
       ? Number(remainingBalance) : deuda.principal;
     deuda.totalInstallments = totalInstallments ? Number(totalInstallments) : null;
     deuda.paidInstallments = deuda.totalInstallments ? 0 : null;
+    deuda.startDate = startDate || todayStr();
   }
   store.deudas.push(deuda);
   return deuda;
@@ -693,6 +700,7 @@ function updateDeuda(store, id, patch) {
       if (n && !d.paidInstallments) d.paidInstallments = 0;
       if (!n) d.paidInstallments = null;
     }
+    if (patch.startDate !== undefined) d.startDate = patch.startDate || d.startDate;
   } else {
     if (patch.variableAmount !== undefined) d.variableAmount = !!patch.variableAmount;
     if (patch.autoDebit !== undefined) d.autoDebit = !!patch.autoDebit;
@@ -757,13 +765,19 @@ function unPayDeuda(store, paymentId) {
  * entidad, con interés/cuotas), esto es un registro simple de dinero entre el
  * usuario y una persona — en cualquier dirección — con un solo vencimiento y sin
  * interés. `direction` decide si el recordatorio dice "paga" o "cobra". */
-function addPersonLoan(store, { direction, personName, amount, date, dueDate, note, phone }) {
+// returnMode 'cuotas' es solo para direction==='me_deben' (dinero que el usuario
+// prestó y que le devuelven en cuotas) — es lo que pide la sección "Préstamos que
+// doy"; para 'debo' (yo le debo a una persona) ese caso vive en `deudas` con
+// lenderType==='persona', que ya soporta cuotas/interés/tasa.
+function addPersonLoan(store, { direction, personName, amount, date, dueDate, note, phone, returnMode, installmentAmount, totalInstallments, reminderFrequency }) {
   if (!personName || !personName.trim()) throw new Error('El nombre de la persona es obligatorio');
   const amt = Number(amount);
   if (!amt || amt <= 0) throw new Error('Monto inválido');
+  const dir = direction === 'me_deben' ? 'me_deben' : 'debo';
+  const isCuotas = dir === 'me_deben' && returnMode === 'cuotas';
   const loan = {
     id: genId(),
-    direction: direction === 'me_deben' ? 'me_deben' : 'debo',
+    direction: dir,
     personName: capLen(personName, LEN_NAME),
     amount: amt,
     date: date || todayStr(),
@@ -771,7 +785,11 @@ function addPersonLoan(store, { direction, personName, amount, date, dueDate, no
     note: capLen(note, LEN_NOTE),
     phone: capLen(phone, LEN_PHONE) || null,
     paid: false,
-    paidDate: null
+    paidDate: null,
+    returnMode: isCuotas ? 'cuotas' : 'unico',
+    installmentAmount: isCuotas && installmentAmount ? Number(installmentAmount) : null,
+    totalInstallments: isCuotas && totalInstallments ? Number(totalInstallments) : null,
+    reminderFrequency: (dir === 'me_deben' && ['monthly', 'once'].includes(reminderFrequency)) ? reminderFrequency : null
   };
   store.personLoans.push(loan);
   return loan;
@@ -794,6 +812,12 @@ function updatePersonLoan(store, id, patch) {
   if (patch.dueDate !== undefined) p.dueDate = patch.dueDate || null;
   if (patch.note !== undefined) p.note = capLen(patch.note, LEN_NOTE);
   if (patch.phone !== undefined) p.phone = capLen(patch.phone, LEN_PHONE) || null;
+  if (p.direction === 'me_deben') {
+    if (patch.returnMode !== undefined) p.returnMode = patch.returnMode === 'cuotas' ? 'cuotas' : 'unico';
+    if (patch.installmentAmount !== undefined) p.installmentAmount = (p.returnMode === 'cuotas' && patch.installmentAmount) ? Number(patch.installmentAmount) : null;
+    if (patch.totalInstallments !== undefined) p.totalInstallments = (p.returnMode === 'cuotas' && patch.totalInstallments) ? Number(patch.totalInstallments) : null;
+    if (patch.reminderFrequency !== undefined) p.reminderFrequency = ['monthly', 'once'].includes(patch.reminderFrequency) ? patch.reminderFrequency : null;
+  }
   return p;
 }
 
@@ -803,26 +827,81 @@ function deletePersonLoan(store, id) {
   store.personLoans.splice(idx, 1);
 }
 
-// Saldar un préstamo entre personas: opcionalmente afecta una cuenta (si yo pagaba,
-// sale plata de la cuenta; si a mí me pagaban, entra plata a la cuenta).
+function personLoanPending(store, id) {
+  const p = store.personLoans.find(x => x.id === id);
+  if (!p) throw new Error('Préstamo no encontrado');
+  const paidSoFar = (store.personLoanPayments || []).filter(x => x.personLoanId === id).reduce((s, x) => s + (x.amount || 0), 0);
+  return Math.max(0, Math.round((p.amount - paidSoFar) * 100) / 100);
+}
+
+// Saldar de una vez el saldo pendiente de un préstamo entre personas (lo que quede
+// después de los abonos parciales ya registrados) — opcionalmente afecta una cuenta
+// (si yo pagaba, sale plata de la cuenta; si a mí me pagaban, entra plata a la cuenta).
 function settlePersonLoan(store, id, { accountId } = {}) {
   const p = store.personLoans.find(x => x.id === id);
   if (!p) throw new Error('Préstamo no encontrado');
   if (p.paid) throw new Error('Este préstamo ya está saldado');
+  const pending = personLoanPending(store, id);
   let txId = null;
-  if (accountId) {
+  if (accountId && pending > 0) {
     const acc = store.accounts.find(a => a.id === accountId);
     if (!acc) throw new Error('Cuenta no encontrada');
     const cat = ensureCategory(store, 'Préstamos');
     const type = p.direction === 'debo' ? 'gasto' : 'ingreso';
     const desc = p.direction === 'debo' ? `Pago a ${p.personName}` : `Cobro a ${p.personName}`;
-    const tx = addTransaction(store, { type, amount: p.amount, category: cat, description: desc, accountId });
+    const tx = addTransaction(store, { type, amount: pending, category: cat, description: desc, accountId });
     txId = tx.id;
   }
   p.paid = true;
   p.paidDate = todayStr();
   p.settleTxId = txId;
   return p;
+}
+
+// Abono parcial contra un préstamo entre personas — recalcula el saldo pendiente
+// (amount - suma de abonos) y, si el abono lo termina de cubrir, marca el préstamo
+// como saldado automáticamente (misma idea que las cuotas de un préstamo bancario).
+function payPersonLoan(store, id, { amount, date, note, accountId } = {}) {
+  const p = store.personLoans.find(x => x.id === id);
+  if (!p) throw new Error('Préstamo no encontrado');
+  if (p.paid) throw new Error('Este préstamo ya está saldado');
+  let amt = Number(amount);
+  if (!amt || amt <= 0) throw new Error('Monto inválido');
+  const pending = personLoanPending(store, id);
+  if (amt > pending) amt = pending;
+
+  let txId = null;
+  if (accountId) {
+    const acc = store.accounts.find(a => a.id === accountId);
+    if (!acc) throw new Error('Cuenta no encontrada');
+    const cat = ensureCategory(store, 'Préstamos');
+    const type = p.direction === 'debo' ? 'gasto' : 'ingreso';
+    const desc = p.direction === 'debo' ? `Abono a ${p.personName}` : `Cobro a ${p.personName}`;
+    const tx = addTransaction(store, { type, amount: amt, category: cat, description: desc, accountId });
+    txId = tx.id;
+  }
+
+  const payment = { id: genId(), personLoanId: id, amount: amt, date: date || todayStr(), note: capLen(note, LEN_NOTE) || null, txId };
+  store.personLoanPayments.push(payment);
+
+  if (Math.round((pending - amt) * 100) / 100 <= 0) {
+    p.paid = true;
+    p.paidDate = todayStr();
+  }
+  return payment;
+}
+
+function unPayPersonLoan(store, paymentId) {
+  const p = store.personLoanPayments.find(x => x.id === paymentId);
+  if (!p) throw new Error('Abono no encontrado');
+  if (p.txId) { try { deleteTransaction(store, p.txId); } catch (_) {} }
+  const loan = store.personLoans.find(x => x.id === p.personLoanId);
+  if (loan && loan.paid) {
+    loan.paid = false;
+    loan.paidDate = null;
+    loan.settleTxId = null;
+  }
+  store.personLoanPayments = store.personLoanPayments.filter(x => x.id !== paymentId);
 }
 
 // Préstamos entre personas vencidos o por vencer, para el recordatorio de Telegram.
@@ -987,5 +1066,6 @@ module.exports = {
   payCard, deleteCardPayment,
   addDeuda, updateDeuda, deleteDeuda, payDeuda, unPayDeuda,
   addPersonLoan, updatePersonLoan, deletePersonLoan, settlePersonLoan, checkPersonLoansDue,
+  payPersonLoan, unPayPersonLoan, personLoanPending,
   addCardCharge, deleteCardCharge, markCardChargeInstallment
 };

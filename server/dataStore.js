@@ -113,6 +113,7 @@ function rowToDeuda(r) {
     d.remainingBalance = r.remaining_balance != null ? Number(r.remaining_balance) : null;
     d.totalInstallments = r.total_installments != null ? r.total_installments : null;
     d.paidInstallments = r.paid_installments != null ? r.paid_installments : null;
+    d.startDate = r.start_date || null;
   }
   return d;
 }
@@ -130,7 +131,8 @@ function deudaToRow(d, userId) {
     principal: d.principal != null ? d.principal : null,
     remaining_balance: d.remainingBalance != null ? d.remainingBalance : null,
     total_installments: d.totalInstallments != null ? d.totalInstallments : null,
-    paid_installments: d.paidInstallments != null ? d.paidInstallments : null
+    paid_installments: d.paidInstallments != null ? d.paidInstallments : null,
+    start_date: d.startDate || null
   };
 }
 function rowToDeudaPayment(r) {
@@ -157,7 +159,11 @@ function rowToPersonLoan(r) {
     note: r.note || '', phone: r.phone || null,
     paid: !!r.paid, paidDate: r.paid_date || null, settleTxId: r.settle_tx_id || null,
     notifiedDue: !!r.notified_due, notifiedSoon: !!r.notified_soon,
-    lastOverdueNotify: r.last_overdue_notify || null
+    lastOverdueNotify: r.last_overdue_notify || null,
+    returnMode: r.return_mode || 'unico',
+    installmentAmount: r.installment_amount != null ? Number(r.installment_amount) : null,
+    totalInstallments: r.total_installments != null ? r.total_installments : null,
+    reminderFrequency: r.reminder_frequency || null
   };
 }
 function personLoanToRow(p, userId) {
@@ -167,8 +173,18 @@ function personLoanToRow(p, userId) {
     paid: !!p.paid, notified_soon: !!p.notifiedSoon,
     date: p.date || null, note: p.note || null, paid_date: p.paidDate || null,
     settle_tx_id: p.settleTxId || null, notified_due: !!p.notifiedDue,
-    last_overdue_notify: p.lastOverdueNotify || null
+    last_overdue_notify: p.lastOverdueNotify || null,
+    return_mode: p.returnMode || 'unico',
+    installment_amount: p.installmentAmount != null ? p.installmentAmount : null,
+    total_installments: p.totalInstallments != null ? p.totalInstallments : null,
+    reminder_frequency: p.reminderFrequency || null
   };
+}
+function rowToPersonLoanPayment(r) {
+  return { id: r.id, personLoanId: r.person_loan_id, amount: Number(r.amount), date: r.date, note: r.note || null, txId: r.tx_id || null };
+}
+function personLoanPaymentToRow(p, userId) {
+  return { id: p.id, person_loan_id: p.personLoanId, user_id: userId, amount: p.amount, date: p.date, note: p.note || null, tx_id: p.txId || null };
 }
 
 /* ---------------- Meta mensual de ahorro ---------------- */
@@ -221,7 +237,7 @@ function reminderToRow(r, userId) {
 
 /* ---------------- Carga completa (para /api/state) ---------------- */
 async function loadUserStore(sb, userId) {
-  const [accRes, txRes, catRes, profRes, pockRes, contribRes, chargeRes, payRes, deudaRes, deudaPayRes, loanRes, remRes] = await Promise.all([
+  const [accRes, txRes, catRes, profRes, pockRes, contribRes, chargeRes, payRes, deudaRes, deudaPayRes, loanRes, loanPayRes, remRes] = await Promise.all([
     sb.from('accounts').select('*').eq('user_id', userId).order('created_at'),
     sb.from('transactions').select('*').eq('user_id', userId).order('date', { ascending: false }),
     sb.from('user_categories').select('*').eq('user_id', userId),
@@ -233,11 +249,12 @@ async function loadUserStore(sb, userId) {
     sb.from('deudas').select('*').eq('user_id', userId).order('created_at'),
     sb.from('deuda_payments').select('*').eq('user_id', userId),
     sb.from('person_loans').select('*').eq('user_id', userId).order('created_at'),
+    sb.from('person_loan_payments').select('*').eq('user_id', userId).order('date', { ascending: false }),
     sb.from('reminders').select('*').eq('user_id', userId).order('created_at')
   ]);
   must(accRes.error); must(txRes.error); must(catRes.error); must(profRes.error);
   must(pockRes.error); must(contribRes.error); must(chargeRes.error); must(payRes.error);
-  must(deudaRes.error); must(deudaPayRes.error); must(loanRes.error); must(remRes.error);
+  must(deudaRes.error); must(deudaPayRes.error); must(loanRes.error); must(loanPayRes.error); must(remRes.error);
 
   const pockets = pockRes.data.map(r => rowToPocket(r, contribRes.data.filter(c => c.pocket_id === r.id)));
   const pocketGrowthChanged = finance.applyPocketGrowth({ pockets });
@@ -277,6 +294,7 @@ async function loadUserStore(sb, userId) {
     deudas: deudaRes.data.map(rowToDeuda),
     deudaPayments: deudaPayRes.data.map(rowToDeudaPayment),
     personLoans: loanRes.data.map(rowToPersonLoan),
+    personLoanPayments: loanPayRes.data.map(rowToPersonLoanPayment),
     reminders: remRes.data.map(rowToReminder),
     monthlyGoal: profileRow ? Number(profileRow.monthly_goal) || null : null,
     ownerChatId: null,
@@ -838,13 +856,15 @@ async function settlePersonLoan(sb, userId, id, body) {
   const { data: loanRow, error: e0 } = await sb.from('person_loans').select('*').eq('id', id).eq('user_id', userId).maybeSingle();
   must(e0);
   if (!loanRow) throw new Error('Préstamo no encontrado');
-  const [{ data: accRows, error: e1 }, { data: catRows, error: e2 }] = await Promise.all([
+  const [{ data: accRows, error: e1 }, { data: catRows, error: e2 }, { data: payRows, error: e2b }] = await Promise.all([
     sb.from('accounts').select('*').eq('user_id', userId),
-    sb.from('user_categories').select('*').eq('user_id', userId)
+    sb.from('user_categories').select('*').eq('user_id', userId),
+    sb.from('person_loan_payments').select('*').eq('person_loan_id', id).eq('user_id', userId)
   ]);
-  must(e1); must(e2);
+  must(e1); must(e2); must(e2b);
   const fakeStore = {
     personLoans: [rowToPersonLoan(loanRow)],
+    personLoanPayments: payRows.map(rowToPersonLoanPayment),
     accounts: accRows.map(rowToAccount),
     categories: catRows.length ? catRows.map(c => c.name) : finance.DEFAULT_CATEGORIES.slice(),
     transactions: []
@@ -868,6 +888,86 @@ async function settlePersonLoan(sb, userId, id, body) {
   if (newCat) await sb.from('user_categories').insert({ id: finance.genId(), user_id: userId, name: newCat });
 
   return p;
+}
+
+async function payPersonLoan(sb, userId, id, body) {
+  const { data: loanRow, error: e0 } = await sb.from('person_loans').select('*').eq('id', id).eq('user_id', userId).maybeSingle();
+  must(e0);
+  if (!loanRow) throw new Error('Préstamo no encontrado');
+  const [{ data: accRows, error: e1 }, { data: catRows, error: e2 }, { data: payRows, error: e2b }] = await Promise.all([
+    sb.from('accounts').select('*').eq('user_id', userId),
+    sb.from('user_categories').select('*').eq('user_id', userId),
+    sb.from('person_loan_payments').select('*').eq('person_loan_id', id).eq('user_id', userId)
+  ]);
+  must(e1); must(e2); must(e2b);
+  const fakeStore = {
+    personLoans: [rowToPersonLoan(loanRow)],
+    personLoanPayments: payRows.map(rowToPersonLoanPayment),
+    accounts: accRows.map(rowToAccount),
+    categories: catRows.length ? catRows.map(c => c.name) : finance.DEFAULT_CATEGORIES.slice(),
+    transactions: []
+  };
+  const categoriesBefore = fakeStore.categories.slice();
+  const payment = finance.payPersonLoan(fakeStore, id, body);
+
+  if (payment.txId) {
+    const tx = fakeStore.transactions.find(t => t.id === payment.txId);
+    const { error: e3 } = await sb.from('transactions').insert(transactionToRow(tx, userId));
+    must(e3);
+    const acc = fakeStore.accounts.find(a => a.id === (body && body.accountId));
+    const row = accountToRow(acc, userId); delete row.id; delete row.user_id;
+    const { error: e4 } = await sb.from('accounts').update(row).eq('id', acc.id).eq('user_id', userId);
+    must(e4);
+  }
+  const { error: e5 } = await sb.from('person_loan_payments').insert(personLoanPaymentToRow(payment, userId));
+  must(e5);
+  const loan = fakeStore.personLoans[0];
+  if (loan.paid) {
+    const { error: e6 } = await sb.from('person_loans').update({ paid: true, paid_date: loan.paidDate }).eq('id', id).eq('user_id', userId);
+    must(e6);
+  }
+  const newCat = fakeStore.categories.find(c => !categoriesBefore.includes(c));
+  if (newCat) await sb.from('user_categories').insert({ id: finance.genId(), user_id: userId, name: newCat });
+
+  return payment;
+}
+
+async function deletePersonLoanPayment(sb, userId, paymentId) {
+  const { data: payRow, error: e0 } = await sb.from('person_loan_payments').select('*').eq('id', paymentId).eq('user_id', userId).maybeSingle();
+  must(e0);
+  if (!payRow) throw new Error('Abono no encontrado');
+  const payment = rowToPersonLoanPayment(payRow);
+
+  const [{ data: loanRow, error: e1 }, txRes, accRes] = await Promise.all([
+    sb.from('person_loans').select('*').eq('id', payment.personLoanId).eq('user_id', userId).maybeSingle(),
+    payment.txId ? sb.from('transactions').select('*').eq('id', payment.txId).eq('user_id', userId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    sb.from('accounts').select('*').eq('user_id', userId)
+  ]);
+  must(e1); must(txRes.error); must(accRes.error);
+
+  const fakeStore = {
+    personLoanPayments: [payment],
+    personLoans: loanRow ? [rowToPersonLoan(loanRow)] : [],
+    transactions: txRes.data ? [rowToTransaction(txRes.data)] : [],
+    accounts: accRes.data.map(rowToAccount)
+  };
+  finance.unPayPersonLoan(fakeStore, paymentId);
+
+  const { error: e2 } = await sb.from('person_loan_payments').delete().eq('id', paymentId).eq('user_id', userId);
+  must(e2);
+  if (payment.txId && txRes.data) {
+    await sb.from('transactions').delete().eq('id', payment.txId).eq('user_id', userId);
+    const acc = fakeStore.accounts.find(a => a.id === txRes.data.account_id);
+    if (acc) {
+      const row = accountToRow(acc, userId); delete row.id; delete row.user_id;
+      const { error } = await sb.from('accounts').update(row).eq('id', acc.id).eq('user_id', userId);
+      must(error);
+    }
+  }
+  if (loanRow && fakeStore.personLoans[0] && !fakeStore.personLoans[0].paid) {
+    const { error: e3 } = await sb.from('person_loans').update({ paid: false, paid_date: null, settle_tx_id: null }).eq('id', payment.personLoanId).eq('user_id', userId);
+    must(e3);
+  }
 }
 
 /* ---------------- Recordatorios / pagos programados (calendario) ---------------- */
@@ -1039,6 +1139,7 @@ module.exports = {
   addCardCharge, deleteCardCharge, markCardChargeInstallment, payCard, deleteCardPayment,
   addDeuda, updateDeuda, deleteDeuda, payDeuda, unPayDeuda,
   addPersonLoan, updatePersonLoan, deletePersonLoan, settlePersonLoan,
+  payPersonLoan, deletePersonLoanPayment,
   addReminder, updateReminder, deleteReminder, payInstallment,
   markReminderNotified, markPocketNotified, markPersonLoanNotified,
   getMonthProgress, setMonthlyGoal,

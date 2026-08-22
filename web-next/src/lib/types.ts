@@ -81,6 +81,7 @@ export interface Deuda {
   remainingBalance?: number | null;
   totalInstallments?: number | null;
   paidInstallments?: number | null;
+  startDate?: string | null;
 }
 
 export interface DeudaPayment {
@@ -91,6 +92,9 @@ export interface DeudaPayment {
   accountId: string | null;
   amount: number | null;
 }
+
+export type PersonLoanReturnMode = 'unico' | 'cuotas';
+export type PersonLoanReminderFrequency = 'monthly' | 'once';
 
 export interface PersonLoan {
   id: string;
@@ -103,6 +107,18 @@ export interface PersonLoan {
   paid: boolean;
   paidDate: string | null;
   direction: 'debo' | 'me_deben';
+  returnMode: PersonLoanReturnMode;
+  installmentAmount: number | null;
+  totalInstallments: number | null;
+  reminderFrequency: PersonLoanReminderFrequency | null;
+}
+
+export interface PersonLoanPayment {
+  id: string;
+  personLoanId: string;
+  amount: number;
+  date: string;
+  note: string | null;
 }
 
 export interface CardCharge {
@@ -141,6 +157,7 @@ export interface AppState {
   deudas: Deuda[];
   deudaPayments: DeudaPayment[];
   personLoans: PersonLoan[];
+  personLoanPayments: PersonLoanPayment[];
   reminders: Reminder[];
   monthlyGoal: number | null;
   profile: Profile;
