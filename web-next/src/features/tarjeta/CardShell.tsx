@@ -4,7 +4,6 @@ import { PERUVIAN_BANKS } from '../../lib/banks';
 import { cardUtilization, cardZone, ZONE_VAR } from '../../lib/cardHealth';
 import type { Account } from '../../lib/types';
 
-const WIDTH = 380;
 const HERO_HEIGHT = 240;
 const BAR_HEIGHT = 62;
 
@@ -35,14 +34,14 @@ export function CardShell({ account, expanded, onToggle }: CardShellProps) {
       onClick={onToggle}
       aria-expanded={expanded}
       aria-label={expanded ? 'Contraer tarjeta' : 'Ver resumen, cuotas y movimientos'}
-      className="relative mx-auto block shrink-0 overflow-hidden rounded-[24px] text-left text-white shadow-[0_16px_34px_rgba(0,0,0,.22)] transition-[height] duration-[400ms] ease-[cubic-bezier(.22,.9,.32,1)]"
-      style={{ width: WIDTH, height: expanded ? BAR_HEIGHT : HERO_HEIGHT, background: accountGradient(accountColorKey(account)) }}
+      className="relative mx-auto block w-full min-w-0 max-w-[380px] overflow-hidden rounded-[24px] text-left text-white shadow-[0_16px_34px_rgba(0,0,0,.22)] transition-[height] duration-[400ms] ease-[cubic-bezier(.22,.9,.32,1)]"
+      style={{ height: expanded ? BAR_HEIGHT : HERO_HEIGHT, background: accountGradient(accountColorKey(account)) }}
     >
       <span className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10" aria-hidden="true" />
 
       {/* Grande */}
       <div
-        className={`absolute inset-0 flex flex-col gap-5 p-7 transition-opacity duration-200 ${
+        className={`absolute inset-0 flex flex-col gap-4 p-5 transition-opacity duration-200 sm:gap-5 sm:p-7 ${
           expanded ? 'pointer-events-none opacity-0' : 'opacity-100'
         }`}
       >
@@ -63,7 +62,7 @@ export function CardShell({ account, expanded, onToggle }: CardShellProps) {
         <div className="relative z-[1] h-7 w-11 rounded-[7px]" style={{ background: 'linear-gradient(135deg,#f3d27a,#c79a3d)' }} />
 
         <div className="relative z-[1] mt-auto">
-          <p className="num m-0 text-[34px] font-extrabold leading-none tracking-tight">{formatMoney(hasLimit ? disponible! : account.balance)}</p>
+          <p className="num m-0 text-[28px] font-extrabold leading-none tracking-tight sm:text-[34px]">{formatMoney(hasLimit ? disponible! : account.balance)}</p>
           <p className="m-0 mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-80">{hasLimit ? 'Disponible' : 'Deuda actual'}</p>
           {hasLimit && <p className="num m-0 mt-1.5 text-sm opacity-85">Usado: {formatMoney(account.balance)}</p>}
         </div>
@@ -100,8 +99,8 @@ export function AddCardTile({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="mx-auto flex shrink-0 flex-col items-center justify-center gap-2 rounded-[24px] border-2 border-dashed border-[var(--border)] bg-[var(--surface)]/60 text-[13px] font-semibold text-[var(--text-faint)] hover:border-[var(--text-muted)] hover:text-[var(--text)]"
-      style={{ width: WIDTH, height: HERO_HEIGHT }}
+      className="mx-auto flex w-full min-w-0 max-w-[380px] flex-col items-center justify-center gap-2 rounded-[24px] border-2 border-dashed border-[var(--border)] bg-[var(--surface)]/60 text-[13px] font-semibold text-[var(--text-faint)] hover:border-[var(--text-muted)] hover:text-[var(--text)]"
+      style={{ height: HERO_HEIGHT }}
     >
       <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--surface-raised)]">
         <i className="ph ph-plus text-lg" aria-hidden="true" />
@@ -111,4 +110,3 @@ export function AddCardTile({ onClick }: { onClick: () => void }) {
   );
 }
 
-export { WIDTH as CARD_WIDTH };

@@ -154,7 +154,11 @@ export function TarjetaPage({ data }: { data: AppState }) {
       <PageHeader title="Tarjeta" actionLabel="Compra en cuotas" onAction={() => setAddingCharge(true)} />
 
       <div className="flex flex-col items-center gap-4">
-        <div className="flex items-center gap-3">
+        {/* w-full + min-w-0 en el slot del medio: en pantallas angostas (el ancho
+            fijo de 380px de la tarjeta desbordaba en celulares reales, ej. Galaxy
+            S25 ~393px) las flechas se quedan con su tamaño y la tarjeta se achica
+            para que la fila entera quepa sin scroll horizontal. */}
+        <div className="flex w-full max-w-[500px] items-center gap-2 sm:gap-3">
           {!expanded && (
             <button
               type="button"
@@ -167,11 +171,13 @@ export function TarjetaPage({ data }: { data: AppState }) {
             </button>
           )}
 
-          {isAddPosition ? (
-            <AddCardTile onClick={() => setAddingCard(true)} />
-          ) : (
-            activeCard && <CardShell account={activeCard} expanded={expanded} onToggle={() => setExpanded((v) => !v)} />
-          )}
+          <div className="min-w-0 flex-1">
+            {isAddPosition ? (
+              <AddCardTile onClick={() => setAddingCard(true)} />
+            ) : (
+              activeCard && <CardShell account={activeCard} expanded={expanded} onToggle={() => setExpanded((v) => !v)} />
+            )}
+          </div>
 
           {!expanded && (
             <button
