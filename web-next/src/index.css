@@ -1,0 +1,164 @@
+@import "tailwindcss";
+
+/* ---------------- Design tokens (colores reales de NUVA, ver public/css/styles.css) ----------------
+   Claro por defecto en :root; oscuro redefine los mismos nombres bajo prefers-color-scheme
+   (si no hay preferencia guardada) y bajo [data-theme="dark"] (toggle manual, gana siempre).
+   El sidebar es negro fijo en los dos temas — así es en la app vieja también. */
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-raised: #f7f7f8;
+  --border: rgba(10, 10, 10, 0.07);
+  --border-flat: rgba(10, 10, 10, 0.07);
+
+  --text: #0a0a0a;
+  --text-muted: #6b6b6b;
+  --text-faint: #8a8a87;
+
+  --brand: #dc2626;
+  --brand-glow: color-mix(in srgb, var(--brand) 45%, transparent);
+
+  --green: #1f7a4d;
+  --red: #b3261e;
+  --amber: #e2a63b;
+  --accent2: #52525b;
+  --ochre: #a56c1f;
+  --lavender: #6f7590;
+
+  /* Zonas del velocímetro de salud de tarjeta (panel "Tarjetas de crédito"): verde/ámbar
+     con hex explícitos pedidos para el gauge (más "semáforo" que --green/--amber, que se
+     usan para otros fines en la app) — la zona roja reutiliza --brand a propósito. */
+  --gauge-safe: #16a34a;
+  --gauge-warn: #d97706;
+  --sage: #5c8a71;
+
+  --sidebar-bg: #070708;
+  --sidebar-text: #8e8e93;
+  --sidebar-fill: #141414;
+
+  --radius-card: 24px;
+  --radius-control: 14px;
+  --radius-pill: 999px;
+
+  /* Pop-in de dígitos (portado 1:1 de public/css/styles.css) */
+  --digit-dur: 500ms;
+  --digit-distance: 8px;
+  --digit-stagger: 70ms;
+  --digit-blur: 2px;
+  --digit-ease: cubic-bezier(0.34, 1.45, 0.64, 1);
+  --digit-dir-x: 0;
+  --digit-dir-y: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0d0d0f;
+    --surface: #18181b;
+    --surface-raised: #212124;
+    --border: rgba(255, 255, 255, 0.08);
+    --border-flat: rgba(255, 255, 255, 0.08);
+
+    --text: #fafafa;
+    --text-muted: #98989c;
+    --text-faint: #7a7a7d;
+
+    --brand: #ff6259;
+    --brand-glow: color-mix(in srgb, var(--brand) 45%, transparent);
+
+    --green: #34d399;
+    --red: #e2836b;
+    --amber: #f0bb5c;
+    --accent2: #a1a1aa;
+    --ochre: #d9a866;
+    --lavender: #a9adc4;
+    --sage: #9fd1b8;
+
+    --gauge-safe: #22c55e;
+    --gauge-warn: #f59e0b;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: #0d0d0f;
+  --surface: #18181b;
+  --surface-raised: #212124;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-flat: rgba(255, 255, 255, 0.08);
+
+  --text: #fafafa;
+  --text-muted: #98989c;
+  --text-faint: #7a7a7d;
+
+  --brand: #ff6259;
+  --brand-glow: color-mix(in srgb, var(--brand) 45%, transparent);
+
+  --green: #34d399;
+  --red: #e2836b;
+  --amber: #f0bb5c;
+  --accent2: #a1a1aa;
+  --ochre: #d9a866;
+  --lavender: #a9adc4;
+  --sage: #9fd1b8;
+
+  --gauge-safe: #22c55e;
+  --gauge-warn: #f59e0b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+/* ---------------- Pop-in de dígitos (portado de app.js#digitSpans) ---------------- */
+@keyframes t-digit-pop-in {
+  0% {
+    transform: translate(calc(var(--digit-distance) * var(--digit-dir-x)), calc(var(--digit-distance) * var(--digit-dir-y)));
+    opacity: 0;
+    filter: blur(var(--digit-blur));
+  }
+  100% {
+    transform: translate(0, 0);
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+.t-digit-group {
+  display: inline-flex;
+  align-items: baseline;
+}
+.t-digit {
+  display: inline-block;
+  will-change: transform, opacity, filter;
+}
+.t-digit-group.is-animating .t-digit {
+  animation: t-digit-pop-in var(--digit-dur) var(--digit-ease) both;
+}
+.t-digit-group.is-animating .t-digit[data-stagger='1'] {
+  animation-delay: var(--digit-stagger);
+}
+.t-digit-group.is-animating .t-digit[data-stagger='2'] {
+  animation-delay: calc(var(--digit-stagger) * 2);
+}
+@media (prefers-reduced-motion: reduce) {
+  .t-digit-group .t-digit {
+    animation: none !important;
+  }
+}
