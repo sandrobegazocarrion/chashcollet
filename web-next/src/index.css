@@ -142,6 +142,11 @@ body {
 }
 .t-digit-group {
   display: inline-flex;
+  /* flex-wrap: nowrap (el default) nunca deja pasar la línea a un segundo renglón,
+     sin importar cuánto texto/números tenga — por eso un monto con muchos dígitos se
+     salía del contorno en vez de acomodarse. Con wrap, si no entra en una línea, los
+     caracteres pasan a la siguiente en vez de desbordar. */
+  flex-wrap: wrap;
   align-items: baseline;
 }
 .t-digit {

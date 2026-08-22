@@ -157,7 +157,7 @@ export function CuentasPage({ data }: { data: AppState }) {
         <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
           <i className="ph ph-wallet" aria-hidden="true" /> Total en tu Billetera
         </p>
-        <p className="num mt-1.5 text-4xl font-extrabold tracking-tight text-[var(--text)]">{formatMoney(total)}</p>
+        <p className="num mt-1.5 break-words text-3xl font-extrabold tracking-tight text-[var(--text)] sm:text-4xl">{formatMoney(total)}</p>
         <div className="mt-5 flex flex-col gap-2">
           {sorted.map((a) => {
             const pct = total > 0 ? Math.max(2, Math.round((a.balance / total) * 100)) : 0;

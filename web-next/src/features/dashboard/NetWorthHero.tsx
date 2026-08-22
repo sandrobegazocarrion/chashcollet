@@ -16,7 +16,7 @@ export function NetWorthHero({ totalLiquid, monthNet }: NetWorthHeroProps) {
   return (
     <Card variant="hero" className="text-center sm:text-left">
       <p className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Lo que tengo</p>
-      <p className="num mt-1 text-6xl font-extrabold leading-none tracking-tight text-[var(--text)] sm:text-7xl">
+      <p className="num mt-1 break-words text-4xl font-extrabold leading-none tracking-tight text-[var(--text)] sm:text-6xl md:text-7xl">
         <AnimatedDigits value={formatMoney(totalLiquid)} animationKey="heroValue" />
       </p>
       <span

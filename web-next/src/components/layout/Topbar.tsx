@@ -142,7 +142,7 @@ export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearch
           onClick={toggle}
           title="Cambiar tema"
           aria-label="Cambiar tema"
-          className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-raised)] sm:flex"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-raised)]"
         >
           <i className={`ph ${theme === 'dark' ? 'ph-sun' : 'ph-moon'}`} aria-hidden="true" />
         </button>
