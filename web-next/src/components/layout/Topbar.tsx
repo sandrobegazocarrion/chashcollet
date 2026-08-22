@@ -51,8 +51,10 @@ export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearch
 
   useEffect(() => {
     function onDown(e: MouseEvent) {
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) setNotifOpen(false);
-      if (accountRef.current && !accountRef.current.contains(e.target as Node)) setAccountOpen(false);
+      const target = e.target as Node;
+      const insideNotif = notifRef.current?.contains(target) || notifPanelRef.current?.contains(target);
+      if (!insideNotif) setNotifOpen(false);
+      if (accountRef.current && !accountRef.current.contains(target)) setAccountOpen(false);
     }
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
@@ -84,10 +86,10 @@ export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearch
 
       <div className="min-w-0 flex-1 truncate text-[15px] font-bold text-[var(--text)]">{title}</div>
 
-      <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+      <div className="relative flex shrink-0 items-center gap-1.5 sm:gap-2">
         <IconPill icon="ph-magnifying-glass" label="Buscar movimientos" onClick={onSearchClick} />
 
-        <div className="relative" ref={notifRef}>
+        <div ref={notifRef}>
           <IconPill
             icon="ph-bell"
             label="Notificaciones"
@@ -98,42 +100,42 @@ export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearch
               setAccountOpen(false);
             }}
           />
-          {notifOpen && (
-            <div
-              ref={notifPanelRef}
-              role="dialog"
-              aria-label="Próximos vencimientos"
-              tabIndex={-1}
-              className="absolute right-0 top-[calc(100%+8px)] z-30 w-[min(20rem,calc(100vw-2rem))] rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-2 shadow-[0_24px_48px_-20px_rgba(10,10,10,.25)] outline-none"
-            >
-              <p className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--text-faint)]">Próximos vencimientos</p>
-              {upcoming.length === 0 ? (
-                <p className="px-2 py-6 text-center text-sm text-[var(--text-faint)]">No tienes vencimientos en los próximos 14 días.</p>
-              ) : (
-                <ul className="flex flex-col">
-                  {upcoming.map((item, i) => (
-                    <li key={i}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onGoTab(item.tab);
-                          setNotifOpen(false);
-                        }}
-                        className="flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-2 text-left hover:bg-[var(--surface-raised)]"
-                      >
-                        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--text)]">{item.name}</span>
-                        <span className="num shrink-0 text-xs font-bold text-[var(--text-muted)]">{formatMoney(item.amount)}</span>
-                        <span className={`shrink-0 text-[11px] font-bold ${item.days <= 2 ? 'text-[var(--red)]' : 'text-[var(--text-faint)]'}`}>
-                          {item.days < 0 ? 'Vencido' : item.days === 0 ? 'Hoy' : `${item.days}d`}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
         </div>
+        {notifOpen && (
+          <div
+            ref={notifPanelRef}
+            role="dialog"
+            aria-label="Próximos vencimientos"
+            tabIndex={-1}
+            className="absolute right-0 top-[calc(100%+8px)] z-30 w-[min(20rem,calc(100vw-2rem))] rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-2 shadow-[0_24px_48px_-20px_rgba(10,10,10,.25)] outline-none"
+          >
+            <p className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--text-faint)]">Próximos vencimientos</p>
+            {upcoming.length === 0 ? (
+              <p className="px-2 py-6 text-center text-sm text-[var(--text-faint)]">No tienes vencimientos en los próximos 14 días.</p>
+            ) : (
+              <ul className="flex flex-col">
+                {upcoming.map((item, i) => (
+                  <li key={i}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onGoTab(item.tab);
+                        setNotifOpen(false);
+                      }}
+                      className="flex w-full items-center gap-2 rounded-[var(--radius-control)] px-2 py-2 text-left hover:bg-[var(--surface-raised)]"
+                    >
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--text)]">{item.name}</span>
+                      <span className="num shrink-0 text-xs font-bold text-[var(--text-muted)]">{formatMoney(item.amount)}</span>
+                      <span className={`shrink-0 text-[11px] font-bold ${item.days <= 2 ? 'text-[var(--red)]' : 'text-[var(--text-faint)]'}`}>
+                        {item.days < 0 ? 'Vencido' : item.days === 0 ? 'Hoy' : `${item.days}d`}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         <IconPill icon="ph-download-simple" label="Descargar en Excel" onClick={() => exportExcel(data)} className="hidden sm:flex" />
 
