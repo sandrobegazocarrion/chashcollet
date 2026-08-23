@@ -144,7 +144,7 @@ function PrestamosPersonalesTab({ data }: { data: AppState }) {
       {prestamos.length === 0 ? (
         <EmptyState icon="ph-bank" title="No tienes préstamos registrados" subtitle="Registra lo que le debes a un banco, financiera, app o persona." />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {prestamos.map((d) => (
             <PrestamoPersonalCard key={d.id} deuda={d} accounts={data.accounts} onPay={() => openPay(d)} onSimulate={() => setSimulating(d)} onEdit={() => openEdit(d)} onDelete={() => deleteDeuda.mutate({ id: d.id })} />
           ))}
@@ -444,7 +444,7 @@ function PrestamosQueDoyTab({ data }: { data: AppState }) {
       {loans.length === 0 ? (
         <EmptyState icon="ph-hand-coins" title="No le prestaste dinero a nadie (todavía)" subtitle="Registra a quién le prestaste para no olvidarte de cobrar." />
       ) : (
-        <div className="flex flex-col gap-3">
+        <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {loans.map((loan) => (
             <PersonLoanCard
               key={loan.id}
