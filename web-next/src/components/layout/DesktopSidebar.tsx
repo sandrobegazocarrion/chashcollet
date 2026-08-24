@@ -1,4 +1,5 @@
 import { Mascot } from '../brand/Mascot';
+import { BrandMark } from '../brand/BrandMark';
 import { SAVINGS_TIPS, todaysTipIndex } from '../../lib/tips';
 import { TABS, type TabId } from './Sidebar';
 
@@ -21,9 +22,7 @@ export function DesktopSidebar({ active, onChange, showAdmin }: DesktopSidebarPr
   return (
     <aside className="fixed inset-y-0 left-0 z-40 hidden w-[210px] shrink-0 flex-col border-r border-[var(--d2-border)] bg-white px-4 py-[26px] lg:flex" style={{ fontFamily: 'var(--font-ui-d2)' }}>
       <div className="flex items-center gap-2.5 px-2">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="var(--d2-accent)" aria-hidden="true">
-          <path d="M12 1 L14.4 9.6 L23 12 L14.4 14.4 L12 23 L9.6 14.4 L1 12 L9.6 9.6 Z" />
-        </svg>
+        <BrandMark className="h-[18px] w-[18px] text-[var(--d2-accent)]" />
         <span className="text-[17px] font-bold text-[var(--d2-ink)]">nuva</span>
       </div>
 
