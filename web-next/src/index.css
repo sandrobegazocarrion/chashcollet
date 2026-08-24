@@ -19,7 +19,8 @@
   --d2-red: #b23b2e;
   --d2-blue: #3d6fd1;
   --d2-orange: #c6772e;
-  --d2-card-shadow: 0 1px 2px rgba(14, 14, 20, 0.03), 0 14px 30px -20px rgba(14, 14, 20, 0.12);
+  --d2-card-shadow: 0 2px 4px rgba(14, 14, 20, 0.04), 0 22px 44px -18px rgba(14, 14, 20, 0.16);
+  --d2-card-shadow-dark: 0 2px 4px rgba(0, 0, 0, 0.15), 0 26px 50px -18px rgba(101, 94, 255, 0.35);
   --font-ui-d2: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 .sparkle {

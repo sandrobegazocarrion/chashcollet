@@ -102,7 +102,7 @@ export function DesktopHomePage({ data, onGoTab }: { data: AppState; onGoTab: (t
             </div>
           </div>
 
-          <div className="mt-3.5 flex gap-2">
+          <div className="relative z-[1] mt-3.5 flex gap-2">
             {[
               { icon: 'ph-arrow-down', label: 'Ingresar' },
               { icon: 'ph-arrow-up', label: 'Gasto' },
@@ -120,7 +120,7 @@ export function DesktopHomePage({ data, onGoTab }: { data: AppState; onGoTab: (t
           </div>
         </div>
 
-        <div className="flex-1 rounded-[26px] border border-[var(--d2-border)] bg-white p-5" style={{ boxShadow: 'var(--d2-card-shadow)' }}>
+        <div className="flex-1 rounded-[26px] bg-[var(--d2-ink)] p-5" style={{ boxShadow: 'var(--d2-card-shadow-dark)' }}>
           <MonthlyRing ingresos={monthIn} gastos={monthOut} ahorro={monthNet} meta={data.monthlyGoal} onSetGoal={() => onGoTab('configuracion')} />
         </div>
       </div>
