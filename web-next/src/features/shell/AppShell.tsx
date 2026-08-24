@@ -46,7 +46,7 @@ export function AppShell() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen bg-[var(--bg)] md:pl-[88px]">
-        <div className="mx-auto flex w-full max-w-[1600px] flex-col gap-6 p-4 sm:p-6 lg:p-8">
+        <div className="flex w-full flex-col gap-6 p-4 sm:p-6 lg:p-8">
           <Skeleton className="h-52" />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Skeleton className="h-20" />
@@ -98,7 +98,7 @@ export function AppShell() {
             setSearchFocusTick((t) => t + 1);
           }}
         />
-        <main className="mx-auto w-full max-w-[1600px] flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="w-full flex-1 p-4 sm:p-6 lg:p-8">
           {tab === 'panel' && (
             <DashboardPage
               data={data}
