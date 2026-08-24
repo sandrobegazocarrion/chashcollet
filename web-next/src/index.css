@@ -1,22 +1,32 @@
 @import "tailwindcss";
 
-/* ---------------- Design tokens (colores reales de NUVA, ver public/css/styles.css) ----------------
+/* ---------------- Design tokens — identidad NUVA (navy/violeta/crema) ----------------
    Claro por defecto en :root; oscuro redefine los mismos nombres bajo prefers-color-scheme
    (si no hay preferencia guardada) y bajo [data-theme="dark"] (toggle manual, gana siempre).
-   El sidebar es negro fijo en los dos temas — así es en la app vieja también. */
+   Ver web-next/src/theme/nuva-tokens.css para la propuesta original revisada con el usuario.
+   Rojo/verde son EXCLUSIVAMENTE semánticos (gasto/ingreso) — nunca color de marca. */
 :root {
-  --bg: #ffffff;
-  --surface: #ffffff;
-  --surface-raised: #f7f7f8;
-  --border: rgba(10, 10, 10, 0.07);
-  --border-flat: rgba(10, 10, 10, 0.07);
+  --nuva-navy: #060b1f;
+  --nuva-violet: #614cd1;
+  --nuva-gray: #d8d8d8;
+  --nuva-cream: #eae6e2;
 
-  --text: #0a0a0a;
-  --text-muted: #6b6b6b;
-  --text-faint: #8a8a87;
+  --bg: var(--nuva-cream);
+  --surface: #f5f2ee;
+  --surface-raised: #fbfaf8;
+  --border: var(--nuva-gray);
+  --border-flat: var(--nuva-gray);
 
-  --brand: #dc2626;
-  --brand-glow: color-mix(in srgb, var(--brand) 45%, transparent);
+  --text: var(--nuva-navy);
+  --text-muted: color-mix(in srgb, var(--nuva-navy) 68%, transparent);
+  --text-faint: color-mix(in srgb, var(--nuva-navy) 44%, transparent);
+
+  --brand: var(--nuva-violet);
+  --brand-hover: #4e3cb0;
+  --brand-active: #3d2e8c;
+  --brand-glow: color-mix(in srgb, var(--nuva-violet) 38%, transparent);
+  --brand-muted-bg: #ede9fb;
+  --brand-muted-text: #4e3cb0;
 
   --green: #1f7a4d;
   --red: #b3261e;
@@ -25,20 +35,22 @@
   --ochre: #a56c1f;
   --lavender: #6f7590;
 
-  /* Zonas del velocímetro de salud de tarjeta (panel "Tarjetas de crédito"): verde/ámbar
-     con hex explícitos pedidos para el gauge (más "semáforo" que --green/--amber, que se
-     usan para otros fines en la app) — la zona roja reutiliza --brand a propósito. */
+  /* Zonas del velocímetro de salud de tarjeta: la zona de peligro es semánticamente
+     roja (--red), no --brand — un gauge de riesgo no debe cambiar de significado solo
+     porque el color de marca cambió. */
   --gauge-safe: #16a34a;
   --gauge-warn: #d97706;
   --sage: #5c8a71;
 
-  --sidebar-bg: #070708;
-  --sidebar-text: #8e8e93;
-  --sidebar-fill: #141414;
+  --sidebar-bg: var(--nuva-navy);
+  --sidebar-text: #9797ad;
+  --sidebar-fill: #10162e;
 
   --radius-card: 24px;
   --radius-control: 14px;
   --radius-pill: 999px;
+
+  --font-money: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
 
   /* Pop-in de dígitos (portado 1:1 de public/css/styles.css) */
   --digit-dur: 500ms;
@@ -52,18 +64,22 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --bg: #0d0d0f;
-    --surface: #18181b;
-    --surface-raised: #212124;
-    --border: rgba(255, 255, 255, 0.08);
-    --border-flat: rgba(255, 255, 255, 0.08);
+    --bg: var(--nuva-navy);
+    --surface: #10162e;
+    --surface-raised: #171e38;
+    --border: rgba(255, 255, 255, 0.1);
+    --border-flat: rgba(255, 255, 255, 0.1);
 
-    --text: #fafafa;
-    --text-muted: #98989c;
-    --text-faint: #7a7a7d;
+    --text: #f0eee9;
+    --text-muted: color-mix(in srgb, #f0eee9 68%, transparent);
+    --text-faint: color-mix(in srgb, #f0eee9 44%, transparent);
 
-    --brand: #ff6259;
-    --brand-glow: color-mix(in srgb, var(--brand) 45%, transparent);
+    --brand: #7c68e0;
+    --brand-hover: #6753c4;
+    --brand-active: #8f7ee8;
+    --brand-glow: color-mix(in srgb, #7c68e0 45%, transparent);
+    --brand-muted-bg: rgba(124, 104, 224, 0.18);
+    --brand-muted-text: #b7abf0;
 
     --green: #34d399;
     --red: #e2836b;
@@ -78,18 +94,22 @@
   }
 }
 :root[data-theme='dark'] {
-  --bg: #0d0d0f;
-  --surface: #18181b;
-  --surface-raised: #212124;
-  --border: rgba(255, 255, 255, 0.08);
-  --border-flat: rgba(255, 255, 255, 0.08);
+  --bg: var(--nuva-navy);
+  --surface: #10162e;
+  --surface-raised: #171e38;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-flat: rgba(255, 255, 255, 0.1);
 
-  --text: #fafafa;
-  --text-muted: #98989c;
-  --text-faint: #7a7a7d;
+  --text: #f0eee9;
+  --text-muted: color-mix(in srgb, #f0eee9 68%, transparent);
+  --text-faint: color-mix(in srgb, #f0eee9 44%, transparent);
 
-  --brand: #ff6259;
-  --brand-glow: color-mix(in srgb, var(--brand) 45%, transparent);
+  --brand: #7c68e0;
+  --brand-hover: #6753c4;
+  --brand-active: #8f7ee8;
+  --brand-glow: color-mix(in srgb, #7c68e0 45%, transparent);
+  --brand-muted-bg: rgba(124, 104, 224, 0.18);
+  --brand-muted-text: #b7abf0;
 
   --green: #34d399;
   --red: #e2836b;
@@ -122,9 +142,14 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+/* Monoespaciada solo para cifras de dinero — nunca para texto de interfaz. .num ya
+   se usa en todo el app (AnimatedDigits, totales, filas de transacciones, tarjetas,
+   préstamos), así que este único cambio aplica la tipografía de precisión en todos
+   lados a la vez. */
 .num {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
+  font-family: var(--font-money);
 }
 
 /* ---------------- Pop-in de dígitos (portado de app.js#digitSpans) ---------------- */

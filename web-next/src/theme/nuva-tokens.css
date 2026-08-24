@@ -1,0 +1,146 @@
+/* ============================================================
+   NUVA — propuesta de identidad visual (Fase 1: tokens + galería)
+   ============================================================
+   Este archivo NO está importado todavía en index.css — es la propuesta
+   para revisión. Reemplaza los tokens de marca actuales (rojo como color
+   primario) sin tocar los radios ya establecidos (--radius-card: 24px,
+   --radius-control: 14px, --radius-pill).
+
+   Paleta base (dada por el usuario):
+     --nuva-navy   #060B1F  texto principal, superficies oscuras
+     --nuva-violet #614CD1  color de marca: CTAs, acentos, estados activos
+     --nuva-gray   #D8D8D8  bordes, elementos secundarios, texto disabled
+     --nuva-cream  #EAE6E2  superficie base en modo claro
+
+   Rojo/verde quedan EXCLUSIVAMENTE semánticos (gasto/ingreso) — nunca
+   como color de marca. Eso es lo que cambia respecto a hoy: --brand deja
+   de ser rojo (#dc2626) y pasa a ser violeta.
+   ============================================================ */
+
+:root {
+  /* ---- Paleta base NUVA (constantes, no cambian por tema) ---- */
+  --nuva-navy: #060b1f;
+  --nuva-violet: #614cd1;
+  --nuva-gray: #d8d8d8;
+  --nuva-cream: #eae6e2;
+
+  /* ---- Modo claro ---- */
+  --bg: var(--nuva-cream);
+  --surface: #f5f2ee; /* cream-elevated: tarjetas sobre el fondo */
+  --surface-raised: #fbfaf8; /* elementos anidados/hover dentro de una tarjeta */
+  --border: var(--nuva-gray);
+  --border-flat: var(--nuva-gray);
+
+  --text: var(--nuva-navy);
+  --text-muted: color-mix(in srgb, var(--nuva-navy) 68%, transparent);
+  --text-faint: color-mix(in srgb, var(--nuva-navy) 44%, transparent);
+  --text-disabled: #b9b9b9;
+
+  /* ---- Marca: violeta (reemplaza el rojo como color primario) ---- */
+  --brand: var(--nuva-violet);
+  --brand-hover: #4e3cb0;
+  --brand-active: #3d2e8c;
+  --brand-glow: color-mix(in srgb, var(--nuva-violet) 38%, transparent);
+  --brand-muted-bg: #ede9fb; /* fondo de chips/badges */
+  --brand-muted-text: #4e3cb0;
+
+  /* ---- Semántico: SOLO gasto/ingreso, nunca marca ---- */
+  --green: #1f7a4d;
+  --red: #b3261e;
+  --amber: #e2a63b;
+
+  /* Tokens que ya existían y se mantienen (fuera de alcance de este cambio) */
+  --accent2: #52525b;
+  --ochre: #a56c1f;
+  --lavender: #6f7590;
+  --sage: #5c8a71;
+  --gauge-safe: #16a34a;
+  --gauge-warn: #d97706;
+
+  /* Sidebar: ya era casi-negro; ahora se ancla al navy real de marca */
+  --sidebar-bg: var(--nuva-navy);
+  --sidebar-text: #8e8ea8;
+  --sidebar-fill: #10162e;
+
+  --radius-card: 24px;
+  --radius-control: 14px;
+  --radius-pill: 999px;
+
+  /* ---- Tipografía ---- */
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  /* Monoespaciada SOLO para montos de dinero (saldos, montos de transacciones,
+     cifras de tarjetas/préstamos) — nunca para texto de interfaz. Da precisión
+     visual, es un detalle que ningún template genérico tiene. */
+  --font-money: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: var(--nuva-navy);
+    --surface: #10162e;
+    --surface-raised: #171e38;
+    --border: rgba(255, 255, 255, 0.1);
+    --border-flat: rgba(255, 255, 255, 0.1);
+
+    --text: #f0eee9;
+    --text-muted: color-mix(in srgb, #f0eee9 68%, transparent);
+    --text-faint: color-mix(in srgb, #f0eee9 44%, transparent);
+    --text-disabled: #5b5f72;
+
+    --brand: #7c68e0; /* violeta aclarado para contraste sobre navy */
+    --brand-hover: #6753c4;
+    --brand-active: #55439e;
+    --brand-glow: color-mix(in srgb, #7c68e0 45%, transparent);
+    --brand-muted-bg: rgba(124, 104, 224, 0.18);
+    --brand-muted-text: #b7abf0;
+
+    --green: #34d399;
+    --red: #e2836b;
+    --amber: #f0bb5c;
+    --accent2: #a1a1aa;
+    --ochre: #d9a866;
+    --lavender: #a9adc4;
+    --sage: #9fd1b8;
+    --gauge-safe: #22c55e;
+    --gauge-warn: #f59e0b;
+  }
+}
+:root[data-theme='dark'] {
+  --bg: var(--nuva-navy);
+  --surface: #10162e;
+  --surface-raised: #171e38;
+  --border: rgba(255, 255, 255, 0.1);
+  --border-flat: rgba(255, 255, 255, 0.1);
+
+  --text: #f0eee9;
+  --text-muted: color-mix(in srgb, #f0eee9 68%, transparent);
+  --text-faint: color-mix(in srgb, #f0eee9 44%, transparent);
+  --text-disabled: #5b5f72;
+
+  --brand: #7c68e0;
+  --brand-hover: #6753c4;
+  --brand-active: #55439e;
+  --brand-glow: color-mix(in srgb, #7c68e0 45%, transparent);
+  --brand-muted-bg: rgba(124, 104, 224, 0.18);
+  --brand-muted-text: #b7abf0;
+
+  --green: #34d399;
+  --red: #e2836b;
+  --amber: #f0bb5c;
+  --accent2: #a1a1aa;
+  --ochre: #d9a866;
+  --lavender: #a9adc4;
+  --sage: #9fd1b8;
+  --gauge-safe: #22c55e;
+  --gauge-warn: #f59e0b;
+}
+
+/* .num ya se usa en TODO el app sobre cifras de dinero (AnimatedDigits,
+   totales, filas de transacciones, tarjetas, préstamos). Sumarle font-family
+   acá basta para que el mono de precisión aplique en todos lados a la vez,
+   sin tocar componente por componente. */
+.num {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  font-family: var(--font-money);
+}

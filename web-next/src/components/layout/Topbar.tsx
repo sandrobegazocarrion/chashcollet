@@ -160,7 +160,7 @@ export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearch
             aria-label="Cuenta"
             aria-haspopup="menu"
             aria-expanded={accountOpen}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#ffb020] to-[var(--brand)] text-sm font-bold uppercase text-white"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-sm font-bold uppercase text-white"
           >
             {avatarLabel}
           </button>

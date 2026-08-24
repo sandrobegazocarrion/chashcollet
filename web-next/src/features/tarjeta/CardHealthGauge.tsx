@@ -44,7 +44,7 @@ export function CardHealthGauge({ pct, simulatedPct }: CardHealthGaugeProps) {
         <path d={arcPath(0, 100, R)} stroke="var(--surface-raised)" strokeWidth={STROKE} fill="none" strokeLinecap="round" />
         <path d={arcPath(0, IDEAL_UTIL_PCT, R)} stroke="var(--gauge-safe)" strokeWidth={STROKE} fill="none" opacity={0.92} />
         <path d={arcPath(IDEAL_UTIL_PCT, 60, R)} stroke="var(--gauge-warn)" strokeWidth={STROKE} fill="none" opacity={0.92} />
-        <path d={arcPath(60, 100, R)} stroke="var(--brand)" strokeWidth={STROKE} fill="none" opacity={0.92} />
+        <path d={arcPath(60, 100, R)} stroke="var(--red)" strokeWidth={STROKE} fill="none" opacity={0.92} />
 
         {/* Marca en 30% "ideal" */}
         <line

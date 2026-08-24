@@ -19,7 +19,7 @@ export function cardZone(pct: number): CardZone {
 export const ZONE_VAR: Record<CardZone, string> = {
   safe: '--gauge-safe',
   warn: '--gauge-warn',
-  danger: '--brand',
+  danger: '--red',
 };
 
 // Cuánto pagar para bajar la deuda al 30% de la línea (el "ideal" recomendado).
