@@ -1,9 +1,13 @@
+import { useMemo, useState } from 'react';
 import { computeTotals, formatDate, formatMoney } from '../../lib/finance';
 import { computeLineChartBuckets } from '../../lib/lineChartBuckets';
-import { PiggyBank } from '../../components/brand/PiggyBank';
 import { Mascot } from '../../components/brand/Mascot';
+import { MonthlyRing } from './MonthlyRing';
 import type { AppState } from '../../lib/types';
 import type { TabId } from '../../components/layout/Sidebar';
+
+type Period = '7D' | '1M' | '3M' | '1A' | 'Todo';
+const PERIODS: Period[] = ['7D', '1M', '3M', '1A', 'Todo'];
 
 // Fase "Metas y Mascota" (desktop, >=1024px) — reconstrucción 1:1 del artboard
 // aprobado: https://claude.ai/code/artifact/5cddac23-367b-4855-9969-41dde7b6fc03
@@ -23,9 +27,20 @@ export function DesktopHomePage({ data, onGoTab }: { data: AppState; onGoTab: (t
   });
   const monthNet = monthIn - monthOut;
 
-  const { ingresos, gastos } = computeLineChartBuckets(data, 'month');
-  const netSeries = ingresos.map((v, i) => v - gastos[i]);
-  const trendPath = buildSmoothPath(netSeries);
+  const [period, setPeriod] = useState<Period>('1M');
+  const dayBuckets = useMemo(() => computeLineChartBuckets(data, 'day'), [data]);
+  const monthBuckets = useMemo(() => computeLineChartBuckets(data, 'month'), [data]);
+  const netSeries = useMemo(() => {
+    if (period === '7D') {
+      const net = dayBuckets.ingresos.map((v, i) => v - dayBuckets.gastos[i]);
+      return net.slice(-7);
+    }
+    if (period === '1M') return dayBuckets.ingresos.map((v, i) => v - dayBuckets.gastos[i]);
+    // 3M/1A/Todo: el bucket mensual real disponible (hasta 6 meses de historial) —
+    // sin inventar rango que la data no tiene.
+    return monthBuckets.ingresos.map((v, i) => v - monthBuckets.gastos[i]);
+  }, [period, dayBuckets, monthBuckets]);
+  const { path: trendPath, last: trendLast } = buildSmoothPath(netSeries);
 
   const goals = data.pockets;
   const recent = [...data.transactions].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 4);
@@ -33,65 +48,80 @@ export function DesktopHomePage({ data, onGoTab }: { data: AppState; onGoTab: (t
   return (
     <div className="flex flex-col gap-4" style={{ fontFamily: 'var(--font-ui-d2)' }}>
       {/* ROW 1 */}
-      <div className="flex gap-4">
+      <div className="flex items-stretch gap-4">
         <div
-          className="relative flex flex-[1.5] items-center justify-between overflow-hidden rounded-[26px] border p-7"
+          className="relative flex-[1.5] overflow-hidden rounded-[26px] border p-6"
           style={{ background: 'linear-gradient(135deg,#F0EEFF 0%,#F7F6FF 100%)', borderColor: '#ECE8FF', boxShadow: 'var(--d2-card-shadow)' }}
         >
-          <div className="relative z-[1] max-w-[290px]">
-            <p className="text-[21px] font-extrabold leading-[1.25] text-[var(--d2-ink)]">Tu ahorro de hoy, tus sueños de mañana</p>
-            <p className="mt-2 text-[12.5px] leading-relaxed text-[#6B6A78]">Organiza, controla y haz crecer tu dinero. ¡Tú puedes!</p>
-            <button
-              type="button"
-              onClick={() => onGoTab('chanchitos')}
-              className="mt-4 flex items-center gap-1.5 rounded-full bg-[var(--d2-ink)] px-5 py-[11px] text-[12.5px] font-semibold text-white"
-            >
-              Ver mis metas
-              <i className="ph ph-arrow-right text-[13px]" aria-hidden="true" />
-            </button>
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-[12.5px] font-medium text-[#6B6A78]">Total en tu cuenta</p>
+              <p className="num mt-1.5 text-[29px] font-semibold text-[var(--d2-ink)]">{formatMoney(totals.totalLiquid)}</p>
+              <p className={`num mt-1 text-xs font-semibold ${monthNet >= 0 ? 'text-[var(--d2-green)]' : 'text-[var(--d2-red)]'}`}>
+                <i className={`ph ${monthNet >= 0 ? 'ph-arrow-up' : 'ph-arrow-down'}`} aria-hidden="true" /> {monthNet >= 0 ? '+' : ''}
+                {formatMoney(monthNet)} este mes
+              </p>
+            </div>
+            <div className="flex shrink-0 gap-0.5 rounded-full border border-[#ECE8FF] bg-white p-[3px]">
+              {PERIODS.map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setPeriod(p)}
+                  className={`rounded-full px-2.5 py-1.5 text-[10px] font-semibold ${p === period ? 'bg-[var(--d2-ink)] text-white' : 'text-[var(--d2-muted)]'}`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
           </div>
-          <PiggyBank />
-        </div>
 
-        <div className="flex flex-1 flex-col rounded-[26px] border border-[var(--d2-border)] bg-white p-6" style={{ boxShadow: 'var(--d2-card-shadow)' }}>
-          <div className="flex items-center justify-between">
-            <p className="text-[12.5px] font-medium text-[var(--d2-muted)]">Total en tu cuenta</p>
-            <i className="ph ph-eye text-[15px] text-[#B4B2BA]" aria-hidden="true" />
+          <div className="relative mt-5 h-[78px]">
+            <svg width="100%" height="78" viewBox="0 0 480 78" preserveAspectRatio="none" className="absolute left-0 top-0 block" aria-hidden="true">
+              <path d={trendPath} fill="none" stroke="var(--d2-accent)" strokeWidth="2.4" strokeLinecap="round" />
+              {trendLast && <circle cx={trendLast[0]} cy={trendLast[1]} r="4" fill="var(--d2-accent)" />}
+            </svg>
+            {trendLast && (
+              <div
+                className="num absolute whitespace-nowrap rounded-[9px] bg-[var(--d2-ink)] px-2 py-1 text-[9.5px] font-semibold text-white"
+                style={{ left: `${Math.min(78, (trendLast[0] / 480) * 100)}%`, top: -6, transform: 'translateX(-50%)' }}
+              >
+                {formatMoney(netSeries[netSeries.length - 1] ?? 0)} · Hoy
+              </div>
+            )}
+
+            {/* Barras crecientes + mascota — firma de marca, sin datos detrás. */}
+            <div className="absolute bottom-0 right-0 flex items-end gap-1.5">
+              <span className="w-[11px] rounded-t-[5px]" style={{ height: 18, background: 'linear-gradient(180deg,#D3CDFF,#AFA6FF)' }} />
+              <span className="w-[11px] rounded-t-[5px]" style={{ height: 29, background: 'linear-gradient(180deg,#B3AAFF,#8B82FA)' }} />
+              <span className="w-[11px] rounded-t-[5px]" style={{ height: 41, background: 'linear-gradient(180deg,#9A90FF,#6D64F2)' }} />
+              <span className="relative w-[11px] rounded-t-[5px]" style={{ height: 55, background: 'linear-gradient(180deg,#8078F5,#5B53E8)' }}>
+                <span className="sparkle absolute h-1.5 w-1.5" style={{ top: -38, left: -8 }} />
+                <Mascot pose="chart" className="absolute bottom-[52px] left-1/2 -translate-x-1/2" />
+              </span>
+            </div>
           </div>
-          <p className="num mt-1.5 text-[27px] font-semibold text-[var(--d2-ink)]">{formatMoney(totals.totalLiquid)}</p>
-          <p className={`num mt-1 text-xs font-semibold ${monthNet >= 0 ? 'text-[var(--d2-green)]' : 'text-[var(--d2-red)]'}`}>
-            <i className={`ph ${monthNet >= 0 ? 'ph-arrow-up' : 'ph-arrow-down'}`} aria-hidden="true" /> {monthNet >= 0 ? '+' : ''}
-            {formatMoney(monthNet)} este mes
-          </p>
 
-          <svg width="100%" height="46" viewBox="0 0 220 46" className="mt-3" aria-hidden="true">
-            <path d={trendPath} fill="none" stroke="var(--d2-accent)" strokeWidth="2.4" strokeLinecap="round" />
-          </svg>
-
-          {/* No estaba en el artboard aprobado, pero el checklist de QA pide que "tasa
-              de ahorro" siga funcionando igual — se agrega como línea compacta acá en
-              vez de inventarle una tarjeta propia que la maqueta no tiene. */}
-          <p className="mt-2 text-[11px] text-[var(--d2-muted)]">
-            Tasa de ahorro: <span className="num font-semibold text-[var(--d2-ink)]">{monthIn > 0 ? `${Math.round((monthNet / monthIn) * 100)}%` : '—'}</span>
-          </p>
-
-          <div className="mt-4 flex gap-2">
+          <div className="mt-3.5 flex gap-2">
             {[
               { icon: 'ph-arrow-down', label: 'Ingresar' },
-              { icon: 'ph-arrow-right', label: 'Transferir' },
-              { icon: 'ph-vault', label: 'Guardar' },
+              { icon: 'ph-arrow-up', label: 'Gasto' },
             ].map((a) => (
               <button
                 key={a.label}
                 type="button"
-                onClick={() => onGoTab(a.label === 'Guardar' ? 'chanchitos' : 'transacciones')}
-                className="flex flex-1 flex-col items-center gap-1.5 rounded-[13px] bg-[#F7F7F9] px-1 py-2.5"
+                onClick={() => onGoTab('transacciones')}
+                className="flex flex-1 flex-col items-center gap-1.5 rounded-[13px] border border-[#ECE8FF] bg-white px-1 py-2.5"
               >
-                <i className={`ph ${a.icon} text-[15px] text-[var(--d2-ink)]`} aria-hidden="true" />
-                <span className="text-[10.5px] font-medium text-[var(--d2-muted-2)]">{a.label}</span>
+                <i className={`ph ${a.icon} text-[14px] text-[var(--d2-ink)]`} aria-hidden="true" />
+                <span className="text-[10px] font-medium text-[var(--d2-muted-2)]">{a.label}</span>
               </button>
             ))}
           </div>
+        </div>
+
+        <div className="flex-1 rounded-[26px] border border-[var(--d2-border)] bg-white p-5" style={{ boxShadow: 'var(--d2-card-shadow)' }}>
+          <MonthlyRing ingresos={monthIn} gastos={monthOut} ahorro={monthNet} meta={data.monthlyGoal} onSetGoal={() => onGoTab('configuracion')} />
         </div>
       </div>
 
@@ -241,13 +271,18 @@ function goalIcon(name: string): string {
 }
 
 // Curva suave tipo Catmull-Rom -> Bezier a través de los puntos de la serie, en el
-// mismo viewBox (220x46) del artboard aprobado. Sin ejes/grid a propósito.
-function buildSmoothPath(values: number[]): string {
-  if (values.length === 0) return '';
-  const W = 220;
-  const H = 46;
-  const PAD_Y = 6;
-  if (values.length === 1) return `M0,${H / 2} L${W},${H / 2}`;
+// mismo viewBox (480x78) del artboard aprobado. La línea ocupa solo los primeros
+// ~365px de los 480 (el resto es el espacio de las barras crecientes + mascota,
+// que viven ancladas a la derecha). Sin ejes/grid a propósito.
+function buildSmoothPath(values: number[]): { path: string; last: readonly [number, number] | null } {
+  if (values.length === 0) return { path: '', last: null };
+  const W = 365;
+  const H = 78;
+  const PAD_Y = 10;
+  if (values.length === 1) {
+    const y = H / 2;
+    return { path: `M0,${y} L${W},${y}`, last: [W, y] };
+  }
   const min = Math.min(...values, 0);
   const max = Math.max(...values, 1);
   const range = max - min || 1;
@@ -263,5 +298,5 @@ function buildSmoothPath(values: number[]): string {
     const midX = (x0 + x1) / 2;
     d += ` C${midX.toFixed(1)},${y0.toFixed(1)} ${midX.toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
   }
-  return d;
+  return { path: d, last: pts[pts.length - 1] };
 }
