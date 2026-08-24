@@ -1,5 +1,32 @@
 @import "tailwindcss";
 
+/* ---------------- "Metas y Mascota" — sistema desktop (>=1024px), Fase 1 ----------------
+   Aprobado en https://claude.ai/code/artifact/5cddac23-367b-4855-9969-41dde7b6fc03 (Inicio).
+   Nombres propios (d2-*) para no chocar ni mezclarse con los tokens navy/violeta/crema de
+   arriba, que siguen siendo el sistema real en mobile/tablet (<1024px) — nada de lo de acá
+   se usa fuera de los componentes Desktop* que lee esta fase. Un solo tema (no dark mode
+   todavía en este sistema; la maqueta aprobada es solo clara). */
+:root {
+  --d2-ink: #0e0e14;
+  --d2-accent: #655eff;
+  --d2-accent-dark: #4f47e6;
+  --d2-accent-tint: #eeecff;
+  --d2-border: #ecebef;
+  --d2-bg: #f5f6f8;
+  --d2-muted: #8b8a92;
+  --d2-muted-2: #57565f;
+  --d2-green: #3e9a6d;
+  --d2-red: #b23b2e;
+  --d2-blue: #3d6fd1;
+  --d2-orange: #c6772e;
+  --d2-card-shadow: 0 1px 2px rgba(14, 14, 20, 0.03), 0 14px 30px -20px rgba(14, 14, 20, 0.12);
+  --font-ui-d2: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+.sparkle {
+  background: var(--d2-accent);
+  clip-path: polygon(50% 0%, 61% 39%, 100% 50%, 61% 61%, 50% 100%, 39% 61%, 0% 50%, 39% 39%);
+}
+
 /* ---------------- Design tokens — identidad NUVA (navy/violeta/crema) ----------------
    Claro por defecto en :root; oscuro redefine los mismos nombres bajo prefers-color-scheme
    (si no hay preferencia guardada) y bajo [data-theme="dark"] (toggle manual, gana siempre).

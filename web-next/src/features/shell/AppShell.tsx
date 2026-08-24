@@ -3,10 +3,12 @@ import { useAppState } from '../../hooks/useAppState';
 import { useAuth } from '../../hooks/useAuth';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Sidebar, TAB_LABELS, type TabId } from '../../components/layout/Sidebar';
+import { DesktopSidebar } from '../../components/layout/DesktopSidebar';
 import { Topbar } from '../../components/layout/Topbar';
 import { SettingsPage } from '../settings/SettingsPage';
 import { greetingText } from '../../lib/greeting';
 import { DashboardPage } from '../dashboard/DashboardPage';
+import { DesktopHomePage } from '../dashboard/DesktopHomePage';
 import { SUBVIEW_META, type SubViewType } from '../dashboard/SubView';
 import { TransaccionesPage } from '../transacciones/TransaccionesPage';
 import { CuentasPage } from '../cuentas/CuentasPage';
@@ -75,8 +77,15 @@ export function AppShell() {
           ? 'Configuración'
           : TAB_LABELS[tab];
 
+  // Saludo/subtítulo de la fase "Metas y Mascota" (desktop) solo aplica en Inicio,
+  // sin sub-vista abierta — en el resto de pestañas el header desktop hereda el
+  // mismo `title` que ya usa mobile (nombre de la pestaña), sin inventar copy.
+  const desktopGreeting = data.profile.ownerName ? `Hola, ${data.profile.ownerName} 👋` : 'Hola 👋';
+  const desktopTitle = tab === 'panel' && !subView ? desktopGreeting : title;
+  const desktopSubtitle = tab === 'panel' && !subView ? 'Hoy es un buen día para seguir construyendo la vida que quieres.' : undefined;
+
   return (
-    <div className="min-h-screen bg-[var(--bg)]">
+    <div className="min-h-screen bg-[var(--bg)] lg:bg-[var(--d2-bg)]">
       <Sidebar
         active={tab}
         onChange={goTab}
@@ -86,9 +95,11 @@ export function AppShell() {
         onQuickAdd={() => goTab('transacciones')}
         online
       />
-      <div className="flex min-h-screen flex-col md:pl-[88px]">
+      <DesktopSidebar active={tab} onChange={goTab} showAdmin={data.profile.isAdmin} />
+      <div className="flex min-h-screen flex-col md:pl-[88px] lg:pl-[210px]">
         <Topbar
-          title={title}
+          title={desktopTitle}
+          subtitle={desktopSubtitle}
           onOpenMenu={() => setSidebarOpen(true)}
           avatarLabel={avatarLabel}
           data={data}
@@ -99,19 +110,26 @@ export function AppShell() {
           }}
         />
         <main className="w-full flex-1 p-4 sm:p-6 lg:p-8">
+          {tab === 'panel' && !subView && (
+            <div className="hidden lg:block">
+              <DesktopHomePage data={data} onGoTab={goTab} />
+            </div>
+          )}
           {tab === 'panel' && (
-            <DashboardPage
-              data={data}
-              onNewGoal={() => goTab('chanchitos')}
-              onOpenGoals={() => goTab('chanchitos')}
-              onGoTab={goTab}
-              subView={subView}
-              svMonth={svMonth}
-              onOpenSubView={setSubView}
-              onCloseSubView={() => setSubView(null)}
-              onPrevSvMonth={() => setSvMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-              onNextSvMonth={() => setSvMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-            />
+            <div className={subView ? '' : 'lg:hidden'}>
+              <DashboardPage
+                data={data}
+                onNewGoal={() => goTab('chanchitos')}
+                onOpenGoals={() => goTab('chanchitos')}
+                onGoTab={goTab}
+                subView={subView}
+                svMonth={svMonth}
+                onOpenSubView={setSubView}
+                onCloseSubView={() => setSubView(null)}
+                onPrevSvMonth={() => setSvMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+                onNextSvMonth={() => setSvMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+              />
+            </div>
           )}
           {tab === 'transacciones' && <TransaccionesPage data={data} focusSearchSignal={searchFocusTick} />}
           {tab === 'cuentas' && <CuentasPage data={data} />}

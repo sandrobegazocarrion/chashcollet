@@ -12,7 +12,7 @@ export type TabId =
   | 'admin'
   | 'configuracion';
 
-interface TabDef {
+export interface TabDef {
   id: TabId;
   label: string;
   icon: string;
@@ -21,7 +21,9 @@ interface TabDef {
 // Mismo orden y mismos íconos que public/index.html#sbNav: Inicio, Cuentas, Tarjetas
 // de crédito, Préstamos, Historial, Servicios, Metas, Pagos, Admin — "Servicios" y
 // "Préstamos" son pestañas separadas ahí (antes las tenía combinadas en una sola).
-const TABS: TabDef[] = [
+// Exportado: DesktopSidebar (fase "Metas y Mascota", >=1024px) reusa esta misma
+// fuente de navegación para no divergir en qué pestañas existen.
+export const TABS: TabDef[] = [
   { id: 'panel', label: 'Inicio', icon: 'ph-house' },
   { id: 'cuentas', label: 'Cuentas', icon: 'ph-bank' },
   { id: 'tarjeta', label: 'Tarjetas de crédito', icon: 'ph-credit-card' },
@@ -55,15 +57,18 @@ export function Sidebar({ active, onChange, showAdmin, open, onClose, onQuickAdd
 
   return (
     <>
+      {/* A partir de lg (1024px) toma el control DesktopSidebar (fase "Metas y Mascota") —
+          este riel navy/violeta queda como el sistema de mobile/tablet, sin tocar su
+          comportamiento actual (drawer <768px, riel fijo 768-1023px). */}
       {open && (
         <div
-          className="fixed inset-0 z-30 bg-black/45 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-30 bg-black/45 backdrop-blur-sm md:hidden lg:hidden"
           onClick={onClose}
           role="presentation"
         />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-[88px] flex-shrink-0 flex-col items-center overflow-y-auto bg-[var(--sidebar-bg)] transition-transform duration-200 md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-[88px] flex-shrink-0 flex-col items-center overflow-y-auto bg-[var(--sidebar-bg)] transition-transform duration-200 md:translate-x-0 lg:hidden ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
