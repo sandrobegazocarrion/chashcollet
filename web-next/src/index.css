@@ -55,7 +55,7 @@
   --radius-control: 14px;
   --radius-pill: 999px;
 
-  --font-money: 'IBM Plex Mono', ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+  --font-money: 'DM Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
   /* Pop-in de dígitos (portado 1:1 de public/css/styles.css) */
   --digit-dur: 500ms;
@@ -147,10 +147,11 @@ body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Monoespaciada solo para cifras de dinero — nunca para texto de interfaz. .num ya
-   se usa en todo el app (AnimatedDigits, totales, filas de transacciones, tarjetas,
-   préstamos), así que este único cambio aplica la tipografía de precisión en todos
-   lados a la vez. */
+/* Tipografía de precisión solo para cifras de dinero — nunca para texto de interfaz.
+   .num ya se usa en todo el app (AnimatedDigits, totales, filas de transacciones,
+   tarjetas, préstamos), así que este único cambio la aplica en todos lados a la vez.
+   font-variant-numeric: tabular-nums mantiene los dígitos alineados en columna aunque
+   DM Sans ya no sea monoespaciada. */
 .num {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
