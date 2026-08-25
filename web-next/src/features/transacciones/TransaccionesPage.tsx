@@ -1,17 +1,15 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { PageHeader } from '../../components/layout/PageHeader';
-import { Modal } from '../../components/ui/Modal';
-import { Input } from '../../components/ui/Input';
-import { Select } from '../../components/ui/Select';
 import { GradientButton } from '../../components/ui/GradientButton';
 import { IconButton } from '../../components/ui/IconButton';
 import { useApiMutation } from '../../hooks/useApiMutation';
 import { formatMoney } from '../../lib/finance';
 import { categoryColorVar } from '../../lib/categoryColor';
 import { ImportWizard } from './ImportWizard';
+import { TransactionSheet } from './TransactionSheet';
 import type { AppState, Transaction } from '../../lib/types';
 
-const CATEGORY_ICONS: Record<string, string> = {
+export const CATEGORY_ICONS: Record<string, string> = {
   Comida: 'ph-hamburger',
   Transporte: 'ph-car',
   Hogar: 'ph-house-simple',
@@ -19,41 +17,10 @@ const CATEGORY_ICONS: Record<string, string> = {
   Salud: 'ph-pill',
   Otros: 'ph-credit-card',
 };
-const ACC_ICONS: Record<string, string> = { ahorro: 'ph-vault', corriente: 'ph-bank', efectivo: 'ph-coins', tarjeta: 'ph-credit-card' };
+export const ACC_ICONS: Record<string, string> = { ahorro: 'ph-vault', corriente: 'ph-bank', efectivo: 'ph-coins', tarjeta: 'ph-credit-card' };
 
-interface FormState {
-  type: 'ingreso' | 'gasto';
-  amount: string;
-  date: string;
-  category: string;
-  description: string;
-  accountId: string;
-}
-
-function todayStr() {
+export function todayStr() {
   return new Date().toISOString().slice(0, 10);
-}
-
-function emptyForm(data: AppState): FormState {
-  return {
-    type: 'gasto',
-    amount: '',
-    date: todayStr(),
-    category: data.categories[0] || 'Otros',
-    description: '',
-    accountId: data.accounts.find((a) => a.type !== 'tarjeta')?.id || data.accounts[0]?.id || '',
-  };
-}
-
-function txToForm(tx: Transaction): FormState {
-  return {
-    type: tx.type,
-    amount: String(tx.amount),
-    date: tx.date,
-    category: tx.category,
-    description: tx.description || '',
-    accountId: tx.accountId || '',
-  };
 }
 
 // "Hoy" / "Ayer" / "3 de agosto" — portado de dateGroupLabel() en app.js.
@@ -77,8 +44,6 @@ export function TransaccionesPage({ data, focusSearchSignal }: { data: AppState;
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
-  const [form, setForm] = useState<FormState>(() => emptyForm(data));
-  const [error, setError] = useState<string | null>(null);
 
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
@@ -97,43 +62,17 @@ export function TransaccionesPage({ data, focusSearchSignal }: { data: AppState;
     return () => clearTimeout(t);
   }, [focusSearchSignal]);
 
-  const addTx = useApiMutation<unknown, Transaction>('POST', '/api/transactions');
-  const updateTx = useApiMutation<{ id: string } & Record<string, unknown>, Transaction>('PUT', (body) => `/api/transactions/${body.id}`);
   const deleteTx = useApiMutation<{ id: string }, void>('DELETE', (body) => `/api/transactions/${body.id}`);
 
   function openCreate() {
-    setForm(emptyForm(data));
-    setError(null);
     setCreating(true);
   }
   function openEdit(tx: Transaction) {
-    setForm(txToForm(tx));
-    setError(null);
     setEditing(tx);
   }
   function closeModal() {
     setCreating(false);
     setEditing(null);
-  }
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    const body = {
-      type: form.type,
-      amount: Number(form.amount),
-      date: form.date,
-      category: form.category,
-      description: form.description.trim() || undefined,
-      accountId: form.accountId,
-    };
-    try {
-      if (editing) await updateTx.mutateAsync({ id: editing.id, ...body });
-      else await addTx.mutateAsync(body);
-      closeModal();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'No se pudo guardar el movimiento.');
-    }
   }
 
   async function handleDelete(tx: Transaction) {
@@ -339,79 +278,7 @@ export function TransaccionesPage({ data, focusSearchSignal }: { data: AppState;
         </>
       )}
 
-      <Modal open={creating || !!editing} onClose={closeModal} title={editing ? 'Editar movimiento' : 'Nueva transacción'}>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <TypeToggle value={form.type} onChange={(type) => setForm({ ...form, type })} />
-          <Input
-            label="Monto"
-            type="number"
-            min={0}
-            step="0.01"
-            required
-            value={form.amount}
-            onChange={(e) => setForm({ ...form, amount: e.target.value })}
-          />
-          <Input label="Fecha" type="date" required value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />
-          <Input
-            label="Descripción (opcional)"
-            value={form.description}
-            onChange={(e) => setForm({ ...form, description: e.target.value })}
-          />
-          <Select label="Categoría" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-            {data.categories.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </Select>
-          <Select label="Cuenta" required value={form.accountId} onChange={(e) => setForm({ ...form, accountId: e.target.value })}>
-            <option value="" disabled>
-              Elige una cuenta
-            </option>
-            {data.accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </Select>
-
-          {error && (
-            <p className="text-sm text-[var(--red)]" role="alert">
-              {error}
-            </p>
-          )}
-
-          <GradientButton type="submit" loading={addTx.isPending || updateTx.isPending} className="w-full">
-            {editing ? 'Guardar cambios' : 'Guardar'}
-          </GradientButton>
-        </form>
-      </Modal>
-    </div>
-  );
-}
-
-function TypeToggle({ value, onChange }: { value: 'ingreso' | 'gasto'; onChange: (v: 'ingreso' | 'gasto') => void }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="text-sm text-[var(--text-muted)]">Tipo</span>
-      <div className="flex overflow-hidden rounded-[var(--radius-control)] border border-[var(--border)]">
-        {(['ingreso', 'gasto'] as const).map((t) => (
-          <button
-            key={t}
-            type="button"
-            onClick={() => onChange(t)}
-            className={`flex-1 py-2 text-sm font-semibold transition-colors ${
-              value === t
-                ? t === 'ingreso'
-                  ? 'bg-[var(--green)] text-white'
-                  : 'bg-[var(--red)] text-white'
-                : 'bg-[var(--surface)] text-[var(--text-muted)] hover:bg-[var(--surface-raised)]'
-            }`}
-          >
-            {t === 'ingreso' ? 'Ingreso' : 'Gasto'}
-          </button>
-        ))}
-      </div>
+      <TransactionSheet open={creating || !!editing} editing={editing} onClose={closeModal} data={data} />
     </div>
   );
 }
