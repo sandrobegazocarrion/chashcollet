@@ -3,7 +3,8 @@ import { useAppState } from '../../hooks/useAppState';
 import { useAuth } from '../../hooks/useAuth';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Sidebar, TAB_LABELS, type TabId } from '../../components/layout/Sidebar';
-import { DesktopSidebar } from '../../components/layout/DesktopSidebar';
+import { DesktopDrawer } from '../../components/layout/DesktopDrawer';
+import { DesktopHeaderCard } from '../../components/layout/DesktopHeaderCard';
 import { Topbar } from '../../components/layout/Topbar';
 import { SettingsPage } from '../settings/SettingsPage';
 import { greetingText } from '../../lib/greeting';
@@ -27,6 +28,7 @@ export function AppShell() {
   const { data, isLoading, isError, error } = useAppState();
   const [tab, setTab] = useState<TabId>('panel');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchFocusTick, setSearchFocusTick] = useState(0);
   const [subView, setSubView] = useState<SubViewType | null>(null);
   const [svMonth, setSvMonth] = useState(() => {
@@ -77,12 +79,17 @@ export function AppShell() {
           ? 'Configuración'
           : TAB_LABELS[tab];
 
-  // Saludo/subtítulo de la fase "Metas y Mascota" (desktop) solo aplica en Inicio,
+  // Saludo/subtítulo de la fase 2 "panel de widgets" (desktop) solo aplica en Inicio,
   // sin sub-vista abierta — en el resto de pestañas el header desktop hereda el
   // mismo `title` que ya usa mobile (nombre de la pestaña), sin inventar copy.
   const desktopGreeting = data.profile.ownerName ? `Hola, ${data.profile.ownerName} 👋` : 'Hola 👋';
   const desktopTitle = tab === 'panel' && !subView ? desktopGreeting : title;
   const desktopSubtitle = tab === 'panel' && !subView ? 'Hoy es un buen día para seguir construyendo la vida que quieres.' : undefined;
+
+  function handleSearchClick() {
+    goTab('transacciones');
+    setSearchFocusTick((t) => t + 1);
+  }
 
   return (
     <div className="min-h-screen bg-[var(--bg)] lg:bg-[var(--d2-bg)]">
@@ -95,21 +102,20 @@ export function AppShell() {
         onQuickAdd={() => goTab('transacciones')}
         online
       />
-      <DesktopSidebar active={tab} onChange={goTab} showAdmin={data.profile.isAdmin} />
-      <div className="flex min-h-screen flex-col md:pl-[88px] lg:pl-[210px]">
-        <Topbar
-          title={desktopTitle}
-          subtitle={desktopSubtitle}
-          onOpenMenu={() => setSidebarOpen(true)}
-          avatarLabel={avatarLabel}
-          data={data}
-          onGoTab={goTab}
-          onSearchClick={() => {
-            goTab('transacciones');
-            setSearchFocusTick((t) => t + 1);
-          }}
-        />
-        <main className="w-full flex-1 p-4 sm:p-6 lg:p-8">
+      <DesktopDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} active={tab} onChange={goTab} showAdmin={data.profile.isAdmin} />
+      <div className="flex min-h-screen flex-col md:pl-[88px] lg:pl-0">
+        <Topbar title={desktopTitle} onOpenMenu={() => setSidebarOpen(true)} avatarLabel={avatarLabel} data={data} onGoTab={goTab} onSearchClick={handleSearchClick} />
+        <main className="w-full flex-1 p-4 sm:p-6 lg:flex lg:flex-col lg:gap-3 lg:p-[22px]">
+          <DesktopHeaderCard
+            title={desktopTitle}
+            subtitle={desktopSubtitle}
+            avatarLabel={avatarLabel}
+            data={data}
+            onGoTab={goTab}
+            onSearchClick={handleSearchClick}
+            onOpenDrawer={() => setDrawerOpen(true)}
+          />
+
           {tab === 'panel' && !subView && (
             <div className="hidden lg:block">
               <DesktopHomePage data={data} onGoTab={goTab} />

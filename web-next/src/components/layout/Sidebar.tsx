@@ -21,7 +21,7 @@ export interface TabDef {
 // Mismo orden y mismos íconos que public/index.html#sbNav: Inicio, Cuentas, Tarjetas
 // de crédito, Préstamos, Historial, Servicios, Metas, Pagos, Admin — "Servicios" y
 // "Préstamos" son pestañas separadas ahí (antes las tenía combinadas en una sola).
-// Exportado: DesktopSidebar (fase "Metas y Mascota", >=1024px) reusa esta misma
+// Exportado: DesktopDrawer (fase 2 "panel de widgets", >=1024px) reusa esta misma
 // fuente de navegación para no divergir en qué pestañas existen.
 export const TABS: TabDef[] = [
   { id: 'panel', label: 'Inicio', icon: 'ph-house' },
@@ -57,9 +57,9 @@ export function Sidebar({ active, onChange, showAdmin, open, onClose, onQuickAdd
 
   return (
     <>
-      {/* A partir de lg (1024px) toma el control DesktopSidebar (fase "Metas y Mascota") —
-          este riel navy/violeta queda como el sistema de mobile/tablet, sin tocar su
-          comportamiento actual (drawer <768px, riel fijo 768-1023px). */}
+      {/* A partir de lg (1024px) la navegación vive en DesktopDrawer (fase 2, "panel de
+          widgets") — este riel navy/violeta queda como el sistema de mobile/tablet, sin
+          tocar su comportamiento actual (drawer <768px, riel fijo 768-1023px). */}
       {open && (
         <div
           className="fixed inset-0 z-30 bg-black/45 backdrop-blur-sm md:hidden lg:hidden"

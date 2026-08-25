@@ -10,7 +10,6 @@ import type { TabId } from './Sidebar';
 
 interface TopbarProps {
   title: string;
-  subtitle?: string;
   onOpenMenu: () => void;
   avatarLabel: string;
   data: AppState;
@@ -22,8 +21,10 @@ interface TopbarProps {
 // pestaña activa, buscador (focus-search), descarga en Excel (download-excel),
 // campana de notificaciones (toggle-notif-panel), toggle de tema, y el avatar — que
 // acá abre un popover de 3 botones en vez del modal de Configuración directo
-// (open-settings ya no cuelga del avatar, ver AccountPopover más abajo).
-export function Topbar({ title, subtitle, onOpenMenu, avatarLabel, data, onGoTab, onSearchClick }: TopbarProps) {
+// (open-settings ya no cuelga del avatar, ver AccountPopover más abajo). Solo
+// <1024px: a partir de lg toma el control DesktopHeaderCard (Fase 2, "panel de
+// widgets"), que vive en el flujo del contenido en vez de acá.
+export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearchClick }: TopbarProps) {
   const { theme, toggle } = useTheme();
   const { signOut } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -75,8 +76,6 @@ export function Topbar({ title, subtitle, onOpenMenu, avatarLabel, data, onGoTab
   const hasUrgent = computeUpcomingPayments(data, 2).length > 0;
 
   return (
-    <>
-    {/* Mobile/tablet (<1024px): sin cambios, sistema navy/violeta actual. */}
     <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-[var(--border-flat)] bg-[var(--bg)]/80 px-4 py-3 backdrop-blur-md sm:gap-3 sm:px-6 lg:hidden">
       <button
         type="button"
@@ -209,132 +208,6 @@ export function Topbar({ title, subtitle, onOpenMenu, avatarLabel, data, onGoTab
         </div>
       </div>
     </header>
-
-    {/* Desktop (>=1024px): fase "Metas y Mascota" — mismo estado/lógica de arriba
-        (notif, cuenta, tema, Telegram), solo con el lenguaje visual nuevo. */}
-    <header className="sticky top-0 z-20 hidden items-center justify-between border-b border-[var(--d2-border)] bg-white px-8 py-[18px] lg:flex" style={{ fontFamily: 'var(--font-ui-d2)' }}>
-      <div>
-        <div className="text-[22px] font-extrabold text-[var(--d2-ink)]">{title}</div>
-        {subtitle && <div className="mt-[3px] text-[13px] text-[var(--d2-muted)]">{subtitle}</div>}
-      </div>
-      <div className="flex items-center gap-3">
-        <button type="button" onClick={onSearchClick} title="Buscar movimientos" aria-label="Buscar movimientos" className="text-[var(--d2-muted-2)] hover:text-[var(--d2-ink)]">
-          <i className="ph ph-magnifying-glass text-[17px]" aria-hidden="true" />
-        </button>
-        <div className="relative" ref={notifRef}>
-          <button
-            type="button"
-            onClick={() => {
-              setNotifOpen((v) => !v);
-              setAccountOpen(false);
-            }}
-            title="Notificaciones"
-            aria-label={hasUrgent ? 'Notificaciones (vencimientos próximos)' : 'Notificaciones'}
-            aria-haspopup="dialog"
-            aria-expanded={notifOpen}
-            className="relative text-[var(--d2-muted-2)] hover:text-[var(--d2-ink)]"
-          >
-            <i className="ph ph-bell text-[17px]" aria-hidden="true" />
-            {hasUrgent && <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-[var(--d2-red)]" aria-hidden="true" />}
-          </button>
-          {notifOpen && (
-            <div
-              ref={notifPanelRef}
-              role="dialog"
-              aria-label="Próximos vencimientos"
-              tabIndex={-1}
-              className="absolute right-0 top-[calc(100%+12px)] z-30 w-[min(20rem,calc(100vw-2rem))] rounded-2xl border border-[var(--d2-border)] bg-white p-2 shadow-[var(--d2-card-shadow)] outline-none"
-              style={{ fontFamily: 'var(--font-ui-d2)' }}
-            >
-              <p className="px-2 py-1.5 text-[11px] font-bold uppercase tracking-wide text-[var(--d2-muted)]">Próximos vencimientos</p>
-              {upcoming.length === 0 ? (
-                <p className="px-2 py-6 text-center text-sm text-[var(--d2-muted)]">No tienes vencimientos en los próximos 14 días.</p>
-              ) : (
-                <ul className="flex flex-col">
-                  {upcoming.map((item, i) => (
-                    <li key={i}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onGoTab(item.tab);
-                          setNotifOpen(false);
-                        }}
-                        className="flex w-full items-center gap-2 rounded-[13px] px-2 py-2 text-left hover:bg-[var(--d2-bg)]"
-                      >
-                        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[var(--d2-ink)]">{item.name}</span>
-                        <span className="num shrink-0 text-xs font-bold text-[var(--d2-muted)]">{formatMoney(item.amount)}</span>
-                        <span className={`shrink-0 text-[11px] font-bold ${item.days <= 2 ? 'text-[var(--d2-red)]' : 'text-[var(--d2-muted)]'}`}>
-                          {item.days < 0 ? 'Vencido' : item.days === 0 ? 'Hoy' : `${item.days}d`}
-                        </span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
-        </div>
-        <button type="button" onClick={toggle} title="Cambiar tema" aria-label="Cambiar tema" className="text-[var(--d2-muted-2)] hover:text-[var(--d2-ink)]">
-          <i className={`ph ${theme === 'dark' ? 'ph-sun' : 'ph-moon'} text-[17px]`} aria-hidden="true" />
-        </button>
-        <div className="relative" ref={accountRef}>
-          <button
-            type="button"
-            onClick={() => {
-              setAccountOpen((v) => !v);
-              setNotifOpen(false);
-            }}
-            title="Cuenta"
-            aria-label="Cuenta"
-            aria-haspopup="menu"
-            aria-expanded={accountOpen}
-            className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-full bg-[var(--d2-accent-tint)] text-[12px] font-bold uppercase text-[var(--d2-accent-dark)]"
-          >
-            {avatarLabel}
-          </button>
-          {accountOpen && (
-            <div
-              ref={accountPanelRef}
-              role="menu"
-              aria-label="Cuenta"
-              className="absolute right-0 top-[calc(100%+12px)] z-30 flex items-center gap-2.5 rounded-full border border-[var(--d2-border)] bg-white px-3 py-2.5 shadow-[var(--d2-card-shadow)]"
-            >
-              <CircleButton
-                role="menuitem"
-                icon="ph-power"
-                label="Cerrar sesión"
-                tone="danger"
-                onClick={() => {
-                  setAccountOpen(false);
-                  signOut();
-                }}
-              />
-              <CircleButton
-                role="menuitem"
-                icon="ph-telegram-logo"
-                badge={linked ? 'ph-check' : 'ph-warning'}
-                label={linked ? 'Telegram vinculado — ir a Configuración' : 'Telegram no vinculado — ir a Configuración'}
-                tone={linked ? 'success' : 'danger'}
-                onClick={() => {
-                  onGoTab('configuracion');
-                  setAccountOpen(false);
-                }}
-              />
-              <CircleButton
-                role="menuitem"
-                icon="ph-gear-six"
-                label="Configuración"
-                onClick={() => {
-                  onGoTab('configuracion');
-                  setAccountOpen(false);
-                }}
-              />
-            </div>
-          )}
-        </div>
-      </div>
-    </header>
-    </>
   );
 }
 

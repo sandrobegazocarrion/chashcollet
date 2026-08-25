@@ -1,19 +1,19 @@
 import { useMemo, useState } from 'react';
-import { computeTotals, formatDate, formatMoney } from '../../lib/finance';
+import { useQuery } from '@tanstack/react-query';
+import { computeTotals, computeUpcomingPayments, formatMoney } from '../../lib/finance';
 import { computeLineChartBuckets } from '../../lib/lineChartBuckets';
-import { Mascot } from '../../components/brand/Mascot';
-import { MonthlyRing } from './MonthlyRing';
+import { categoryColorVar } from '../../lib/categoryColor';
+import { apiCall } from '../../lib/api';
+import { CATEGORY_ICONS } from '../transacciones/TransaccionesPage';
+import { SAVINGS_TIPS, todaysTipIndex } from '../../lib/tips';
 import type { AppState } from '../../lib/types';
 import type { TabId } from '../../components/layout/Sidebar';
 
-type Period = '7D' | '1M' | '3M' | '1A' | 'Todo';
-const PERIODS: Period[] = ['7D', '1M', '3M', '1A', 'Todo'];
-
-// Fase "Metas y Mascota" (desktop, >=1024px) — reconstrucción 1:1 del artboard
+// Fase 2 ("panel de widgets", >=1024px) — reconstrucción 1:1 del artboard "Web"
 // aprobado: https://claude.ai/code/artifact/5cddac23-367b-4855-9969-41dde7b6fc03
-// (Main.dc.html). Datos reales de `data` en todo — nada inventado; donde el
-// artboard mostraba algo sin equivalente real (4 metas de ejemplo) se usa el
-// estado vacío real de la cuenta en vez de placeholders.
+// (Main.dc.html). Sin ilustraciones/mascota a propósito — panel denso 100% de
+// datos reales; donde el artboard no tiene un dato real detrás (racha de
+// ahorro) se omite en vez de inventar un número.
 export function DesktopHomePage({ data, onGoTab }: { data: AppState; onGoTab: (tab: TabId) => void }) {
   const totals = computeTotals(data);
   const now = new Date();
@@ -26,262 +26,354 @@ export function DesktopHomePage({ data, onGoTab }: { data: AppState; onGoTab: (t
     else monthOut += tx.amount;
   });
   const monthNet = monthIn - monthOut;
+  const savingsRate = monthIn > 0 ? Math.round((monthNet / monthIn) * 100) : null;
+  const goalPct = data.monthlyGoal ? Math.max(0, Math.min(100, Math.round((monthNet / data.monthlyGoal) * 100))) : null;
 
-  const [period, setPeriod] = useState<Period>('1M');
   const dayBuckets = useMemo(() => computeLineChartBuckets(data, 'day'), [data]);
   const monthBuckets = useMemo(() => computeLineChartBuckets(data, 'month'), [data]);
-  const netSeries = useMemo(() => {
-    if (period === '7D') {
-      const net = dayBuckets.ingresos.map((v, i) => v - dayBuckets.gastos[i]);
-      return net.slice(-7);
-    }
-    if (period === '1M') return dayBuckets.ingresos.map((v, i) => v - dayBuckets.gastos[i]);
-    // 3M/1A/Todo: el bucket mensual real disponible (hasta 6 meses de historial) —
-    // sin inventar rango que la data no tiene.
-    return monthBuckets.ingresos.map((v, i) => v - monthBuckets.gastos[i]);
-  }, [period, dayBuckets, monthBuckets]);
-  const { path: trendPath, last: trendLast } = buildSmoothPath(netSeries);
+  const netByMonth = monthBuckets.ingresos.map((v, i) => v - monthBuckets.gastos[i]);
+  const trendPct = useMemo(() => {
+    if (netByMonth.length < 2) return null;
+    const prev = netByMonth[netByMonth.length - 2];
+    const cur = netByMonth[netByMonth.length - 1];
+    if (prev === 0) return null;
+    return Math.round(((cur - prev) / Math.abs(prev)) * 100);
+  }, [netByMonth]);
+  const { path: trendPath } = buildSmoothPath(netByMonth);
 
-  const goals = data.pockets;
-  const recent = [...data.transactions].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 4);
+  const todayStr = now.toISOString().slice(0, 10);
+  const todaySpend = data.transactions.filter((tx) => tx.type === 'gasto' && tx.date === todayStr).reduce((s, t) => s + t.amount, 0);
+  const last7Gastos = dayBuckets.gastos.slice(-7);
+  const maxDay = Math.max(1, ...last7Gastos);
+
+  const monthCatMap: Record<string, number> = {};
+  data.transactions.forEach((tx) => {
+    if (tx.type !== 'gasto' || tx.date.slice(0, 7) !== monthKey) return;
+    monthCatMap[tx.category] = (monthCatMap[tx.category] || 0) + tx.amount;
+  });
+  const topCats = Object.keys(monthCatMap).sort((a, b) => monthCatMap[b] - monthCatMap[a]);
+  const topCatsBars = topCats.slice(0, 3);
+  const maxCat = Math.max(1, ...topCatsBars.map((c) => monthCatMap[c]));
+
+  const upcoming = computeUpcomingPayments(data, Infinity);
+  const urgent = upcoming.find((i) => i.days <= 2) || upcoming[0];
+
+  const { data: linkStatus } = useQuery({
+    queryKey: ['telegram-link-status'],
+    queryFn: () => apiCall<{ linked: boolean }>('GET', '/api/telegram/link-status'),
+  });
+  const linked = !!linkStatus?.linked;
+
+  const [tipDismissed, setTipDismissed] = useState(false);
+  const tipText = SAVINGS_TIPS[todaysTipIndex()].replace(/^\p{Emoji}\s*/u, '');
 
   return (
-    <div className="flex flex-col gap-4" style={{ fontFamily: 'var(--font-ui-d2)' }}>
+    <div className="flex flex-col gap-3" style={{ fontFamily: 'var(--font-ui-d2)' }}>
       {/* ROW 1 */}
-      <div className="flex items-stretch gap-4">
-        <div
-          className="relative flex-[1.5] overflow-hidden rounded-[26px] border p-6"
-          style={{ background: 'linear-gradient(135deg,#F0EEFF 0%,#F7F6FF 100%)', borderColor: '#ECE8FF', boxShadow: 'var(--d2-card-shadow)' }}
-        >
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-[12.5px] font-medium text-[#6B6A78]">Total en tu cuenta</p>
-              <p className="num mt-1.5 text-[29px] font-semibold text-[var(--d2-ink)]">{formatMoney(totals.totalLiquid)}</p>
-              <p className={`num mt-1 text-xs font-semibold ${monthNet >= 0 ? 'text-[var(--d2-green)]' : 'text-[var(--d2-red)]'}`}>
-                <i className={`ph ${monthNet >= 0 ? 'ph-arrow-up' : 'ph-arrow-down'}`} aria-hidden="true" /> {monthNet >= 0 ? '+' : ''}
-                {formatMoney(monthNet)} este mes
-              </p>
-            </div>
-            <div className="flex shrink-0 gap-0.5 rounded-full border border-[#ECE8FF] bg-white p-[3px]">
-              {PERIODS.map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setPeriod(p)}
-                  className={`rounded-full px-2.5 py-1.5 text-[10px] font-semibold ${p === period ? 'bg-[var(--d2-ink)] text-white' : 'text-[var(--d2-muted)]'}`}
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative mt-5 h-[78px]">
-            <svg width="100%" height="78" viewBox="0 0 480 78" preserveAspectRatio="none" className="absolute left-0 top-0 block" aria-hidden="true">
-              <path d={trendPath} fill="none" stroke="var(--d2-accent)" strokeWidth="2.4" strokeLinecap="round" />
-              {trendLast && <circle cx={trendLast[0]} cy={trendLast[1]} r="4" fill="var(--d2-accent)" />}
-            </svg>
-            {trendLast && (
-              <div
-                className="num absolute whitespace-nowrap rounded-[9px] bg-[var(--d2-ink)] px-2 py-1 text-[9.5px] font-semibold text-white"
-                style={{ left: `${Math.min(78, (trendLast[0] / 480) * 100)}%`, top: -6, transform: 'translateX(-50%)' }}
-              >
-                {formatMoney(netSeries[netSeries.length - 1] ?? 0)} · Hoy
-              </div>
-            )}
-
-            {/* Barras crecientes + mascota — firma de marca, sin datos detrás. */}
-            <div className="absolute bottom-0 right-0 flex items-end gap-1.5">
-              <span className="w-[11px] rounded-t-[5px]" style={{ height: 18, background: 'linear-gradient(180deg,#D3CDFF,#AFA6FF)' }} />
-              <span className="w-[11px] rounded-t-[5px]" style={{ height: 29, background: 'linear-gradient(180deg,#B3AAFF,#8B82FA)' }} />
-              <span className="w-[11px] rounded-t-[5px]" style={{ height: 41, background: 'linear-gradient(180deg,#9A90FF,#6D64F2)' }} />
-              <span className="relative w-[11px] rounded-t-[5px]" style={{ height: 55, background: 'linear-gradient(180deg,#8078F5,#5B53E8)' }}>
-                <span className="sparkle absolute h-1.5 w-1.5" style={{ top: -38, left: -8 }} />
-                <Mascot pose="chart" className="absolute bottom-[52px] left-1/2 -translate-x-1/2" />
+      <div className="flex gap-2.5">
+        {/* Cuenta principal */}
+        <div className="flex flex-[1.6] flex-col justify-between rounded-[28px] border border-[var(--d2-border)] bg-white p-6" style={{ boxShadow: 'var(--d2-card-shadow)' }}>
+          <div>
+            <div className="flex items-center justify-between">
+              <p className="text-[13px] font-bold text-[var(--d2-ink)]">Cuenta principal</p>
+              <span className="flex items-center gap-1 rounded-full bg-[var(--d2-bg)] px-2.5 py-[5px] text-[10.5px] font-semibold text-[var(--d2-muted-2)]">
+                Este mes
+                <i className="ph ph-caret-down text-[9px]" aria-hidden="true" />
               </span>
             </div>
+            <p className="mt-4 text-[11px] text-[var(--d2-muted)]">Balance disponible</p>
+            <p className="num mt-1 text-[27px] font-semibold text-[var(--d2-ink)]">{formatMoney(totals.totalLiquid)}</p>
           </div>
-
-          <div className="relative z-[1] mt-3.5 flex gap-2">
-            {[
-              { icon: 'ph-arrow-down', label: 'Ingresar' },
-              { icon: 'ph-arrow-up', label: 'Gasto' },
-            ].map((a) => (
-              <button
-                key={a.label}
-                type="button"
-                onClick={() => onGoTab('transacciones')}
-                className="flex flex-1 flex-col items-center gap-1.5 rounded-[13px] border border-[#ECE8FF] bg-white px-1 py-2.5"
-              >
-                <i className={`ph ${a.icon} text-[14px] text-[var(--d2-ink)]`} aria-hidden="true" />
-                <span className="text-[10px] font-medium text-[var(--d2-muted-2)]">{a.label}</span>
-              </button>
-            ))}
+          <div className="mt-4 flex gap-2.5">
+            <button type="button" onClick={() => onGoTab('transacciones')} className="flex-1 rounded-[13px] bg-[var(--d2-ink)] py-3 text-xs font-semibold text-white">
+              Ingresar
+            </button>
+            <button type="button" onClick={() => onGoTab('transacciones')} className="flex-1 rounded-[13px] border border-[var(--d2-border)] bg-white py-3 text-xs font-semibold text-[var(--d2-ink)]">
+              Gasto
+            </button>
+          </div>
+          <div className="mt-4 flex items-center justify-between border-t border-[var(--d2-divider)] pt-3.5">
+            <p className="text-[11px] text-[var(--d2-muted)]">
+              {goalPct === null ? (
+                'Sin meta de ahorro definida'
+              ) : (
+                <>
+                  Meta de ahorro <span className="num font-semibold text-[var(--d2-ink)]">{goalPct}%</span>
+                </>
+              )}
+            </p>
+            <button type="button" onClick={() => onGoTab(goalPct === null ? 'configuracion' : 'chanchitos')} className="text-[11px] font-semibold text-[var(--d2-accent)]">
+              {goalPct === null ? 'Definir →' : 'Ver detalle →'}
+            </button>
           </div>
         </div>
 
-        <div className="flex-1 rounded-[26px] bg-[var(--d2-ink)] p-5" style={{ boxShadow: 'var(--d2-card-shadow-dark)' }}>
-          <MonthlyRing ingresos={monthIn} gastos={monthOut} ahorro={monthNet} meta={data.monthlyGoal} onSetGoal={() => onGoTab('configuracion')} />
+        {/* Ingresos / Gastos */}
+        <div className="flex flex-[1.05] flex-col justify-between rounded-[28px] border border-[var(--d2-border)] bg-white p-[22px]" style={{ boxShadow: 'var(--d2-card-shadow)' }}>
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-[var(--d2-green-tint)]">
+                <i className="ph ph-arrow-up text-sm text-[var(--d2-green)]" aria-hidden="true" />
+              </span>
+              <span className="text-[10px] font-semibold text-[var(--d2-muted)]">Este mes</span>
+            </div>
+            <p className="mt-2.5 text-[10.5px] text-[var(--d2-muted)]">Ingresos totales</p>
+            <p className="num mt-0.5 text-base font-semibold text-[var(--d2-ink)]">{formatMoney(monthIn)}</p>
+          </div>
+          <div className="my-3.5 h-px bg-[var(--d2-divider)]" />
+          <div>
+            <div className="flex items-center justify-between">
+              <span className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-[var(--d2-accent-tint-2)]">
+                <i className="ph ph-arrow-down text-sm text-[var(--d2-accent)]" aria-hidden="true" />
+              </span>
+              <span className="text-[10px] font-semibold text-[var(--d2-muted)]">Este mes</span>
+            </div>
+            <p className="mt-2.5 text-[10.5px] text-[var(--d2-muted)]">Gastos totales</p>
+            <p className="num mt-0.5 text-base font-semibold text-[var(--d2-ink)]">{formatMoney(monthOut)}</p>
+          </div>
+        </div>
+
+        {/* Bot Telegram / Tasa de ahorro */}
+        <div className="flex flex-[0.68] flex-col gap-2.5">
+          <button
+            type="button"
+            onClick={() => onGoTab('configuracion')}
+            className="flex flex-1 flex-col items-center justify-center gap-2 rounded-[28px] border border-[var(--d2-border)] bg-white p-3"
+            style={{ boxShadow: 'var(--d2-card-shadow)' }}
+          >
+            <i className="ph ph-paper-plane-tilt text-lg text-[var(--d2-accent)]" aria-hidden="true" />
+            <span className="text-center text-[10px] font-semibold text-[var(--d2-muted-2)]">Bot Telegram</span>
+          </button>
+          <div className="flex flex-1 flex-col items-center justify-center gap-0.5 rounded-[28px] bg-[var(--d2-ink)]">
+            {savingsRate === null ? (
+              <button type="button" onClick={() => onGoTab('transacciones')} className="flex flex-col items-center gap-1 px-2 text-center">
+                <i className="ph ph-piggy-bank text-lg text-white/50" aria-hidden="true" />
+                <span className="text-[8.5px] leading-tight text-white/50">Registra ingresos para ver tu tasa</span>
+              </button>
+            ) : (
+              <>
+                <div className="relative h-14 w-14">
+                  <svg width="56" height="56" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.14)" strokeWidth="11" />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="42"
+                      fill="none"
+                      stroke="var(--d2-accent)"
+                      strokeWidth="11"
+                      strokeLinecap="round"
+                      strokeDasharray={`${Math.max(0, Math.min(100, savingsRate)) * 2.639} 263.9`}
+                      transform="rotate(-90 50 50)"
+                    />
+                  </svg>
+                  <div className="num absolute inset-0 flex items-center justify-center text-[12.5px] font-bold text-white">{savingsRate}%</div>
+                </div>
+                <p className="mt-1 text-center text-[9px] font-semibold text-white/65">Tasa de ahorro</p>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Por categoría (racha de ahorro omitida: sin dato real todavía) */}
+        <div className="flex flex-[0.85] flex-col gap-2.5">
+          <div className="flex flex-1 flex-col justify-center rounded-[28px] border border-[var(--d2-border)] bg-white p-3.5" style={{ boxShadow: 'var(--d2-card-shadow)' }}>
+            <p className="text-[9.5px] text-[var(--d2-muted)]">Por categoría</p>
+            {topCatsBars.length === 0 ? (
+              <p className="mt-2 text-[9.5px] text-[var(--d2-muted)]">Sin gastos este mes.</p>
+            ) : (
+              <div className="mt-2 flex h-7 items-end gap-[5px]">
+                {topCatsBars.map((c, i) => (
+                  <span
+                    key={c}
+                    title={c}
+                    className="w-[9px] rounded-t-[3px]"
+                    style={{ height: `${Math.max(12, (monthCatMap[c] / maxCat) * 100)}%`, background: i === 0 ? 'var(--d2-accent)' : 'var(--d2-track)' }}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Ingresos vs gastos — tendencia */}
+        <div className="flex flex-[1.35] flex-col justify-between rounded-[28px] border border-[var(--d2-border)] bg-white p-6" style={{ boxShadow: 'var(--d2-card-shadow)' }}>
+          <div className="flex items-center justify-between">
+            <span className="flex items-center gap-2">
+              <i className="ph ph-trend-up text-[15px] text-[var(--d2-accent)]" aria-hidden="true" />
+              <span className="text-xs font-medium text-[var(--d2-muted)]">Ingresos vs. gastos</span>
+            </span>
+            {trendPct !== null && (
+              <span className={`rounded-full px-2.5 py-1 text-[10.5px] font-bold ${trendPct >= 0 ? 'bg-[var(--d2-accent-tint)] text-[var(--d2-accent-dark)]' : 'bg-[var(--d2-orange-tint)] text-[var(--d2-orange)]'}`}>
+                {trendPct >= 0 ? '+' : ''}
+                {trendPct}%
+              </span>
+            )}
+          </div>
+          <p className="num mt-2.5 text-[22px] font-semibold text-[var(--d2-ink)]">
+            {monthNet >= 0 ? '+' : ''}
+            {formatMoney(monthNet)}
+          </p>
+          <svg width="100%" height="52" viewBox="0 0 260 52" preserveAspectRatio="none" className="mt-2.5 block">
+            <path d={trendPath} fill="none" stroke="var(--d2-accent)" strokeWidth="2.4" strokeLinecap="round" />
+          </svg>
         </div>
       </div>
 
       {/* ROW 2 */}
-      <div className="flex flex-1 gap-4">
-        <div className="flex flex-[1.3] flex-col rounded-[26px] border border-[var(--d2-border)] bg-white p-[22px]" style={{ boxShadow: 'var(--d2-card-shadow)' }}>
+      <div className="flex gap-2.5">
+        {/* Así vas este mes */}
+        <div className="flex flex-1 flex-col rounded-[28px] border border-[var(--d2-border)] bg-white p-[22px]" style={{ boxShadow: 'var(--d2-card-shadow)' }}>
           <div className="flex items-center justify-between">
-            <p className="text-[13.5px] font-bold text-[var(--d2-ink)]">Tus metas</p>
-            <button type="button" onClick={() => onGoTab('chanchitos')} className="text-[11.5px] font-semibold text-[var(--d2-accent)]">
-              Ver todas →
-            </button>
+            <p className="text-[13px] font-bold text-[var(--d2-ink)]">Así vas este mes</p>
+            <span className="rounded-full bg-[var(--d2-bg)] px-2.5 py-[5px] text-[10px] font-semibold text-[var(--d2-muted-2)]">
+              {MONTHS_ES[now.getMonth()]}
+            </span>
           </div>
-
-          {goals.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-2.5 py-6 text-center">
-              <Mascot pose="sidebar" />
-              <p className="text-[12.5px] font-semibold text-[var(--d2-ink)]">Aún no tienes metas activas</p>
-              <p className="max-w-[220px] text-[11.5px] leading-relaxed text-[var(--d2-muted)]">Crea tu primera meta y empieza a ver tu progreso acá.</p>
-              <button type="button" onClick={() => onGoTab('chanchitos')} className="mt-1 rounded-full bg-[var(--d2-ink)] px-4 py-2 text-[11.5px] font-semibold text-white">
-                Crear mi primera meta
-              </button>
+          <div className="mt-2 flex flex-1 items-center justify-center">
+            <div className="relative h-[164px] w-[164px]">
+              <div className="absolute inset-0 rounded-full bg-[#F5F3FF]" />
+              <div className="absolute inset-[27px] rounded-full bg-[#DCD5FF]" />
+              <div className="absolute inset-[56px] rounded-full bg-[var(--d2-accent)]" />
+              <p className="num absolute inset-x-0 top-2 text-center text-[10.5px] font-semibold text-[var(--d2-muted-2)]">{formatMoney(monthIn)}</p>
+              <p className="num absolute inset-x-0 top-[34px] text-center text-[10.5px] font-semibold text-[var(--d2-accent-dark)]">{formatMoney(monthOut)}</p>
+              <p className="num absolute inset-x-0 top-[76px] text-center text-[11px] font-bold text-white">
+                {monthNet >= 0 ? '+' : ''}
+                {formatMoney(monthNet)}
+              </p>
             </div>
-          ) : (
-            <div className="mt-3.5 grid grid-cols-2 gap-3">
-              {goals.slice(0, 4).map((g, i) => {
-                const tone = GOAL_TONES[i % GOAL_TONES.length];
-                const pct = g.target && g.target > 0 ? Math.max(0, Math.min(100, (g.balance / g.target) * 100)) : 0;
-                return (
-                  <div key={g.id} className="flex flex-col gap-2 rounded-2xl border border-[var(--d2-border)] p-3.5">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-[10px]" style={{ background: tone.bg }}>
-                      <i className={`ph ${goalIcon(g.name)} text-[15px]`} style={{ color: tone.fg }} aria-hidden="true" />
-                    </span>
-                    <p className="truncate text-[12.5px] font-semibold text-[var(--d2-ink)]">{g.name}</p>
-                    <p className="num text-[11px] text-[var(--d2-muted)]">
-                      {formatMoney(g.balance)} / {g.target ? formatMoney(g.target) : '—'}
-                    </p>
-                    <div className="h-1.5 rounded-full bg-[#F0EFF3]">
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: tone.fg }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+          </div>
         </div>
 
-        <div className="flex flex-1 flex-col rounded-[26px] border border-[var(--d2-border)] bg-white p-[22px]" style={{ boxShadow: 'var(--d2-card-shadow)' }}>
-          <div className="flex items-center justify-between">
-            <p className="text-[13.5px] font-bold text-[var(--d2-ink)]">Últimos movimientos</p>
-            <button type="button" onClick={() => onGoTab('transacciones')} className="text-[11.5px] font-semibold text-[var(--d2-accent)]">
-              Ver todos →
+        {/* Actividad reciente */}
+        <div className="flex flex-[1.6] flex-col rounded-[28px] border border-[var(--d2-border)] bg-white p-[22px]" style={{ boxShadow: 'var(--d2-card-shadow)' }}>
+          <div className="flex items-center gap-2.5">
+            <button type="button" onClick={() => onGoTab('transacciones')} className="flex flex-1 items-center gap-2 rounded-full bg-[var(--d2-bg)] px-3.5 py-[9px] text-left">
+              <i className="ph ph-magnifying-glass text-[13px] text-[var(--d2-muted)]" aria-hidden="true" />
+              <span className="text-[11.5px] text-[var(--d2-muted)]">Buscar movimiento…</span>
+            </button>
+            <button type="button" onClick={() => onGoTab('transacciones')} className="whitespace-nowrap rounded-full bg-[var(--d2-ink)] px-3.5 py-2 text-[11px] font-semibold text-white">
+              Todos
+            </button>
+            <button type="button" onClick={() => onGoTab('transacciones')} className="whitespace-nowrap rounded-full bg-[var(--d2-bg)] px-3.5 py-2 text-[11px] font-semibold text-[var(--d2-muted-2)]">
+              Ingresos
+            </button>
+            <button type="button" onClick={() => onGoTab('transacciones')} className="whitespace-nowrap rounded-full bg-[var(--d2-bg)] px-3.5 py-2 text-[11px] font-semibold text-[var(--d2-muted-2)]">
+              Gastos
             </button>
           </div>
-          <div className="mt-2 flex flex-col">
-            {recent.length === 0 ? (
-              <p className="py-8 text-center text-[12.5px] text-[var(--d2-muted)]">Todavía no hay movimientos.</p>
-            ) : (
-              recent.map((tx, i) => {
-                const isIncome = tx.type === 'ingreso';
-                const initial = (tx.description || tx.category || '?').charAt(0).toUpperCase();
-                return (
-                  <div key={tx.id} className={`flex items-center justify-between py-2.5 ${i < recent.length - 1 ? 'border-b border-[#F3F2F5]' : ''}`}>
-                    <div className="flex items-center gap-2.5">
-                      <span
-                        className="flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-bold"
-                        style={isIncome ? { background: 'var(--d2-accent-tint)', color: 'var(--d2-accent-dark)' } : { background: '#F0F0F3', color: '#6B6B76' }}
-                      >
-                        {initial}
-                      </span>
-                      <div>
-                        <p className="text-[12.5px] font-medium text-[var(--d2-ink)]">{tx.description || tx.category}</p>
-                        <p className="text-[10.5px] text-[#B4B2BA]">
-                          {tx.category} · {formatDate(tx.date)}
-                        </p>
-                      </div>
-                    </div>
-                    <span className={`num text-[12.5px] font-semibold ${isIncome ? 'text-[var(--d2-green)]' : 'text-[var(--d2-red)]'}`}>
-                      {isIncome ? '+' : '-'}
-                      {formatMoney(tx.amount)}
+
+          <div className="mt-4 flex flex-1 gap-3">
+            <div className="flex flex-1 flex-col justify-between rounded-[18px] border border-[var(--d2-border)] p-3.5">
+              <div className="flex h-8 items-end gap-[3px]">
+                {last7Gastos.map((v, i) => (
+                  <span
+                    key={i}
+                    className="w-[3px] rounded-sm"
+                    style={{ height: `${Math.max(10, (v / maxDay) * 100)}%`, background: v === maxDay && v > 0 ? 'var(--d2-accent)' : 'var(--d2-track)' }}
+                  />
+                ))}
+              </div>
+              <div>
+                <p className="num mt-2 text-sm font-semibold text-[var(--d2-ink)]">{formatMoney(todaySpend)}</p>
+                <p className="mt-0.5 text-[9.5px] text-[var(--d2-muted)]">Gasto de hoy</p>
+              </div>
+            </div>
+
+            <div className="flex-1 rounded-[18px] border border-[var(--d2-border)] p-3.5">
+              <p className="mb-2 text-[11px] font-bold text-[var(--d2-ink)]">Categorías</p>
+              {topCats.length === 0 ? (
+                <p className="text-[10.5px] text-[var(--d2-muted)]">Sin gastos este mes.</p>
+              ) : (
+                topCats.slice(0, 3).map((c) => (
+                  <div key={c} className="flex items-center gap-2 py-[5px]">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[6px]" style={{ background: `color-mix(in srgb, var(${categoryColorVar(c)}) 15%, transparent)` }}>
+                      <i className={`ph ${CATEGORY_ICONS[c] || 'ph-credit-card'} text-[10px]`} style={{ color: `var(${categoryColorVar(c)})` }} aria-hidden="true" />
                     </span>
+                    <span className="text-[10.5px] text-[var(--d2-muted-3)]">{c}</span>
                   </div>
-                );
-              })
+                ))
+              )}
+            </div>
+
+            {!linked && (
+              <button
+                type="button"
+                onClick={() => onGoTab('configuracion')}
+                className="flex flex-1 flex-col justify-between rounded-[18px] border border-[var(--d2-border)] p-3.5 text-left"
+                style={{ background: 'var(--d2-accent-tint-2)' }}
+              >
+                <span className="flex h-[26px] w-[26px] items-center justify-center rounded-full bg-white">
+                  <i className="ph ph-paper-plane-tilt text-[13px] text-[var(--d2-accent)]" aria-hidden="true" />
+                </span>
+                <span>
+                  <span className="block text-[11px] font-bold text-[var(--d2-ink)]">Conecta tu bot</span>
+                  <span className="mt-0.5 block text-[9.5px] leading-snug text-[var(--d2-muted-2)]">Registra gastos por Telegram.</span>
+                  <span className="mt-2 inline-block rounded-full bg-[var(--d2-ink)] px-3 py-[7px] text-[10px] font-semibold text-white">Conectar</span>
+                </span>
+              </button>
             )}
           </div>
         </div>
-      </div>
 
-      {/* ROW 3 */}
-      <div className="flex gap-4">
-        <div className="flex-1 rounded-[26px] border border-[var(--d2-border)] bg-white p-5" style={{ boxShadow: 'var(--d2-card-shadow)' }}>
-          <p className="text-[13px] font-bold text-[var(--d2-ink)]">Accesos rápidos</p>
-          <div className="mt-3 flex gap-2.5">
-            {[
-              { icon: 'ph-target', label: 'Mis metas', tab: 'chanchitos' as TabId },
-              { icon: 'ph-squares-four', label: 'Categorías', tab: 'transacciones' as TabId },
-              { icon: 'ph-chart-bar', label: 'Reportes', tab: 'calendario' as TabId },
-              { icon: 'ph-gear-six', label: 'Ajustes', tab: 'configuracion' as TabId },
-            ].map((a) => (
-              <button key={a.label} type="button" onClick={() => onGoTab(a.tab)} className="flex flex-1 flex-col items-center gap-1.5 rounded-[13px] bg-[#F7F7F9] px-1 py-3">
-                <i className={`ph ${a.icon} text-base text-[var(--d2-ink)]`} aria-hidden="true" />
-                <span className="text-[10px] font-medium text-[var(--d2-muted-2)]">{a.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {goals.length === 0 && (
-          <div
-            className="relative flex flex-1 items-center justify-between overflow-hidden rounded-[26px] border p-[22px]"
-            style={{ background: '#EAF6EF', borderColor: '#DFF0E6', boxShadow: 'var(--d2-card-shadow)' }}
+        {/* Vence pronto / Consejo del día */}
+        <div className="flex flex-[0.85] flex-col gap-2.5">
+          <button
+            type="button"
+            onClick={() => onGoTab(urgent?.tab || 'calendario')}
+            className="flex flex-1 flex-col justify-center gap-1.5 rounded-[28px] border border-[var(--d2-border)] bg-white p-4 text-left"
+            style={{ boxShadow: 'var(--d2-card-shadow)' }}
           >
-            <div className="relative z-[1] max-w-[200px]">
-              <p className="text-[15px] font-extrabold text-[var(--d2-ink)]">Ahorra hoy, disfruta mañana</p>
-              <p className="mt-1 text-[11.5px] text-[#5C6B62]">Cada sol cuenta. ¡Tú puedes!</p>
+            <span className="flex items-center gap-2">
+              <span className="flex h-[26px] w-[26px] shrink-0 items-center justify-center rounded-lg bg-[var(--d2-orange-tint)]">
+                <i className="ph ph-clock text-[13px] text-[var(--d2-orange)]" aria-hidden="true" />
+              </span>
+              <span className="text-[10.5px] font-bold text-[var(--d2-ink)]">Vence pronto</span>
+            </span>
+            <span className="text-[10px] leading-snug text-[var(--d2-muted-2)]">
+              {!urgent
+                ? 'No tienes pagos pendientes declarados.'
+                : urgent.days < 0
+                  ? `${urgent.name} vencido hace ${-urgent.days} día${-urgent.days === 1 ? '' : 's'} · `
+                  : urgent.days === 0
+                    ? `${urgent.name} vence hoy · `
+                    : `${urgent.name} vence en ${urgent.days} día${urgent.days === 1 ? '' : 's'} · `}
+              {urgent && <span className="num font-semibold text-[var(--d2-ink)]">{formatMoney(urgent.amount)}</span>}
+            </span>
+            <span className="text-[10px] font-semibold text-[var(--d2-accent)]">Ir al calendario →</span>
+          </button>
+
+          {!tipDismissed && (
+            <div className="relative flex-1 rounded-[28px] border border-[var(--d2-border)] bg-white p-4" style={{ boxShadow: 'var(--d2-card-shadow)' }}>
               <button
                 type="button"
-                onClick={() => onGoTab('chanchitos')}
-                className="mt-3 flex items-center gap-1 rounded-full bg-[var(--d2-ink)] px-4 py-2 text-[11.5px] font-semibold text-white"
+                onClick={() => setTipDismissed(true)}
+                aria-label="Descartar consejo"
+                className="absolute right-3.5 top-3.5 text-[var(--d2-muted)]"
               >
-                Crear nueva meta
-                <i className="ph ph-arrow-right text-xs" aria-hidden="true" />
+                <i className="ph ph-x text-[10px]" aria-hidden="true" />
               </button>
+              <p className="text-[10px] font-semibold text-[var(--d2-muted)]">Consejo del día</p>
+              <p className="mt-1.5 max-w-[85%] text-[10.5px] leading-snug text-[var(--d2-ink)]">{tipText}</p>
             </div>
-            <Mascot pose="banner" />
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
 }
 
-const GOAL_TONES = [
-  { bg: '#E4F4EC', fg: 'var(--d2-green)' },
-  { bg: '#E6EEFB', fg: 'var(--d2-blue)' },
-  { bg: '#FBEDE0', fg: 'var(--d2-orange)' },
-  { bg: '#E4F4EC', fg: 'var(--d2-green)' },
-];
+const MONTHS_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 
-function goalIcon(name: string): string {
-  const n = name.toLowerCase();
-  if (/(viaje|playa|vacacion)/.test(n)) return 'ph-airplane-tilt';
-  if (/(laptop|compu|tech|celular|equipo)/.test(n)) return 'ph-laptop';
-  if (/(emergencia|fondo)/.test(n)) return 'ph-shield-check';
-  if (/(ropa|accesorio)/.test(n)) return 'ph-t-shirt';
-  return 'ph-flag-banner';
-}
-
-// Curva suave tipo Catmull-Rom -> Bezier a través de los puntos de la serie, en el
-// mismo viewBox (480x78) del artboard aprobado. La línea ocupa solo los primeros
-// ~365px de los 480 (el resto es el espacio de las barras crecientes + mascota,
-// que viven ancladas a la derecha). Sin ejes/grid a propósito.
-function buildSmoothPath(values: number[]): { path: string; last: readonly [number, number] | null } {
-  if (values.length === 0) return { path: '', last: null };
-  const W = 365;
-  const H = 78;
-  const PAD_Y = 10;
+// Curva suave tipo Catmull-Rom -> Bezier, viewBox 260x52 (igual al artboard aprobado).
+function buildSmoothPath(values: number[]): { path: string } {
+  if (values.length === 0) return { path: '' };
+  const W = 260;
+  const H = 52;
+  const PAD_Y = 6;
   if (values.length === 1) {
     const y = H / 2;
-    return { path: `M0,${y} L${W},${y}`, last: [W, y] };
+    return { path: `M0,${y} L${W},${y}` };
   }
   const min = Math.min(...values, 0);
   const max = Math.max(...values, 1);
@@ -298,5 +390,5 @@ function buildSmoothPath(values: number[]): { path: string; last: readonly [numb
     const midX = (x0 + x1) / 2;
     d += ` C${midX.toFixed(1)},${y0.toFixed(1)} ${midX.toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
   }
-  return { path: d, last: pts[pts.length - 1] };
+  return { path: d };
 }

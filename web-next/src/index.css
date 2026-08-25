@@ -1,25 +1,31 @@
 @import "tailwindcss";
 
-/* ---------------- "Metas y Mascota" — sistema desktop (>=1024px), Fase 1 ----------------
-   Aprobado en https://claude.ai/code/artifact/5cddac23-367b-4855-9969-41dde7b6fc03 (Inicio).
-   Nombres propios (d2-*) para no chocar ni mezclarse con los tokens navy/violeta/crema de
-   arriba, que siguen siendo el sistema real en mobile/tablet (<1024px) — nada de lo de acá
-   se usa fuera de los componentes Desktop* que lee esta fase. Un solo tema (no dark mode
-   todavía en este sistema; la maqueta aprobada es solo clara). */
+/* ---------------- Sistema desktop (>=1024px), Fase 2: "panel de widgets" ----------------
+   Aprobado en https://claude.ai/code/artifact/5cddac23-367b-4855-9969-41dde7b6fc03 (artboard
+   "Web"). Reemplaza la dirección de la Fase 1 (sidebar fijo + mascota) — mismo namespace
+   d2-* (no choca con los tokens navy/violeta/crema de arriba, que siguen siendo el sistema
+   real en mobile/tablet <1024px), solo se extiende con los tintes que pide la nueva
+   referencia. Un solo tema (claro) — la maqueta aprobada no define dark mode acá. */
 :root {
   --d2-ink: #0e0e14;
   --d2-accent: #655eff;
   --d2-accent-dark: #4f47e6;
-  --d2-accent-tint: #eeecff;
+  --d2-accent-tint: #eceaff;
+  --d2-accent-tint-2: #f5f1ff;
   --d2-border: #ecebef;
+  --d2-divider: #f3f2f5;
   --d2-bg: #f5f6f8;
   --d2-muted: #8b8a92;
   --d2-muted-2: #57565f;
+  --d2-muted-3: #43434c;
   --d2-green: #3e9a6d;
+  --d2-green-tint: #eaf6ef;
   --d2-red: #b23b2e;
   --d2-blue: #3d6fd1;
   --d2-orange: #c6772e;
-  --d2-card-shadow: 0 2px 4px rgba(14, 14, 20, 0.04), 0 22px 44px -18px rgba(14, 14, 20, 0.16);
+  --d2-orange-tint: #fbede0;
+  --d2-track: #e7e5ee;
+  --d2-card-shadow: 0 1px 2px rgba(14, 14, 20, 0.03), 0 14px 30px -20px rgba(14, 14, 20, 0.12);
   --d2-card-shadow-dark: 0 2px 4px rgba(0, 0, 0, 0.15), 0 26px 50px -18px rgba(101, 94, 255, 0.35);
   --font-ui-d2: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
