@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { Card } from '../../components/ui/Card';
 import { computeLineChartBuckets, type LineChartMode } from '../../lib/lineChartBuckets';
 import { formatMoney } from '../../lib/finance';
@@ -8,6 +9,7 @@ import type { AppState } from '../../lib/types';
 const W = 560;
 const H = 200;
 const PAD = 24;
+const EASE = [0.16, 1, 0.3, 1] as const;
 
 function buildPath(values: number[], max: number): { line: string; area: string } {
   if (values.length === 0) return { line: '', area: '' };
@@ -25,6 +27,7 @@ function buildPath(values: number[], max: number): { line: string; area: string 
 // Espeja .chart-card (Ingresos vs. gastos): SVG en vez de Chart.js — sin dependencia
 // extra, misma info (línea + área, toggle mes/semana/día, leyenda con puntos).
 export function IncomeExpenseChart({ data }: { data: AppState }) {
+  const reduceMotion = useReducedMotion();
   const [mode, setMode] = useState<LineChartMode>('month');
   const { labels, ingresos, gastos } = computeLineChartBuckets(data, mode);
   const max = Math.max(1, ...ingresos, ...gastos);
@@ -89,10 +92,46 @@ export function IncomeExpenseChart({ data }: { data: AppState }) {
                 <stop offset="100%" stopColor="var(--red)" stopOpacity="0" />
               </linearGradient>
             </defs>
-            <path d={ing.area} fill="url(#ing-fill)" />
-            <path d={gas.area} fill="url(#gas-fill)" />
-            <path d={ing.line} fill="none" stroke="var(--green)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-            <path d={gas.line} fill="none" stroke="var(--red)" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+            <motion.path
+              key={`ing-area-${mode}`}
+              d={ing.area}
+              fill="url(#ing-fill)"
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: reduceMotion ? 0 : 0.7 }}
+            />
+            <motion.path
+              key={`gas-area-${mode}`}
+              d={gas.area}
+              fill="url(#gas-fill)"
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5, delay: reduceMotion ? 0 : 0.7 }}
+            />
+            <motion.path
+              key={`ing-line-${mode}`}
+              d={ing.line}
+              fill="none"
+              stroke="var(--green)"
+              strokeWidth="2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              initial={reduceMotion ? false : { pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 0.9, ease: EASE }}
+            />
+            <motion.path
+              key={`gas-line-${mode}`}
+              d={gas.line}
+              fill="none"
+              stroke="var(--red)"
+              strokeWidth="2"
+              strokeLinejoin="round"
+              strokeLinecap="round"
+              initial={reduceMotion ? false : { pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 0.9, delay: reduceMotion ? 0 : 0.1, ease: EASE }}
+            />
           </svg>
           <div className="mt-1 flex justify-between text-[10.5px] text-[var(--text-faint)]">
             {labels.map((l, i) => {
