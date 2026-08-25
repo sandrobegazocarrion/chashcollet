@@ -21,9 +21,7 @@ interface TopbarProps {
 // pestaña activa, buscador (focus-search), descarga en Excel (download-excel),
 // campana de notificaciones (toggle-notif-panel), toggle de tema, y el avatar — que
 // acá abre un popover de 3 botones en vez del modal de Configuración directo
-// (open-settings ya no cuelga del avatar, ver AccountPopover más abajo). Solo
-// <1024px: a partir de lg toma el control DesktopHeaderCard (Fase 2, "panel de
-// widgets"), que vive en el flujo del contenido en vez de acá.
+// (open-settings ya no cuelga del avatar, ver AccountPopover más abajo).
 export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearchClick }: TopbarProps) {
   const { theme, toggle } = useTheme();
   const { signOut } = useAuth();
@@ -76,7 +74,7 @@ export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearch
   const hasUrgent = computeUpcomingPayments(data, 2).length > 0;
 
   return (
-    <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-[var(--border-flat)] bg-[var(--bg)]/80 px-4 py-3 backdrop-blur-md sm:gap-3 sm:px-6 lg:hidden">
+    <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-[var(--border-flat)] bg-[var(--bg)]/80 px-4 py-3 backdrop-blur-md sm:gap-3 sm:px-6">
       <button
         type="button"
         onClick={onOpenMenu}
