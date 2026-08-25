@@ -8,13 +8,16 @@ interface DesktopDrawerProps {
   active: TabId;
   onChange: (tab: TabId) => void;
   showAdmin: boolean;
+  onQuickAdd: () => void;
 }
 
 // Fase 2 ("panel de widgets", >=1024px): la navegación deja de vivir en un riel
 // fijo (Fase 1, ya descartada) y pasa a este drawer deslizante que abre el botón
 // hamburguesa del header — misma fuente de pestañas (TABS) que ya usan el riel
-// móvil/tablet y la Fase 1, así que ninguna sección deja de ser alcanzable.
-export function DesktopDrawer({ open, onClose, active, onChange, showAdmin }: DesktopDrawerProps) {
+// móvil/tablet y la Fase 1, así que ninguna sección deja de ser alcanzable. El
+// botón "+" de acceso rápido al final replica el mismo control que ya existe en
+// el riel de móvil/tablet, adaptado a la paleta clara del drawer.
+export function DesktopDrawer({ open, onClose, active, onChange, showAdmin, onQuickAdd }: DesktopDrawerProps) {
   const tabs = showAdmin ? TABS : TABS.filter((t) => t.id !== 'admin');
 
   useEffect(() => {
@@ -50,7 +53,7 @@ export function DesktopDrawer({ open, onClose, active, onChange, showAdmin }: De
           <span className="text-[17px] font-bold text-[var(--d2-ink)]">nuva</span>
         </div>
 
-        <nav className="flex flex-col gap-1">
+        <nav className="flex flex-1 flex-col gap-1">
           {tabs.map((tab) => {
             const isActive = tab.id === active;
             return (
@@ -71,6 +74,19 @@ export function DesktopDrawer({ open, onClose, active, onChange, showAdmin }: De
             );
           })}
         </nav>
+
+        <button
+          type="button"
+          title="Nuevo movimiento"
+          aria-label="Nuevo movimiento"
+          onClick={() => {
+            onQuickAdd();
+            onClose();
+          }}
+          className="mx-auto mb-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--d2-accent)] text-lg text-white shadow-[0_12px_24px_-8px_rgba(101,94,255,0.45)] transition-transform hover:-translate-y-0.5 active:scale-95"
+        >
+          <i className="ph ph-plus" aria-hidden="true" />
+        </button>
       </aside>
     </div>
   );

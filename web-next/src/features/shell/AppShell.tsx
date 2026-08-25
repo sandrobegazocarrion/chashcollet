@@ -102,7 +102,14 @@ export function AppShell() {
         onQuickAdd={() => goTab('transacciones')}
         online
       />
-      <DesktopDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} active={tab} onChange={goTab} showAdmin={data.profile.isAdmin} />
+      <DesktopDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        active={tab}
+        onChange={goTab}
+        showAdmin={data.profile.isAdmin}
+        onQuickAdd={() => goTab('transacciones')}
+      />
       <div className="flex min-h-screen flex-col md:pl-[88px] lg:pl-0">
         <Topbar title={desktopTitle} onOpenMenu={() => setSidebarOpen(true)} avatarLabel={avatarLabel} data={data} onGoTab={goTab} onSearchClick={handleSearchClick} />
         <main className="w-full flex-1 p-4 sm:p-6 lg:flex lg:flex-col lg:gap-3 lg:p-[22px]">
