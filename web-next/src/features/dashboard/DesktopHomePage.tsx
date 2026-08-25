@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Card } from '../../components/ui/Card';
 import { computeTotals, formatMoney, pocketsRemainingThisMonth } from '../../lib/finance';
 import { computeLineChartBuckets } from '../../lib/lineChartBuckets';
@@ -40,7 +40,6 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }:
   const availablePct = totals.totalLiquid > 0 ? Math.max(0, Math.min(100, Math.round((safeToSpend / totals.totalLiquid) * 100))) : 0;
 
   const monthBuckets = useMemo(() => computeLineChartBuckets(data, 'month'), [data]);
-  const dayBuckets = useMemo(() => computeLineChartBuckets(data, 'day'), [data]);
 
   // Tasa de ahorro de meses anteriores (mismos buckets que "Ingresos vs. gastos"),
   // para el sparkline y el "vs. mes anterior" — sin inventar historial que no existe.
@@ -48,19 +47,17 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }:
   const prevRate = monthRates.length >= 2 ? monthRates[monthRates.length - 2] : null;
   const rateDelta = savingsRate !== null && prevRate !== null ? savingsRate - prevRate : null;
 
-  // "Balance de hoy" real, reconstruido hacia atrás desde el líquido actual con el
-  // flujo neto diario de los últimos 30 días — no hay snapshots históricos de saldo
-  // guardados, así que esta es la única forma honesta de trazar una tendencia.
+  // "Lo que tengo" mes a mes: reconstruido hacia atrás desde el líquido actual con
+  // el flujo neto de cada uno de los últimos 6 meses (mismos buckets que "Ingresos
+  // vs. gastos") — no hay snapshots históricos de saldo guardados, así que esta es
+  // la única forma honesta de trazar cómo fue evolucionando.
   const trendPoints = useMemo(() => {
-    const nets = dayBuckets.ingresos.slice(-30).map((v, i) => v - dayBuckets.gastos.slice(-30)[i]);
-    let running = totals.totalLiquid;
-    const points = [running];
-    for (let i = nets.length - 1; i >= 0; i--) {
-      running -= nets[i];
-      points.unshift(running);
-    }
+    const nets = monthBuckets.ingresos.map((v, i) => v - monthBuckets.gastos[i]);
+    const points = new Array<number>(nets.length);
+    points[nets.length - 1] = totals.totalLiquid;
+    for (let i = nets.length - 2; i >= 0; i--) points[i] = points[i + 1] - nets[i + 1];
     return points;
-  }, [dayBuckets, totals.totalLiquid]);
+  }, [monthBuckets, totals.totalLiquid]);
 
   // "Presupuesto" implícito = promedio de gasto de los últimos meses completos
   // (sin contar el actual, que sigue en curso) — no existe un campo real de
@@ -103,7 +100,7 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }:
             {monthNet >= 0 ? '+' : ''}
             {formatMoney(monthNet)} · Flujo neto de este mes
           </span>
-          <TrendMini points={trendPoints} label={formatMoney(totals.totalLiquid)} />
+          <TrendMini points={trendPoints} labels={monthBuckets.labels} label={formatMoney(totals.totalLiquid)} />
         </Card>
 
         <Card className="flex flex-1 flex-col justify-between">
@@ -292,32 +289,97 @@ function Sparkline({ values }: { values: number[] }) {
   );
 }
 
-function TrendMini({ points, label }: { points: number[]; label: string }) {
-  if (points.length < 2) return <div className="mt-3 h-14" aria-hidden="true" />;
-  const W = 100;
-  const H = 56;
-  const PAD = 4;
-  const min = Math.min(...points);
-  const max = Math.max(...points, min + 1);
-  const range = max - min || 1;
-  const pts = points.map((v, i) => {
-    const x = (i / (points.length - 1)) * W;
-    const y = H - PAD - ((v - min) / range) * (H - PAD * 2);
-    return [x, y] as const;
-  });
-  const line = pts.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
+// Curva suave (Catmull-Rom -> Bezier) mes a mes, con la línea "dibujándose" al
+// montar (stroke-dashoffset real vía getTotalLength(), no un valor inventado) —
+// respeta prefers-reduced-motion mostrando la curva ya completa sin animar.
+function TrendMini({ points, labels, label }: { points: number[]; labels: string[]; label: string }) {
+  const pathRef = useRef<SVGPathElement>(null);
+  const [dash, setDash] = useState<{ length: number; drawn: boolean } | null>(null);
+
+  const W = 480;
+  const H = 130;
+  const PAD_Y = 14;
+
+  const pts = useMemo(() => {
+    if (points.length === 0) return [] as (readonly [number, number])[];
+    if (points.length === 1) return [[0, H / 2]] as (readonly [number, number])[];
+    const min = Math.min(...points);
+    const max = Math.max(...points, min + 1);
+    const range = max - min || 1;
+    return points.map((v, i) => {
+      const x = (i / (points.length - 1)) * W;
+      const y = H - PAD_Y - ((v - min) / range) * (H - PAD_Y * 2);
+      return [x, y] as const;
+    });
+  }, [points]);
+
+  const line = useMemo(() => {
+    if (pts.length < 2) return '';
+    let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [x0, y0] = pts[i];
+      const [x1, y1] = pts[i + 1];
+      const midX = (x0 + x1) / 2;
+      d += ` C${midX.toFixed(1)},${y0.toFixed(1)} ${midX.toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
+    }
+    return d;
+  }, [pts]);
+
+  useEffect(() => {
+    if (!pathRef.current || !line) return;
+    const length = pathRef.current.getTotalLength();
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    setDash({ length, drawn: reduceMotion });
+    if (reduceMotion) return;
+    const raf = requestAnimationFrame(() => setDash({ length, drawn: true }));
+    return () => cancelAnimationFrame(raf);
+  }, [line]);
+
+  if (pts.length < 2) return <div className="mt-3 h-[130px]" aria-hidden="true" />;
   const last = pts[pts.length - 1];
+
   return (
-    <div className="relative mt-3 h-14">
-      <svg viewBox={`0 0 ${W} ${H}`} className="h-full w-full" preserveAspectRatio="none">
-        <path d={line} fill="none" stroke="var(--brand)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <circle cx={last[0]} cy={last[1]} r="2.4" fill="var(--brand)" />
-      </svg>
-      <div
-        className="num absolute rounded-[8px] bg-[var(--text)] px-2 py-1 text-[10px] font-bold text-[var(--bg)]"
-        style={{ left: `${Math.min(78, (last[0] / W) * 100)}%`, top: 0, transform: 'translate(-50%,-100%)', whiteSpace: 'nowrap' }}
-      >
-        {label}
+    <div className="relative mt-3">
+      <div className="relative h-[130px]">
+        <svg viewBox={`0 0 ${W} ${H}`} className="h-full w-full" preserveAspectRatio="none">
+          <path
+            ref={pathRef}
+            d={line}
+            fill="none"
+            stroke="var(--brand)"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            style={
+              dash
+                ? {
+                    strokeDasharray: dash.length,
+                    strokeDashoffset: dash.drawn ? 0 : dash.length,
+                    transition: 'stroke-dashoffset 1.1s cubic-bezier(0.16, 1, 0.3, 1)',
+                  }
+                : undefined
+            }
+          />
+          <circle cx={last[0]} cy={last[1]} r="3.5" fill="var(--brand)" opacity={dash?.drawn ? 1 : 0} style={{ transition: 'opacity 0.3s ease-out 0.9s' }} />
+        </svg>
+        <div
+          className="num absolute rounded-[8px] bg-[var(--text)] px-2 py-1 text-[10px] font-bold text-[var(--bg)]"
+          style={{
+            left: `${Math.min(88, (last[0] / W) * 100)}%`,
+            top: `${Math.max(0, (last[1] / H) * 100 - 14)}%`,
+            transform: 'translate(-50%,-100%)',
+            whiteSpace: 'nowrap',
+            opacity: dash?.drawn ? 1 : 0,
+            transition: 'opacity 0.3s ease-out 0.9s',
+          }}
+        >
+          {label}
+        </div>
+      </div>
+      <div className="mt-1 flex justify-between text-[10.5px] text-[var(--text-faint)]">
+        {labels.map((l, i) => (
+          <span key={i}>{l}</span>
+        ))}
       </div>
     </div>
   );
