@@ -7,6 +7,7 @@ import { Topbar } from '../../components/layout/Topbar';
 import { SettingsPage } from '../settings/SettingsPage';
 import { greetingText } from '../../lib/greeting';
 import { DashboardPage } from '../dashboard/DashboardPage';
+import { DesktopHomePage } from '../dashboard/DesktopHomePage';
 import { SUBVIEW_META, type SubViewType } from '../dashboard/SubView';
 import { TransaccionesPage } from '../transacciones/TransaccionesPage';
 import { CuentasPage } from '../cuentas/CuentasPage';
@@ -99,19 +100,31 @@ export function AppShell() {
           }}
         />
         <main className="w-full flex-1 p-4 sm:p-6 lg:p-8">
+          {tab === 'panel' && !subView && (
+            <div className="hidden lg:block">
+              <DesktopHomePage
+                data={data}
+                onOpenSubView={setSubView}
+                onNewGoal={() => goTab('chanchitos')}
+                onOpenGoals={() => goTab('chanchitos')}
+              />
+            </div>
+          )}
           {tab === 'panel' && (
-            <DashboardPage
-              data={data}
-              onNewGoal={() => goTab('chanchitos')}
-              onOpenGoals={() => goTab('chanchitos')}
-              onGoTab={goTab}
-              subView={subView}
-              svMonth={svMonth}
-              onOpenSubView={setSubView}
-              onCloseSubView={() => setSubView(null)}
-              onPrevSvMonth={() => setSvMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
-              onNextSvMonth={() => setSvMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
-            />
+            <div className={subView ? '' : 'lg:hidden'}>
+              <DashboardPage
+                data={data}
+                onNewGoal={() => goTab('chanchitos')}
+                onOpenGoals={() => goTab('chanchitos')}
+                onGoTab={goTab}
+                subView={subView}
+                svMonth={svMonth}
+                onOpenSubView={setSubView}
+                onCloseSubView={() => setSubView(null)}
+                onPrevSvMonth={() => setSvMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1))}
+                onNextSvMonth={() => setSvMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1))}
+              />
+            </div>
           )}
           {tab === 'transacciones' && <TransaccionesPage data={data} focusSearchSignal={searchFocusTick} />}
           {tab === 'cuentas' && <CuentasPage data={data} />}
