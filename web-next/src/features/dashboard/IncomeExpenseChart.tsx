@@ -11,17 +11,35 @@ const H = 200;
 const PAD = 24;
 const EASE = [0.16, 1, 0.3, 1] as const;
 
-function buildPath(values: number[], max: number): { line: string; area: string } {
-  if (values.length === 0) return { line: '', area: '' };
-  const step = values.length > 1 ? (W - PAD * 2) / (values.length - 1) : 0;
-  const points = values.map((v, i) => {
-    const x = PAD + i * step;
-    const y = max > 0 ? H - PAD - (v / max) * (H - PAD * 2) : H - PAD;
-    return [x, y] as const;
-  });
-  const line = points.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
-  const area = `${line} L${points[points.length - 1][0].toFixed(1)},${H - PAD} L${points[0][0].toFixed(1)},${H - PAD} Z`;
-  return { line, area };
+interface Bar {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+// Barras agrupadas (ingreso/gasto lado a lado por periodo) en vez de línea+área:
+// mejor comparación directa y no se deforma sin importar cuántos periodos entren
+// (día llega a mostrar hasta 31 grupos).
+function buildBars(ingresos: number[], gastos: number[], max: number): { ing: Bar[]; gas: Bar[] } {
+  const n = ingresos.length;
+  if (n === 0) return { ing: [], gas: [] };
+  const groupW = (W - PAD * 2) / n;
+  const barW = Math.max(2, Math.min(16, groupW * 0.3));
+  const gap = barW * 0.3;
+  const baseline = H - PAD;
+  const scale = (v: number) => (max > 0 ? (v / max) * (H - PAD * 2) : 0);
+
+  const ing: Bar[] = [];
+  const gas: Bar[] = [];
+  for (let i = 0; i < n; i++) {
+    const cx = PAD + i * groupW + groupW / 2;
+    const hIng = scale(ingresos[i]);
+    const hGas = scale(gastos[i]);
+    ing.push({ x: cx - gap / 2 - barW, y: baseline - hIng, width: barW, height: hIng });
+    gas.push({ x: cx + gap / 2, y: baseline - hGas, width: barW, height: hGas });
+  }
+  return { ing, gas };
 }
 
 // Espeja .chart-card (Ingresos vs. gastos): SVG en vez de Chart.js — sin dependencia
@@ -31,8 +49,7 @@ export function IncomeExpenseChart({ data }: { data: AppState }) {
   const [mode, setMode] = useState<LineChartMode>('month');
   const { labels, ingresos, gastos } = computeLineChartBuckets(data, mode);
   const max = Math.max(1, ...ingresos, ...gastos);
-  const ing = buildPath(ingresos, max);
-  const gas = buildPath(gastos, max);
+  const { ing, gas } = buildBars(ingresos, gastos, max);
   const totalIng = ingresos.reduce((s, v) => s + v, 0);
   const totalGas = gastos.reduce((s, v) => s + v, 0);
 
@@ -82,56 +99,31 @@ export function IncomeExpenseChart({ data }: { data: AppState }) {
       ) : (
         <div>
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Ingresos y gastos">
-            <defs>
-              <linearGradient id="ing-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--green)" stopOpacity="0.18" />
-                <stop offset="100%" stopColor="var(--green)" stopOpacity="0" />
-              </linearGradient>
-              <linearGradient id="gas-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="var(--red)" stopOpacity="0.14" />
-                <stop offset="100%" stopColor="var(--red)" stopOpacity="0" />
-              </linearGradient>
-            </defs>
-            <motion.path
-              key={`ing-area-${mode}`}
-              d={ing.area}
-              fill="url(#ing-fill)"
-              initial={reduceMotion ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: reduceMotion ? 0 : 0.7 }}
-            />
-            <motion.path
-              key={`gas-area-${mode}`}
-              d={gas.area}
-              fill="url(#gas-fill)"
-              initial={reduceMotion ? false : { opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5, delay: reduceMotion ? 0 : 0.7 }}
-            />
-            <motion.path
-              key={`ing-line-${mode}`}
-              d={ing.line}
-              fill="none"
-              stroke="var(--green)"
-              strokeWidth="2"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              initial={reduceMotion ? false : { pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 0.9, ease: EASE }}
-            />
-            <motion.path
-              key={`gas-line-${mode}`}
-              d={gas.line}
-              fill="none"
-              stroke="var(--red)"
-              strokeWidth="2"
-              strokeLinejoin="round"
-              strokeLinecap="round"
-              initial={reduceMotion ? false : { pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 0.9, delay: reduceMotion ? 0 : 0.1, ease: EASE }}
-            />
+            <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} stroke="var(--border-flat)" strokeWidth="1" />
+            {ing.map((b, i) => (
+              <motion.rect
+                key={`ing-${mode}-${i}`}
+                x={b.x}
+                width={b.width}
+                rx={2}
+                fill="var(--green)"
+                initial={reduceMotion ? false : { y: H - PAD, height: 0 }}
+                animate={{ y: b.y, height: b.height }}
+                transition={{ duration: 0.55, delay: reduceMotion ? 0 : 0.1 + i * 0.02, ease: EASE }}
+              />
+            ))}
+            {gas.map((b, i) => (
+              <motion.rect
+                key={`gas-${mode}-${i}`}
+                x={b.x}
+                width={b.width}
+                rx={2}
+                fill="var(--red)"
+                initial={reduceMotion ? false : { y: H - PAD, height: 0 }}
+                animate={{ y: b.y, height: b.height }}
+                transition={{ duration: 0.55, delay: reduceMotion ? 0 : 0.14 + i * 0.02, ease: EASE }}
+              />
+            ))}
           </svg>
           <div className="mt-1 flex justify-between text-[10.5px] text-[var(--text-faint)]">
             {labels.map((l, i) => {

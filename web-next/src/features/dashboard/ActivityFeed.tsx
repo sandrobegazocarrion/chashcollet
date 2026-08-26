@@ -48,7 +48,7 @@ export function ActivityFeed({ transactions, accounts }: ActivityFeedProps) {
                     {formatDate(tx.date)} · {acc ? acc.name : '—'}
                   </p>
                 </div>
-                <span className={`num shrink-0 text-sm font-medium ${isIncome ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
+                <span className={`num shrink-0 text-sm font-medium ${isIncome ? 'text-[var(--green)]' : 'text-[var(--text-muted)]'}`}>
                   {isIncome ? '+' : '-'}
                   {formatMoney(tx.amount)}
                 </span>

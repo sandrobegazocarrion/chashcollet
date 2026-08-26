@@ -1,13 +1,16 @@
 import { motion, useReducedMotion } from 'framer-motion';
 import { Card } from '../../components/ui/Card';
-import { categoryColorVar } from '../../lib/categoryColor';
 import { formatMoney } from '../../lib/finance';
 import { ChartEmptyState } from './ChartEmptyState';
 import type { AppState } from '../../lib/types';
 
 // Espeja .donut-wrap (Gastos por categoría): conic-gradient de CSS en vez de
-// Chart.js — mismo total al centro + leyenda con porcentajes.
+// Chart.js — mismo total al centro + leyenda con porcentajes. Los segmentos usan
+// una rampa de violetas de marca (posición en el ranking, no identidad de
+// categoría) en vez de los colores semánticos de categoryColor.ts — esos quedan
+// reservados para badges/iconos de transacciones en el resto de la app.
 const EASE = [0.16, 1, 0.3, 1] as const;
+const VIOLET_RAMP = ['#4E3CB0', '#6D4AE0', '#8567EA', '#A78BFA', '#C9BBFA', '#9C97A8'];
 
 export function CategoryDonutChart({ data }: { data: AppState }) {
   const reduceMotion = useReducedMotion();
@@ -18,13 +21,14 @@ export function CategoryDonutChart({ data }: { data: AppState }) {
   });
   const cats = Object.keys(catMap).sort((a, b) => catMap[b] - catMap[a]);
   const total = cats.reduce((s, c) => s + catMap[c], 0);
+  const colorFor = (i: number) => VIOLET_RAMP[i % VIOLET_RAMP.length];
 
   let acc = 0;
-  const stops = cats.map((c) => {
+  const stops = cats.map((c, i) => {
     const pct = total > 0 ? (catMap[c] / total) * 100 : 0;
     const from = acc;
     acc += pct;
-    return `var(${categoryColorVar(c)}) ${from}% ${acc}%`;
+    return `${colorFor(i)} ${from}% ${acc}%`;
   });
 
   return (
@@ -63,7 +67,7 @@ export function CategoryDonutChart({ data }: { data: AppState }) {
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ duration: 0.35, delay: reduceMotion ? 0 : 0.35 + i * 0.05, ease: EASE }}
                 >
-                  <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: `var(${categoryColorVar(c)})` }} />
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: colorFor(i) }} />
                   <span className="min-w-0 flex-1 truncate">{c}</span>
                   <b className="num shrink-0 text-xs font-bold text-[var(--text)]">{formatMoney(catMap[c])}</b>
                   <span className="w-8 shrink-0 text-right text-[11px] text-[var(--text-faint)]">{pct}%</span>

@@ -18,10 +18,11 @@ interface TopbarProps {
 }
 
 // Espeja .topbar de public/index.html: hamburger (solo móvil), título/saludo de la
-// pestaña activa, buscador (focus-search), descarga en Excel (download-excel),
-// campana de notificaciones (toggle-notif-panel), toggle de tema, y el avatar — que
-// acá abre un popover de 3 botones en vez del modal de Configuración directo
-// (open-settings ya no cuelga del avatar, ver AccountPopover más abajo).
+// pestaña activa, buscador (focus-search, con atajo ⌘K/Ctrl+K), descarga en Excel
+// (download-excel), campana de notificaciones (toggle-notif-panel), toggle de
+// tema, y el avatar — que acá abre un popover de 3 botones en vez del modal de
+// Configuración directo (open-settings ya no cuelga del avatar, ver
+// AccountPopover más abajo).
 export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearchClick }: TopbarProps) {
   const { theme, toggle } = useTheme();
   const { signOut } = useAuth();
@@ -31,6 +32,17 @@ export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearch
   const accountRef = useRef<HTMLDivElement>(null);
   const notifPanelRef = useRef<HTMLDivElement>(null);
   const accountPanelRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        onSearchClick();
+      }
+    }
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onSearchClick]);
 
   // Al abrir un popover, el foco pasa a su primer control — así un usuario de
   // teclado/lector de pantalla se entera de que apareció y puede navegarlo.
@@ -84,10 +96,23 @@ export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearch
         <i className="ph ph-list" aria-hidden="true" />
       </button>
 
-      <div className="min-w-0 flex-1 truncate text-[15px] font-bold text-[var(--text)]">{title}</div>
+      <div className="min-w-0 shrink-0 truncate text-[15px] font-bold text-[var(--text)]">{title}</div>
 
-      <div className="relative flex shrink-0 items-center gap-1.5 sm:gap-2">
-        <IconPill icon="ph-magnifying-glass" label="Buscar movimientos" onClick={onSearchClick} />
+      <button
+        type="button"
+        onClick={onSearchClick}
+        aria-label="Buscar movimientos"
+        className="hidden min-w-0 max-w-md flex-1 items-center gap-2.5 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2.5 text-left text-[13.5px] text-[var(--text-faint)] hover:border-[var(--text-faint)] md:flex"
+      >
+        <i className="ph ph-magnifying-glass shrink-0" aria-hidden="true" />
+        <span className="min-w-0 flex-1 truncate">Buscar movimientos</span>
+        <kbd className="shrink-0 rounded-[6px] border border-[var(--border)] bg-[var(--surface-raised)] px-1.5 py-0.5 text-[10.5px] font-bold text-[var(--text-faint)]">
+          ⌘K
+        </kbd>
+      </button>
+
+      <div className="relative ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+        <IconPill icon="ph-magnifying-glass" label="Buscar movimientos" onClick={onSearchClick} ghost className="md:hidden" />
 
         <div ref={notifRef}>
           <IconPill
@@ -95,6 +120,7 @@ export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearch
             label="Notificaciones"
             dot={hasUrgent}
             expanded={notifOpen}
+            ghost
             onClick={() => {
               setNotifOpen((v) => !v);
               setAccountOpen(false);
@@ -137,14 +163,14 @@ export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearch
           </div>
         )}
 
-        <IconPill icon="ph-download-simple" label="Descargar en Excel" onClick={() => exportExcel(data)} className="hidden sm:flex" />
+        <IconPill icon="ph-download-simple" label="Descargar en Excel" onClick={() => exportExcel(data)} ghost className="hidden sm:flex" />
 
         <button
           type="button"
           onClick={toggle}
           title="Cambiar tema"
           aria-label="Cambiar tema"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-raised)]"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]"
         >
           <i className={`ph ${theme === 'dark' ? 'ph-sun' : 'ph-moon'}`} aria-hidden="true" />
         </button>
@@ -215,6 +241,7 @@ function IconPill({
   onClick,
   dot,
   expanded,
+  ghost = false,
   className = '',
 }: {
   icon: string;
@@ -222,6 +249,7 @@ function IconPill({
   onClick: () => void;
   dot?: boolean;
   expanded?: boolean;
+  ghost?: boolean;
   className?: string;
 }) {
   return (
@@ -232,7 +260,11 @@ function IconPill({
       aria-label={dot ? `${label} (vencimientos próximos)` : label}
       aria-haspopup={expanded !== undefined ? 'dialog' : undefined}
       aria-expanded={expanded}
-      className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-raised)] ${className}`}
+      className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] ${
+        ghost
+          ? 'text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]'
+          : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-raised)]'
+      } ${className}`}
     >
       <i className={`ph ${icon}`} aria-hidden="true" />
       {dot && <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--red)]" aria-hidden="true" />}
