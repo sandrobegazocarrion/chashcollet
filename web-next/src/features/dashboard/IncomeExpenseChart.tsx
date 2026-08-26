@@ -107,13 +107,17 @@ export function IncomeExpenseChart({ data, onOpenSubView }: { data: AppState; on
       </div>
 
       {data.transactions.length === 0 ? (
-        <ChartEmptyState icon="ph-chart-line" message="Aún no hay transacciones para graficar." />
+        <div className="flex flex-1 flex-col justify-center">
+          <ChartEmptyState icon="ph-chart-line" message="Aún no hay transacciones para graficar." />
+        </div>
       ) : labels.length < 2 ? (
         // Con un solo punto (ej. un usuario nuevo con movimientos en un único mes) el
         // path del SVG queda como un solo "M" sin ningún "L" — no dibuja nada visible,
         // aunque técnicamente "hay datos". Mejor mostrar un empty-state explícito que
         // dejar el área en blanco sin explicación.
-        <ChartEmptyState icon="ph-chart-line" message="Con más movimientos aquí verás tu tendencia de ingresos y gastos." />
+        <div className="flex flex-1 flex-col justify-center">
+          <ChartEmptyState icon="ph-chart-line" message="Con más movimientos aquí verás tu tendencia de ingresos y gastos." />
+        </div>
       ) : (
         <div className="flex flex-1 flex-col justify-center">
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Ingresos y gastos">

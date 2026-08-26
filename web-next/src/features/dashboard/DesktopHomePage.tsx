@@ -2,10 +2,10 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { computeTotals, formatMoney, pocketsRemainingThisMonth } from '../../lib/finance';
 import { computeLineChartBuckets } from '../../lib/lineChartBuckets';
-import { cardUtilization, cardZone, ZONE_VAR } from '../../lib/cardHealth';
 import { IncomeExpenseChart } from './IncomeExpenseChart';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { ActivityFeed } from './ActivityFeed';
+import { CardShell } from '../tarjeta/CardShell';
 import type { AppState } from '../../lib/types';
 import type { SubViewType } from './SubView';
 
@@ -85,8 +85,6 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, o
 
   const cards = data.accounts.filter((a) => a.type === 'tarjeta');
   const mainCard = cards[0];
-  const cardUtilPct = mainCard ? cardUtilization(mainCard.balance, mainCard.creditLimit || 0) : 0;
-  const cardAvailable = mainCard && mainCard.creditLimit ? Math.max(0, mainCard.creditLimit - mainCard.balance) : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -278,7 +276,7 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, o
 
       {/* ROW 4 */}
       <div className="flex items-stretch gap-5">
-        <TileCard className="w-[420px] shrink-0" delay={0.5}>
+        <TileCard className="w-[440px] shrink-0" delay={0.5}>
           <div className="flex items-center justify-between">
             <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-faint)]">
               <i className="ph ph-credit-card" aria-hidden="true" /> Tarjeta de crédito
@@ -296,42 +294,17 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, o
               </button>
             </div>
           ) : (
-            <>
-              <div className="mt-3 flex items-end justify-between gap-4">
-                <div>
-                  <p className="num text-2xl font-extrabold text-[var(--text)]">{formatMoney(mainCard.balance)}</p>
-                  <p className="mt-0.5 text-[11.5px] text-[var(--text-muted)]">
-                    {mainCard.name}
-                    {cards.length > 1 ? ` · +${cards.length - 1} más` : ''}
-                  </p>
-                </div>
-                <span
-                  className="num rounded-[var(--radius-pill)] px-2.5 py-1 text-[12px] font-bold"
-                  style={{ background: `color-mix(in srgb, var(${ZONE_VAR[cardZone(cardUtilPct)]}) 14%, transparent)`, color: `var(${ZONE_VAR[cardZone(cardUtilPct)]})` }}
-                >
-                  {Math.round(cardUtilPct)}% usado
-                </span>
-              </div>
-              {mainCard.creditLimit ? (
-                <>
-                  <div className="mt-3 h-1.5 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--surface-raised)]">
-                    <motion.div
-                      className="h-full rounded-[var(--radius-pill)]"
-                      style={{ background: `var(${ZONE_VAR[cardZone(cardUtilPct)]})` }}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${Math.min(100, cardUtilPct)}%` }}
-                      transition={{ duration: 0.7, delay: 0.7, ease: EASE }}
-                    />
-                  </div>
-                  <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--text-muted)]">
-                    <span className="num font-semibold text-[var(--text)]">{formatMoney(cardAvailable || 0)}</span> disponibles de{' '}
-                    <span className="num">{formatMoney(mainCard.creditLimit)}</span> de línea.
-                  </p>
-                </>
-              ) : (
-                <p className="mt-3 text-[11.5px] leading-relaxed text-[var(--text-faint)]">Agrega una línea de crédito a esta tarjeta para ver su utilización.</p>
+            <div className="mt-3">
+              {/* Misma tarjeta "de billetera" (gradiente + chip) que la página de
+                  Tarjeta — no un panel de datos aparte, para que se sienta como la
+                  tarjeta real y no un resumen inventado. */}
+              <CardShell account={mainCard} expanded={false} onToggle={onOpenTarjeta} />
+              {cards.length > 1 && (
+                <p className="mt-2.5 text-center text-[11.5px] text-[var(--text-muted)]">
+                  +{cards.length - 1} tarjeta{cards.length - 1 === 1 ? '' : 's'} más
+                </p>
               )}
-            </>
+            </div>
           )}
         </TileCard>
       </div>

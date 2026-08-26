@@ -32,10 +32,12 @@ export function CategoryDonutChart({ data }: { data: AppState }) {
   });
 
   return (
-    <Card className="min-h-[320px]">
+    <Card className="flex h-full min-h-[320px] flex-col">
       <h2 className="mb-3.5 text-sm font-bold text-[var(--text)]">Gastos por categoría</h2>
       {cats.length === 0 ? (
-        <ChartEmptyState icon="ph-chart-donut" message="Aún no hay gastos para graficar." />
+        <div className="flex flex-1 flex-col justify-center">
+          <ChartEmptyState icon="ph-chart-donut" message="Aún no hay gastos para graficar." />
+        </div>
       ) : (
         // Layout siempre apilado (nunca en fila): esta tarjeta vive en una grilla de 2
         // columnas dentro de un contenido con max-w-5xl y una columna de Objetivos de
@@ -43,7 +45,7 @@ export function CategoryDonutChart({ data }: { data: AppState }) {
         // fila — usar un breakpoint de viewport (xl:) para eso desbordaba el contenido
         // sin importar cuán ancha estuviera la ventana, porque el viewport no es el
         // ancho real de la tarjeta.
-        <div className="flex flex-col items-center gap-5">
+        <div className="flex flex-1 flex-col items-center justify-center gap-5">
           <motion.div
             className="relative h-[164px] w-[164px] shrink-0 rounded-full"
             style={{ background: `conic-gradient(${stops.join(', ')})` }}
