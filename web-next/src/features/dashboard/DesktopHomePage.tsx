@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { computeTotals, formatMoney, pocketsRemainingThisMonth } from '../../lib/finance';
 import { computeLineChartBuckets } from '../../lib/lineChartBuckets';
@@ -114,7 +114,7 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }:
               </p>
             </div>
             <div className="min-w-0 flex-1">
-              <TrendMini points={trendPoints} labels={monthBuckets.labels} label={formatMoney(totals.totalLiquid)} width={760} height={180} dark />
+              <TrendMini points={trendPoints} labels={monthBuckets.labels} width={760} height={180} dark />
             </div>
           </div>
         </div>
@@ -344,21 +344,20 @@ function RateBars({ values }: { values: number[] }) {
   );
 }
 
-// Curva suave (Catmull-Rom -> Bezier) mes a mes, con la línea "dibujándose" al
-// montar vía el pathLength animado de framer-motion — respeta
-// prefers-reduced-motion mostrando la curva ya completa sin animar. `dark`
-// ajusta la paleta para vivir sobre el panel de tinta del hero.
+// Barras mes a mes (una por mes de "Lo que tengo"), seleccionables por click: el
+// mes elegido se resalta (color pleno + leve escala) y el resto se atenúa, con el
+// tooltip animándose hacia la barra seleccionada. Arranca con el mes actual ya
+// seleccionado. Respeta prefers-reduced-motion. `dark` ajusta la paleta para
+// vivir sobre el panel de tinta del hero.
 function TrendMini({
   points,
   labels,
-  label,
   width = 480,
   height = 130,
   dark = false,
 }: {
   points: number[];
   labels: string[];
-  label: string;
   width?: number;
   height?: number;
   dark?: boolean;
@@ -367,37 +366,30 @@ function TrendMini({
   const W = width;
   const H = height;
   const PAD_Y = 14;
+  const [selected, setSelected] = useState(points.length - 1);
 
-  const pts = useMemo(() => {
-    if (points.length === 0) return [] as (readonly [number, number])[];
-    if (points.length === 1) return [[0, H / 2]] as (readonly [number, number])[];
-    const min = Math.min(...points);
+  const bars = useMemo(() => {
+    if (points.length === 0) return [];
+    const min = Math.min(...points, 0);
     const max = Math.max(...points, min + 1);
     const range = max - min || 1;
+    const n = points.length;
+    const groupW = W / n;
+    const barW = Math.min(40, groupW * 0.5);
     return points.map((v, i) => {
-      const x = (i / (points.length - 1)) * W;
-      const y = H - PAD_Y - ((v - min) / range) * (H - PAD_Y * 2);
-      return [x, y] as const;
+      const cx = i * groupW + groupW / 2;
+      const barH = Math.max(3, ((v - min) / range) * (H - PAD_Y * 2));
+      return { x: cx - barW / 2, y: H - PAD_Y - barH, width: barW, height: barH, cx };
     });
   }, [points, W, H]);
 
-  const line = useMemo(() => {
-    if (pts.length < 2) return '';
-    let d = `M${pts[0][0].toFixed(1)},${pts[0][1].toFixed(1)}`;
-    for (let i = 0; i < pts.length - 1; i++) {
-      const [x0, y0] = pts[i];
-      const [x1, y1] = pts[i + 1];
-      const midX = (x0 + x1) / 2;
-      d += ` C${midX.toFixed(1)},${y0.toFixed(1)} ${midX.toFixed(1)},${y1.toFixed(1)} ${x1.toFixed(1)},${y1.toFixed(1)}`;
-    }
-    return d;
-  }, [pts]);
+  if (bars.length < 2) return <div style={{ height: H }} aria-hidden="true" />;
+  const activeIdx = Math.min(selected, bars.length - 1);
+  const active = bars[activeIdx];
+  const tooltipDelay = reduceMotion ? 0 : 0.9;
 
-  if (pts.length < 2) return <div style={{ height: H }} aria-hidden="true" />;
-  const last = pts[pts.length - 1];
-  const dotDelay = reduceMotion ? 0 : 1.1;
-
-  const stroke = dark ? '#B7A9FF' : 'var(--brand)';
+  const activeFill = dark ? '#B7A9FF' : 'var(--brand)';
+  const idleFill = dark ? 'rgba(255,255,255,0.16)' : 'var(--border-flat)';
   const tooltipBg = dark ? '#F5F3EF' : 'var(--text)';
   const tooltipText = dark ? 'var(--sidebar-bg)' : 'var(--bg)';
   const axisClass = dark ? 'text-white/40' : 'text-[var(--text-faint)]';
@@ -406,47 +398,53 @@ function TrendMini({
     <div className="relative">
       <div className="relative" style={{ height: H }}>
         <svg viewBox={`0 0 ${W} ${H}`} className="h-full w-full" preserveAspectRatio="none">
-          <motion.path
-            d={line}
-            fill="none"
-            stroke={stroke}
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            initial={reduceMotion ? false : { pathLength: 0 }}
-            animate={{ pathLength: 1 }}
-            transition={{ duration: 1.1, delay: reduceMotion ? 0 : 0.2, ease: EASE }}
-          />
-          <motion.circle
-            cx={last[0]}
-            cy={last[1]}
-            r="4"
-            fill={stroke}
-            initial={reduceMotion ? false : { opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.3, delay: dotDelay, ease: EASE }}
-          />
+          {bars.map((b, i) => (
+            <motion.rect
+              key={i}
+              width={b.width}
+              rx={6}
+              onClick={() => setSelected(i)}
+              className="cursor-pointer"
+              initial={reduceMotion ? false : { x: b.x, y: H - PAD_Y, height: 0, fill: idleFill }}
+              animate={{ x: b.x, y: b.y, height: b.height, fill: i === activeIdx ? activeFill : idleFill }}
+              transition={{
+                height: { duration: 0.6, delay: reduceMotion ? 0 : 0.15 + i * 0.05, ease: EASE },
+                y: { duration: 0.6, delay: reduceMotion ? 0 : 0.15 + i * 0.05, ease: EASE },
+                fill: { duration: 0.25 },
+              }}
+            />
+          ))}
         </svg>
         <motion.div
           className="num absolute rounded-[8px] px-2 py-1 text-[10px] font-bold"
           style={{
-            left: `${Math.min(90, (last[0] / W) * 100)}%`,
-            top: `${Math.max(0, (last[1] / H) * 100 - 12)}%`,
             transform: 'translate(-50%,-100%)',
             whiteSpace: 'nowrap',
             background: tooltipBg,
             color: tooltipText,
           }}
-          initial={reduceMotion ? false : { opacity: 0, y: 4 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3, delay: dotDelay, ease: EASE }}
+          initial={reduceMotion ? false : { opacity: 0 }}
+          animate={{
+            opacity: 1,
+            left: `${Math.min(92, Math.max(8, (active.cx / W) * 100))}%`,
+            top: `${Math.max(0, (active.y / H) * 100 - 12)}%`,
+          }}
+          transition={{ duration: reduceMotion ? 0 : 0.35, delay: reduceMotion ? 0 : tooltipDelay, ease: EASE }}
         >
-          {label}
+          {formatMoney(points[activeIdx])}
         </motion.div>
       </div>
       <div className={`mt-1.5 flex justify-between text-[10.5px] ${axisClass}`}>
         {labels.map((l, i) => (
-          <span key={i}>{l}</span>
+          <button
+            key={i}
+            type="button"
+            onClick={() => setSelected(i)}
+            className={`num transition-opacity ${i === activeIdx ? 'font-bold opacity-100' : 'opacity-70 hover:opacity-100'}`}
+            style={i === activeIdx && dark ? { color: '#F5F3EF' } : i === activeIdx ? { color: 'var(--text)' } : undefined}
+          >
+            {l}
+          </button>
         ))}
       </div>
     </div>
