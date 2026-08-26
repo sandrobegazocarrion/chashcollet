@@ -5,7 +5,7 @@ import { computeLineChartBuckets } from '../../lib/lineChartBuckets';
 import { IncomeExpenseChart } from './IncomeExpenseChart';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { ActivityFeed } from './ActivityFeed';
-import { CardShell } from '../tarjeta/CardShell';
+import { CardShell, AddCardTile } from '../tarjeta/CardShell';
 import type { AppState } from '../../lib/types';
 import type { SubViewType } from './SubView';
 
@@ -262,37 +262,24 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, o
             )}
           </TileCard>
 
-          <TileCard delay={0.3}>
-            <div className="flex items-center justify-between">
-              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-faint)]">
-                <i className="ph ph-credit-card" aria-hidden="true" /> Tarjeta de crédito
-              </p>
-              <button type="button" onClick={onOpenTarjeta} className="shrink-0 text-[11.5px] font-bold text-[var(--brand)]">
-                Ver →
-              </button>
-            </div>
-
+          {/* Sin panel envolvente: la tarjeta "de billetera" va directo, más grande,
+              aprovechando el espacio que antes se perdía en el header/padding de una
+              TileCard. Es el mismo CardShell de la página de Tarjeta — el click ya
+              navega ahí, no hace falta un link "Ver" aparte. */}
+          <MotionCard delay={0.3} padded={false}>
             {!mainCard ? (
-              <div className="mt-3 flex flex-col gap-2">
-                <p className="text-[12.5px] leading-relaxed text-[var(--text-faint)]">Todavía no tienes tarjetas de crédito registradas.</p>
-                <button type="button" onClick={onOpenTarjeta} className="w-fit text-[12.5px] font-bold text-[var(--brand)]">
-                  + Agregar tarjeta
-                </button>
-              </div>
+              <AddCardTile onClick={onOpenTarjeta} />
             ) : (
-              <div className="mt-3">
-                {/* Misma tarjeta "de billetera" (gradiente + chip) que la página de
-                    Tarjeta — no un panel de datos aparte, para que se sienta como la
-                    tarjeta real y no un resumen inventado. */}
+              <>
                 <CardShell account={mainCard} expanded={false} onToggle={onOpenTarjeta} />
                 {cards.length > 1 && (
                   <p className="mt-2.5 text-center text-[11.5px] text-[var(--text-muted)]">
                     +{cards.length - 1} tarjeta{cards.length - 1 === 1 ? '' : 's'} más
                   </p>
                 )}
-              </div>
+              </>
             )}
-          </TileCard>
+          </MotionCard>
         </div>
 
         <MotionCard className="flex-[1.3]" delay={0.36} padded={false}>
