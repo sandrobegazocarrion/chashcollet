@@ -1,6 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { Card } from '../../components/ui/Card';
 import { computeTotals, formatMoney, pocketsRemainingThisMonth } from '../../lib/finance';
 import { computeLineChartBuckets } from '../../lib/lineChartBuckets';
 import { IncomeExpenseChart } from './IncomeExpenseChart';
@@ -16,12 +15,16 @@ interface DesktopHomePageProps {
   onOpenGoals: () => void;
 }
 
-// Réplica del layout de referencia que pasó el usuario: mismo sidebar/header de
-// siempre (sin cambios), pero el contenido de Inicio en desktop (>=1024px) pasa a
-// un grid de 9 tarjetas más denso. Reutiliza toda la lógica real ya existente
-// (StatsRow/MonthCompareCard/IncomeExpenseChart/CategoryDonutChart/ActivityFeed)
-// y solo se construyen de cero las piezas nuevas: gauge circular, sparkline de
-// tasa de ahorro, tarjeta de presupuesto y tarjeta compacta de meta.
+// Pase de refinamiento visual (pedido: "elegante, pro, minimalista, tecnológico,
+// estilo Apple/fintech premium") sobre el layout hero+grid anterior. Mismos datos
+// y misma lógica real de siempre — lo que cambia es la jerarquía y el tratamiento:
+// "Lo que tengo" pasa a ser un panel de tinta (navy, igual al sidebar) que forma
+// una "L" continua de marca, con "Balance disponible" plegado ahí adentro en vez
+// de repetir el mismo número en una tarjeta aparte. El resto de tarjetas (locales
+// a este archivo, no tocan el sistema compartido) ganan más aire y una sombra de
+// dos capas más sutil. IncomeExpenseChart/CategoryDonutChart/ActivityFeed se
+// reutilizan tal cual (son también de mobile) para no duplicar lógica ni arriesgar
+// el diseño compartido.
 export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }: DesktopHomePageProps) {
   const totals = computeTotals(data);
   const now = new Date();
@@ -43,7 +46,7 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }:
   const monthBuckets = useMemo(() => computeLineChartBuckets(data, 'month'), [data]);
 
   // Tasa de ahorro de meses anteriores (mismos buckets que "Ingresos vs. gastos"),
-  // para el sparkline y el "vs. mes anterior" — sin inventar historial que no existe.
+  // para las barras y el "vs. mes anterior" — sin inventar historial que no existe.
   const monthRates = monthBuckets.ingresos.map((ing, i) => (ing > 0 ? Math.round(((ing - monthBuckets.gastos[i]) / ing) * 100) : null));
   const prevRate = monthRates.length >= 2 ? monthRates[monthRates.length - 2] : null;
   const rateDelta = savingsRate !== null && prevRate !== null ? savingsRate - prevRate : null;
@@ -79,75 +82,72 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }:
   const goalRemaining = mainGoal && mainGoal.target ? Math.max(0, mainGoal.target - mainGoal.balance) : 0;
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* ROW 1 */}
-      <div className="flex items-stretch gap-4">
-        <MotionCard className="flex-[1.6]" delay={0}>
-          <div className="flex h-full flex-col justify-between">
-            <div className="flex items-start justify-between">
-              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
-                <i className="ph ph-wallet" aria-hidden="true" /> Lo que tengo
-              </p>
-              <span className="flex items-center gap-1 rounded-[var(--radius-pill)] border border-[var(--border)] px-2.5 py-1 text-[10.5px] font-bold text-[var(--text-muted)]">
-                {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
-              </span>
-            </div>
-            <p className="num mt-2 text-4xl font-extrabold tracking-tight text-[var(--text)]">{formatMoney(totals.totalLiquid)}</p>
-            <span
-              className={`num mt-3 inline-flex w-fit items-center gap-1.5 rounded-[var(--radius-pill)] px-3 py-1.5 text-[12px] font-bold ${
-                monthNet >= 0 ? 'bg-[var(--green)]/[0.14] text-[var(--green)]' : 'bg-[var(--red)]/[0.12] text-[var(--red)]'
-              }`}
-            >
-              <i className={`ph ${monthNet >= 0 ? 'ph-trend-up' : 'ph-trend-down'}`} aria-hidden="true" />
-              {monthNet >= 0 ? '+' : ''}
-              {formatMoney(monthNet)} · Flujo neto de este mes
-            </span>
-            <TrendMini points={trendPoints} labels={monthBuckets.labels} label={formatMoney(totals.totalLiquid)} />
-          </div>
-        </MotionCard>
-
-        <MotionCard className="flex-1" delay={0.06}>
-          <div className="flex h-full flex-col justify-between">
-            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
-              <i className="ph ph-wallet" aria-hidden="true" /> Balance disponible
+    <div className="flex flex-col gap-5">
+      {/* HERO — panel de tinta (mismo navy que el sidebar): "Lo que tengo" +
+          "Balance disponible" plegado como línea secundaria (ya no repite el
+          mismo número en una tarjeta aparte) + tendencia mensual a todo lo ancho. */}
+      <MotionCard delay={0} padded={false}>
+        <div className="ink-hero rounded-[var(--radius-card)] p-8" style={{ background: 'var(--sidebar-bg)' }}>
+          <div className="flex items-start justify-between">
+            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-white/50">
+              <i className="ph ph-wallet" aria-hidden="true" /> Lo que tengo
             </p>
-            <div className="mt-2 flex items-end justify-between gap-2">
-              <div>
-                <p className={`num text-2xl font-extrabold ${safeToSpend >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>{formatMoney(safeToSpend)}</p>
-                <p className="mt-1 text-[11.5px] text-[var(--text-muted)]">Disponible para usar</p>
-              </div>
-              <RingGauge pct={availablePct} colorVar="--green" size={54} />
+            <span className="rounded-[var(--radius-pill)] border border-white/15 px-2.5 py-1 text-[10.5px] font-bold text-white/70">
+              {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
+            </span>
+          </div>
+
+          <div className="mt-5 flex items-end gap-12">
+            <div className="w-[400px] shrink-0">
+              <p className="num text-[64px] font-extrabold leading-none tracking-[-0.02em] text-white">{formatMoney(totals.totalLiquid)}</p>
+              <span
+                className={`num mt-4 inline-flex w-fit items-center gap-1.5 rounded-[var(--radius-pill)] bg-white/10 px-3 py-1.5 text-[12px] font-bold ${
+                  monthNet >= 0 ? 'text-[#5FE0A6]' : 'text-[#F0937D]'
+                }`}
+              >
+                <i className={`ph ${monthNet >= 0 ? 'ph-trend-up' : 'ph-trend-down'}`} aria-hidden="true" />
+                {monthNet >= 0 ? '+' : ''}
+                {formatMoney(monthNet)} · Flujo neto de este mes
+              </span>
+              <p className="mt-4 text-[12.5px] text-white/45">
+                {availablePct}% disponible para usar · {data.accounts.length} cuenta{data.accounts.length === 1 ? '' : 's'}
+              </p>
+            </div>
+            <div className="min-w-0 flex-1">
+              <TrendMini points={trendPoints} labels={monthBuckets.labels} label={formatMoney(totals.totalLiquid)} width={760} height={180} dark />
             </div>
           </div>
-        </MotionCard>
+        </div>
+      </MotionCard>
 
-        <MotionCard className="flex-1" delay={0.12}>
-          <div className="flex h-full flex-col justify-between">
-            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
+      {/* ROW 2 */}
+      <div className="flex items-stretch gap-5">
+        <TileCard className="flex-1" delay={0.08}>
+          <div className="flex items-center justify-between">
+            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-faint)]">
               <i className="ph ph-piggy-bank" aria-hidden="true" /> Tasa de ahorro
             </p>
-            {savingsRate === null ? (
-              <p className="mt-2 text-[12.5px] leading-relaxed text-[var(--text-faint)]">Registra ingresos este mes para ver tu tasa de ahorro.</p>
-            ) : (
-              <>
-                <p className="num mt-1 text-3xl font-extrabold text-[var(--brand)]">{savingsRate}%</p>
+          </div>
+          {savingsRate === null ? (
+            <p className="mt-3 text-[12.5px] leading-relaxed text-[var(--text-faint)]">Registra ingresos este mes para ver tu tasa de ahorro.</p>
+          ) : (
+            <div className="mt-3 flex items-end justify-between gap-4">
+              <div>
+                <p className="num text-3xl font-extrabold text-[var(--brand)]">{savingsRate}%</p>
                 {rateDelta !== null && (
-                  <p className={`num mt-1 text-[11.5px] font-semibold ${rateDelta >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
+                  <p className={`num mt-1.5 text-[11.5px] font-semibold ${rateDelta >= 0 ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>
                     <i className={`ph ${rateDelta >= 0 ? 'ph-arrow-up' : 'ph-arrow-down'}`} aria-hidden="true" /> {Math.abs(rateDelta)}% vs. mes anterior
                   </p>
                 )}
-              </>
-            )}
-            <Sparkline values={monthRates.filter((v): v is number => v !== null)} />
-          </div>
-        </MotionCard>
-      </div>
+              </div>
+              <RateBars values={monthRates.filter((v): v is number => v !== null)} />
+            </div>
+          )}
+        </TileCard>
 
-      {/* ROW 2 */}
-      <div className="flex items-stretch gap-4">
-        <MotionCard className="flex-[1.3]" delay={0.18}>
+        <TileCard className="flex-[1.3]" delay={0.14}>
           <div className="flex items-center justify-between">
-            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
+            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-faint)]">
               <i className="ph ph-calendar-blank" aria-hidden="true" /> Resumen de {monthLabel}
             </p>
             <button
@@ -159,7 +159,7 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }:
               {formatMoney(monthNet)}
             </button>
           </div>
-          <div className="mt-3 flex justify-between text-sm">
+          <div className="mt-4 flex justify-between text-sm">
             <button type="button" onClick={() => onOpenSubView('ingresos')} className="text-left">
               <p className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--text-faint)]">Ingresos</p>
               <p className="num text-base font-extrabold text-[var(--green)]">{formatMoney(monthIn)}</p>
@@ -187,36 +187,39 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }:
             <span className="text-[var(--green)]">{inPct}% Ingresos</span>
             <span className="text-[var(--red)]">{outPct}% Gastos</span>
           </div>
-        </MotionCard>
+        </TileCard>
 
-        <MotionCard className="flex-1" delay={0.24}>
-          <div className="flex h-full flex-col justify-between">
-            <div className="flex items-center justify-between">
-              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
-                <i className="ph ph-gauge" aria-hidden="true" /> ¿Cómo voy este mes?
-              </p>
-              {budgetPct !== null && budgetPct >= 90 && (
-                <span className="rounded-[var(--radius-pill)] bg-[var(--amber)]/[0.16] px-2 py-0.5 text-[10px] font-bold text-[var(--amber)]">Atención</span>
-              )}
-            </div>
-            {budgetPct === null ? (
-              <p className="mt-2 text-[12.5px] leading-relaxed text-[var(--text-faint)]">Con más meses de historial verás cómo va tu gasto acá.</p>
-            ) : (
-              <p className="mt-2 text-[13px] leading-relaxed text-[var(--text)]">
-                Has usado el <b className="num text-[var(--text)]">{budgetPct}%</b> de tu gasto promedio y quedan{' '}
-                <b className="num text-[var(--text)]">{daysLeft}</b> día{daysLeft === 1 ? '' : 's'}.
-              </p>
+        <TileCard className="flex-1" delay={0.2}>
+          <div className="flex items-center justify-between">
+            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-faint)]">
+              <i className="ph ph-gauge" aria-hidden="true" /> ¿Cómo voy este mes?
+            </p>
+            {budgetPct !== null && budgetPct >= 90 && (
+              <span className="flex items-center gap-1.5 text-[10.5px] font-bold text-[var(--amber)]">
+                <span className="h-1.5 w-1.5 rounded-full bg-[var(--amber)]" /> Atención
+              </span>
             )}
-            <button type="button" onClick={() => onOpenSubView('gastos')} className="mt-3 text-left text-[12.5px] font-bold text-[var(--brand)]">
-              Ver detalles →
-            </button>
           </div>
-        </MotionCard>
+          {budgetPct === null ? (
+            <p className="mt-3 text-[12.5px] leading-relaxed text-[var(--text-faint)]">Con más meses de historial verás cómo va tu gasto acá.</p>
+          ) : (
+            <p className="mt-3 text-[13px] leading-relaxed text-[var(--text)]">
+              Has usado el <b className="num text-[var(--text)]">{budgetPct}%</b> de tu gasto promedio y quedan{' '}
+              <b className="num text-[var(--text)]">{daysLeft}</b> día{daysLeft === 1 ? '' : 's'}.
+            </p>
+          )}
+          <button type="button" onClick={() => onOpenSubView('gastos')} className="mt-4 text-left text-[12.5px] font-bold text-[var(--brand)]">
+            Ver detalles →
+          </button>
+        </TileCard>
+      </div>
 
-        <MotionCard className="flex-1" delay={0.3}>
+      {/* ROW 3 */}
+      <div className="flex items-stretch gap-5">
+        <TileCard className="w-[260px] shrink-0" delay={0.26}>
           <div className="flex h-full flex-col justify-between">
             <div className="flex items-center justify-between">
-              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
+              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-faint)]">
                 <i className="ph ph-target" aria-hidden="true" /> Tus metas
               </p>
               <button type="button" onClick={onOpenGoals} className="text-[11.5px] font-bold text-[var(--brand)]">
@@ -253,18 +256,15 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }:
               </>
             )}
           </div>
-        </MotionCard>
-      </div>
+        </TileCard>
 
-      {/* ROW 3 */}
-      <div className="flex items-stretch gap-4">
-        <MotionCard className="flex-[1.4]" delay={0.36} padded={false}>
+        <MotionCard className="flex-[1.3]" delay={0.32} padded={false}>
           <IncomeExpenseChart data={data} />
         </MotionCard>
-        <MotionCard className="flex-1" delay={0.42} padded={false}>
+        <MotionCard className="flex-1" delay={0.38} padded={false}>
           <CategoryDonutChart data={data} />
         </MotionCard>
-        <MotionCard className="flex-1" delay={0.48} padded={false}>
+        <MotionCard className="flex-1" delay={0.44} padded={false}>
           <ActivityFeed transactions={data.transactions} accounts={data.accounts} />
         </MotionCard>
       </div>
@@ -274,11 +274,15 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }:
 
 const EASE = [0.16, 1, 0.3, 1] as const;
 
+// Sombra de dos capas (contacto ajustado + ambient suave) en vez de una sola
+// sombra genérica — mismo radio/borde que el resto de la app (--radius-card),
+// solo se refina la profundidad y se le da más aire interno (28px vs. 22px).
+const TILE_CLASS =
+  'rounded-[var(--radius-card)] border border-[var(--border-flat)] bg-[var(--surface)] p-7 shadow-[0_1px_2px_rgba(16,10,40,0.05),0_18px_36px_-22px_rgba(16,10,40,0.14)]';
+
 // Entrada escalonada de tarjetas: fade + leve subida, con delay creciente por
-// tarjeta (0 -> 0.48s) para que el grid se sienta como una sola composición
-// entrando en cascada en vez de 9 piezas apareciendo a la vez. Respeta
-// prefers-reduced-motion (useReducedMotion de framer-motion) mostrando las
-// tarjetas ya en su posición final, sin animar.
+// tarjeta para que el grid se sienta como una sola composición entrando en
+// cascada en vez de piezas apareciendo a la vez. Respeta prefers-reduced-motion.
 function MotionCard({
   className = '',
   delay,
@@ -298,76 +302,70 @@ function MotionCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: reduceMotion ? 0 : delay, ease: EASE }}
     >
-      {padded ? <Card className="h-full">{children}</Card> : children}
+      {padded ? <div className={`${TILE_CLASS} h-full`}>{children}</div> : children}
     </motion.div>
   );
 }
 
-function RingGauge({ pct, colorVar, size = 54 }: { pct: number; colorVar: string; size?: number }) {
-  const reduceMotion = useReducedMotion();
-  const r = 22;
-  const c = 2 * Math.PI * r;
+function TileCard({ className = '', delay, children }: { className?: string; delay: number; children: ReactNode }) {
   return (
-    <div className="relative shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox="0 0 56 56">
-        <circle cx="28" cy="28" r={r} fill="none" stroke="var(--border)" strokeWidth="6" />
-        <motion.circle
-          cx="28"
-          cy="28"
-          r={r}
-          fill="none"
-          stroke={`var(${colorVar})`}
-          strokeWidth="6"
-          strokeLinecap="round"
-          strokeDasharray={c}
-          transform="rotate(-90 28 28)"
-          initial={reduceMotion ? false : { strokeDashoffset: c }}
-          animate={{ strokeDashoffset: c - (pct / 100) * c }}
-          transition={{ duration: 1, delay: reduceMotion ? 0 : 0.3, ease: EASE }}
-        />
-      </svg>
-      <div className="num absolute inset-0 flex items-center justify-center text-[11px] font-bold text-[var(--text)]">{pct}%</div>
-    </div>
+    <MotionCard className={className} delay={delay}>
+      {children}
+    </MotionCard>
   );
 }
 
-function Sparkline({ values }: { values: number[] }) {
+// Barras de tasa de ahorro mes a mes (reemplaza la línea fina anterior): el mes
+// actual resaltado en violeta de marca, los anteriores en un tono neutro — se
+// lee de un vistazo sin competir con el número grande de al lado.
+function RateBars({ values }: { values: number[] }) {
   const reduceMotion = useReducedMotion();
-  if (values.length < 2) return <div className="mt-2 h-6" aria-hidden="true" />;
-  const W = 100;
-  const H = 24;
-  const min = Math.min(...values, 0);
+  if (values.length === 0) return <div className="h-14 w-28 shrink-0" aria-hidden="true" />;
+  const H = 52;
   const max = Math.max(...values, 1);
+  const min = Math.min(...values, 0);
   const range = max - min || 1;
-  const pts = values.map((v, i) => {
-    const x = (i / (values.length - 1)) * W;
-    const y = H - ((v - min) / range) * H;
-    return `${x.toFixed(1)},${y.toFixed(1)}`;
-  });
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="mt-2 h-6 w-full" preserveAspectRatio="none" aria-hidden="true">
-      <motion.polyline
-        points={pts.join(' ')}
-        fill="none"
-        stroke="var(--brand)"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        initial={reduceMotion ? false : { pathLength: 0 }}
-        animate={{ pathLength: 1 }}
-        transition={{ duration: 0.9, delay: reduceMotion ? 0 : 0.4, ease: EASE }}
-      />
-    </svg>
+    <div className="flex h-14 shrink-0 items-end gap-1.5">
+      {values.map((v, i) => {
+        const h = Math.max(3, ((v - min) / range) * H);
+        const isLast = i === values.length - 1;
+        return (
+          <motion.div
+            key={i}
+            className={`w-2.5 rounded-full ${isLast ? 'bg-[var(--brand)]' : 'bg-[var(--border-flat)]'}`}
+            initial={reduceMotion ? false : { height: 0 }}
+            animate={{ height: h }}
+            transition={{ duration: 0.5, delay: reduceMotion ? 0 : 0.3 + i * 0.06, ease: EASE }}
+          />
+        );
+      })}
+    </div>
   );
 }
 
 // Curva suave (Catmull-Rom -> Bezier) mes a mes, con la línea "dibujándose" al
 // montar vía el pathLength animado de framer-motion — respeta
-// prefers-reduced-motion mostrando la curva ya completa sin animar.
-function TrendMini({ points, labels, label }: { points: number[]; labels: string[]; label: string }) {
+// prefers-reduced-motion mostrando la curva ya completa sin animar. `dark`
+// ajusta la paleta para vivir sobre el panel de tinta del hero.
+function TrendMini({
+  points,
+  labels,
+  label,
+  width = 480,
+  height = 130,
+  dark = false,
+}: {
+  points: number[];
+  labels: string[];
+  label: string;
+  width?: number;
+  height?: number;
+  dark?: boolean;
+}) {
   const reduceMotion = useReducedMotion();
-  const W = 480;
-  const H = 130;
+  const W = width;
+  const H = height;
   const PAD_Y = 14;
 
   const pts = useMemo(() => {
@@ -381,7 +379,7 @@ function TrendMini({ points, labels, label }: { points: number[]; labels: string
       const y = H - PAD_Y - ((v - min) / range) * (H - PAD_Y * 2);
       return [x, y] as const;
     });
-  }, [points]);
+  }, [points, W, H]);
 
   const line = useMemo(() => {
     if (pts.length < 2) return '';
@@ -395,18 +393,23 @@ function TrendMini({ points, labels, label }: { points: number[]; labels: string
     return d;
   }, [pts]);
 
-  if (pts.length < 2) return <div className="mt-3 h-[130px]" aria-hidden="true" />;
+  if (pts.length < 2) return <div style={{ height: H }} aria-hidden="true" />;
   const last = pts[pts.length - 1];
-  const dotDelay = reduceMotion ? 0 : 1.3;
+  const dotDelay = reduceMotion ? 0 : 1.1;
+
+  const stroke = dark ? '#B7A9FF' : 'var(--brand)';
+  const tooltipBg = dark ? '#F5F3EF' : 'var(--text)';
+  const tooltipText = dark ? 'var(--sidebar-bg)' : 'var(--bg)';
+  const axisClass = dark ? 'text-white/40' : 'text-[var(--text-faint)]';
 
   return (
-    <div className="relative mt-3">
-      <div className="relative h-[130px]">
+    <div className="relative">
+      <div className="relative" style={{ height: H }}>
         <svg viewBox={`0 0 ${W} ${H}`} className="h-full w-full" preserveAspectRatio="none">
           <motion.path
             d={line}
             fill="none"
-            stroke="var(--brand)"
+            stroke={stroke}
             strokeWidth="2.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -417,20 +420,22 @@ function TrendMini({ points, labels, label }: { points: number[]; labels: string
           <motion.circle
             cx={last[0]}
             cy={last[1]}
-            r="3.5"
-            fill="var(--brand)"
+            r="4"
+            fill={stroke}
             initial={reduceMotion ? false : { opacity: 0, scale: 0 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 0.3, delay: dotDelay, ease: EASE }}
           />
         </svg>
         <motion.div
-          className="num absolute rounded-[8px] bg-[var(--text)] px-2 py-1 text-[10px] font-bold text-[var(--bg)]"
+          className="num absolute rounded-[8px] px-2 py-1 text-[10px] font-bold"
           style={{
-            left: `${Math.min(88, (last[0] / W) * 100)}%`,
-            top: `${Math.max(0, (last[1] / H) * 100 - 14)}%`,
+            left: `${Math.min(90, (last[0] / W) * 100)}%`,
+            top: `${Math.max(0, (last[1] / H) * 100 - 12)}%`,
             transform: 'translate(-50%,-100%)',
             whiteSpace: 'nowrap',
+            background: tooltipBg,
+            color: tooltipText,
           }}
           initial={reduceMotion ? false : { opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
@@ -439,7 +444,7 @@ function TrendMini({ points, labels, label }: { points: number[]; labels: string
           {label}
         </motion.div>
       </div>
-      <div className="mt-1 flex justify-between text-[10.5px] text-[var(--text-faint)]">
+      <div className={`mt-1.5 flex justify-between text-[10.5px] ${axisClass}`}>
         {labels.map((l, i) => (
           <span key={i}>{l}</span>
         ))}
