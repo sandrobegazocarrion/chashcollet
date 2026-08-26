@@ -222,51 +222,11 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, o
       {/* ROW 3 */}
       <div className="flex items-stretch gap-5">
         <div className="flex w-[270px] shrink-0 flex-col gap-5">
-          <TileCard delay={0.26}>
-            <div className="flex items-center justify-between">
-              <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-faint)]">
-                <i className="ph ph-target" aria-hidden="true" /> Tus metas
-              </p>
-              <button type="button" onClick={onOpenGoals} className="text-[11.5px] font-bold text-[var(--brand)]">
-                Ver todas →
-              </button>
-            </div>
-            {!mainGoal ? (
-              <div className="mt-3 flex flex-col gap-2">
-                <p className="text-[12.5px] leading-relaxed text-[var(--text-faint)]">Crea tu primera meta de ahorro para verla acá.</p>
-                <button type="button" onClick={onNewGoal} className="w-fit text-[12.5px] font-bold text-[var(--brand)]">
-                  + Nueva meta
-                </button>
-              </div>
-            ) : (
-              <>
-                <p className="num mt-2 text-base font-extrabold text-[var(--text)]">
-                  {formatMoney(mainGoal.balance)} <span className="text-[var(--text-faint)]">/ {mainGoal.target ? formatMoney(mainGoal.target) : '—'}</span>
-                </p>
-                <p className="mt-0.5 text-[11.5px] text-[var(--text-muted)]">{mainGoal.name}</p>
-                <div className="mt-2 h-1.5 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--surface-raised)]">
-                  <motion.div
-                    className="h-full rounded-[var(--radius-pill)] bg-[var(--green)]"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${goalPct}%` }}
-                    transition={{ duration: 0.7, delay: 0.6, ease: EASE }}
-                  />
-                </div>
-                <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--text-muted)]">
-                  Te faltan <span className="num font-semibold text-[var(--text)]">{formatMoney(goalRemaining)}</span> para alcanzar tu objetivo.
-                </p>
-                <button type="button" onClick={onOpenGoals} className="mt-2 text-left text-[12.5px] font-bold text-[var(--brand)]">
-                  Ver objetivo →
-                </button>
-              </>
-            )}
-          </TileCard>
-
           {/* Sin panel envolvente: la tarjeta "de billetera" va directo, más grande,
               aprovechando el espacio que antes se perdía en el header/padding de una
               TileCard. Es el mismo CardShell de la página de Tarjeta — el click ya
               navega ahí, no hace falta un link "Ver" aparte. */}
-          <MotionCard delay={0.3} padded={false}>
+          <MotionCard delay={0.26} padded={false}>
             {!mainCard ? (
               <AddCardTile onClick={onOpenTarjeta} />
             ) : (
@@ -280,6 +240,50 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, o
               </>
             )}
           </MotionCard>
+
+          {/* flex-1: llena todo el resto del alto de la columna (antes quedaba
+              espacio vacío debajo cuando no había metas todavía). */}
+          <TileCard className="flex-1" delay={0.3}>
+            <div className="flex h-full flex-col">
+              <div className="flex items-center justify-between">
+                <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-faint)]">
+                  <i className="ph ph-target" aria-hidden="true" /> Tus metas
+                </p>
+                <button type="button" onClick={onOpenGoals} className="text-[11.5px] font-bold text-[var(--brand)]">
+                  Ver todas →
+                </button>
+              </div>
+              {!mainGoal ? (
+                <div className="flex flex-1 flex-col justify-center gap-2">
+                  <p className="text-[12.5px] leading-relaxed text-[var(--text-faint)]">Crea tu primera meta de ahorro para verla acá.</p>
+                  <button type="button" onClick={onNewGoal} className="w-fit text-[12.5px] font-bold text-[var(--brand)]">
+                    + Nueva meta
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-1 flex-col justify-center">
+                  <p className="num mt-2 text-base font-extrabold text-[var(--text)]">
+                    {formatMoney(mainGoal.balance)} <span className="text-[var(--text-faint)]">/ {mainGoal.target ? formatMoney(mainGoal.target) : '—'}</span>
+                  </p>
+                  <p className="mt-0.5 text-[11.5px] text-[var(--text-muted)]">{mainGoal.name}</p>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--surface-raised)]">
+                    <motion.div
+                      className="h-full rounded-[var(--radius-pill)] bg-[var(--green)]"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${goalPct}%` }}
+                      transition={{ duration: 0.7, delay: 0.6, ease: EASE }}
+                    />
+                  </div>
+                  <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--text-muted)]">
+                    Te faltan <span className="num font-semibold text-[var(--text)]">{formatMoney(goalRemaining)}</span> para alcanzar tu objetivo.
+                  </p>
+                  <button type="button" onClick={onOpenGoals} className="mt-2 text-left text-[12.5px] font-bold text-[var(--brand)]">
+                    Ver objetivo →
+                  </button>
+                </div>
+              )}
+            </div>
+          </TileCard>
         </div>
 
         <MotionCard className="flex-[1.3]" delay={0.36} padded={false}>
