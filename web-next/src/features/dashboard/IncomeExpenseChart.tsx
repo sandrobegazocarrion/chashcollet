@@ -73,7 +73,7 @@ export function IncomeExpenseChart({ data, onOpenSubView }: { data: AppState; on
           <span className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide text-[var(--text-faint)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--green)]" /> Ingresos
           </span>
-          <p className="num mt-1 text-xl font-extrabold text-[var(--green)]">{formatMoney(totalIng)}</p>
+          <p className="num mt-1 whitespace-nowrap text-lg font-extrabold text-[var(--green)]">{formatMoney(totalIng)}</p>
         </button>
         <button
           type="button"
@@ -85,7 +85,7 @@ export function IncomeExpenseChart({ data, onOpenSubView }: { data: AppState; on
           <span className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide text-[var(--text-faint)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--red)]" /> Gastos
           </span>
-          <p className="num mt-1 text-xl font-extrabold text-[var(--red)]">{formatMoney(totalGas)}</p>
+          <p className="num mt-1 whitespace-nowrap text-lg font-extrabold text-[var(--red)]">{formatMoney(totalGas)}</p>
         </button>
       </div>
 
