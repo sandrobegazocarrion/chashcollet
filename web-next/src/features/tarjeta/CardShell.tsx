@@ -34,6 +34,10 @@ interface CardShellProps {
   account: Account;
   expanded: boolean;
   onToggle: () => void;
+  // Proporción real de tarjeta (~1.586:1) para usos angostos como el widget de
+  // Inicio, en vez del 380×240 casi cuadrado de la página de Tarjeta (que se queda
+  // igual — este prop es opt-in, no cambia el default).
+  compact?: boolean;
 }
 
 // La tarjeta protagonista: grande (380×240) por defecto; al tocarla se "encoge" — la
@@ -42,7 +46,7 @@ interface CardShellProps {
 // y el compacto viven superpuestos en el mismo contenedor y se cruzan en opacidad,
 // para que la transición se sienta como un solo elemento que se achica, no dos
 // componentes distintos reemplazándose de golpe.
-export function CardShell({ account, expanded, onToggle }: CardShellProps) {
+export function CardShell({ account, expanded, onToggle, compact = false }: CardShellProps) {
   const hasLimit = !!(account.creditLimit && account.creditLimit > 0);
   const util = hasLimit ? cardUtilization(account.balance, account.creditLimit!) : 0;
   const isOverLimit = hasLimit && account.balance > account.creditLimit!;
@@ -50,6 +54,7 @@ export function CardShell({ account, expanded, onToggle }: CardShellProps) {
   const bankLabel = account.bank ? PERUVIAN_BANKS[account.bank] || account.bank : account.name;
   const zone = cardZone(util);
   const pillText = isOverLimit ? 'Sobregiro' : `${Math.round(util)}%`;
+  const heroHeight = compact ? 168 : HERO_HEIGHT;
 
   return (
     <button
@@ -58,13 +63,13 @@ export function CardShell({ account, expanded, onToggle }: CardShellProps) {
       aria-expanded={expanded}
       aria-label={expanded ? 'Contraer tarjeta' : 'Ver resumen, cuotas y movimientos'}
       className="relative mx-auto block w-full min-w-0 max-w-[380px] overflow-hidden rounded-[24px] text-left text-white shadow-[0_16px_34px_rgba(0,0,0,.22)] transition-[height] duration-[400ms] ease-[cubic-bezier(.22,.9,.32,1)]"
-      style={{ height: expanded ? BAR_HEIGHT : HERO_HEIGHT, background: accountGradient(accountColorKey(account)) }}
+      style={{ height: expanded ? BAR_HEIGHT : heroHeight, background: accountGradient(accountColorKey(account)) }}
     >
       <span className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-white/10" aria-hidden="true" />
 
       {/* Grande */}
       <div
-        className={`absolute inset-0 flex flex-col gap-4 p-5 transition-opacity duration-200 sm:gap-5 sm:p-7 ${
+        className={`absolute inset-0 flex flex-col transition-opacity duration-200 ${compact ? 'gap-3 p-4' : 'gap-4 p-5 sm:gap-5 sm:p-7'} ${
           expanded ? 'pointer-events-none opacity-0' : 'opacity-100'
         }`}
       >
@@ -83,14 +88,20 @@ export function CardShell({ account, expanded, onToggle }: CardShellProps) {
         </div>
 
         <div className="relative z-[1] flex items-center justify-between">
-          <div className="h-7 w-11 rounded-[7px]" style={{ background: 'linear-gradient(135deg,#f3d27a,#c79a3d)' }} />
-          <NetworkMark network={account.network} className="h-6 w-9 opacity-95" />
+          <div className={compact ? 'h-6 w-9 rounded-[6px]' : 'h-7 w-11 rounded-[7px]'} style={{ background: 'linear-gradient(135deg,#f3d27a,#c79a3d)' }} />
+          <NetworkMark network={account.network} className={compact ? 'h-5 w-8 opacity-95' : 'h-6 w-9 opacity-95'} />
         </div>
 
         <div className="relative z-[1] mt-auto">
-          <p className="num m-0 text-[28px] font-extrabold leading-none tracking-tight sm:text-[34px]">{formatMoney(hasLimit ? disponible! : account.balance)}</p>
-          <p className="m-0 mt-1.5 text-[11px] font-bold uppercase tracking-wide opacity-80">{hasLimit ? 'Disponible' : 'Deuda actual'}</p>
-          {hasLimit && <p className="num m-0 mt-1.5 text-sm opacity-85">Usado: {formatMoney(account.balance)}</p>}
+          <p className={`num m-0 font-extrabold leading-none tracking-tight ${compact ? 'text-xl' : 'text-[28px] sm:text-[34px]'}`}>
+            {formatMoney(hasLimit ? disponible! : account.balance)}
+          </p>
+          <p className={`m-0 font-bold uppercase tracking-wide opacity-80 ${compact ? 'mt-1 text-[9.5px]' : 'mt-1.5 text-[11px]'}`}>
+            {hasLimit ? 'Disponible' : 'Deuda actual'}
+          </p>
+          {hasLimit && (
+            <p className={`num m-0 opacity-85 ${compact ? 'mt-1 text-[11px]' : 'mt-1.5 text-sm'}`}>Usado: {formatMoney(account.balance)}</p>
+          )}
         </div>
       </div>
 

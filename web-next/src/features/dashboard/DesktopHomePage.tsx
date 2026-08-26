@@ -231,7 +231,7 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, o
               <AddCardTile onClick={onOpenTarjeta} />
             ) : (
               <>
-                <CardShell account={mainCard} expanded={false} onToggle={onOpenTarjeta} />
+                <CardShell account={mainCard} expanded={false} onToggle={onOpenTarjeta} compact />
                 {cards.length > 1 && (
                   <p className="mt-2.5 text-center text-[11.5px] text-[var(--text-muted)]">
                     +{cards.length - 1} tarjeta{cards.length - 1 === 1 ? '' : 's'} más
