@@ -83,7 +83,7 @@ export function DashboardPage({
         </div>
 
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <IncomeExpenseChart data={data} />
+          <IncomeExpenseChart data={data} onOpenSubView={onOpenSubView} />
           <CategoryDonutChart data={data} />
         </div>
 

@@ -5,9 +5,10 @@ import { computeLineChartBuckets, type LineChartMode } from '../../lib/lineChart
 import { formatMoney } from '../../lib/finance';
 import { ChartEmptyState } from './ChartEmptyState';
 import type { AppState } from '../../lib/types';
+import type { SubViewType } from './SubView';
 
 const W = 560;
-const H = 200;
+const H = 240;
 const PAD = 24;
 const EASE = [0.16, 1, 0.3, 1] as const;
 
@@ -43,8 +44,11 @@ function buildBars(ingresos: number[], gastos: number[], max: number): { ing: Ba
 }
 
 // Espeja .chart-card (Ingresos vs. gastos): SVG en vez de Chart.js — sin dependencia
-// extra, misma info (línea + área, toggle mes/semana/día, leyenda con puntos).
-export function IncomeExpenseChart({ data }: { data: AppState }) {
+// extra, misma info (barras, toggle mes/semana/día, leyenda con puntos). Cuando se
+// pasa `onOpenSubView` (Inicio, mobile y desktop) los totales de Ingresos/Gastos se
+// vuelven clickeables y llevan al historial filtrado — igual que el resto de
+// montos-resumen del dashboard.
+export function IncomeExpenseChart({ data, onOpenSubView }: { data: AppState; onOpenSubView?: (type: SubViewType) => void }) {
   const reduceMotion = useReducedMotion();
   const [mode, setMode] = useState<LineChartMode>('month');
   const { labels, ingresos, gastos } = computeLineChartBuckets(data, mode);
@@ -54,38 +58,52 @@ export function IncomeExpenseChart({ data }: { data: AppState }) {
   const totalGas = gastos.reduce((s, v) => s + v, 0);
 
   return (
-    <Card className="min-h-[320px]">
+    <Card className="flex h-full min-h-[320px] flex-col">
       <h2 className="mb-3 text-sm font-bold text-[var(--text)]">Ingresos vs. gastos</h2>
 
-      {/* Totales del periodo visible, en grande — no solo la forma de la línea. */}
+      {/* Totales del periodo visible, en grande — no solo la forma de las barras. */}
       <div className="mb-4 grid grid-cols-2 gap-3">
-        <div className="rounded-[var(--radius-control)] border border-[var(--border-flat)] bg-[var(--surface-raised)] p-3">
+        <button
+          type="button"
+          onClick={onOpenSubView ? () => onOpenSubView('ingresos') : undefined}
+          className={`rounded-[var(--radius-control)] border border-[var(--border-flat)] bg-[var(--surface-raised)] p-3 text-left ${
+            onOpenSubView ? 'cursor-pointer transition-colors hover:border-[var(--green)]/40 hover:bg-[var(--green)]/5' : 'cursor-default'
+          }`}
+        >
           <span className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide text-[var(--text-faint)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--green)]" /> Ingresos
           </span>
           <p className="num mt-1 text-xl font-extrabold text-[var(--green)]">{formatMoney(totalIng)}</p>
-        </div>
-        <div className="rounded-[var(--radius-control)] border border-[var(--border-flat)] bg-[var(--surface-raised)] p-3">
+        </button>
+        <button
+          type="button"
+          onClick={onOpenSubView ? () => onOpenSubView('gastos') : undefined}
+          className={`rounded-[var(--radius-control)] border border-[var(--border-flat)] bg-[var(--surface-raised)] p-3 text-left ${
+            onOpenSubView ? 'cursor-pointer transition-colors hover:border-[var(--red)]/40 hover:bg-[var(--red)]/5' : 'cursor-default'
+          }`}
+        >
           <span className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide text-[var(--text-faint)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--red)]" /> Gastos
           </span>
           <p className="num mt-1 text-xl font-extrabold text-[var(--red)]">{formatMoney(totalGas)}</p>
-        </div>
+        </button>
       </div>
 
-      <div className="mb-2.5 inline-flex rounded-[11px] border border-[var(--border)] bg-[var(--surface-raised)] p-[3px]">
-        {(['month', 'week', 'day'] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setMode(m)}
-            className={`rounded-lg px-2.5 py-1 text-[11.5px] font-bold transition-colors ${
-              mode === m ? 'bg-[var(--surface)] text-[var(--text)] shadow-sm' : 'text-[var(--text-muted)]'
-            }`}
-          >
-            {m === 'month' ? '6 meses' : m === 'week' ? 'Por semana' : 'Por día'}
-          </button>
-        ))}
+      <div className="mb-4 flex justify-center">
+        <div className="inline-flex rounded-[11px] border border-[var(--border)] bg-[var(--surface-raised)] p-[3px]">
+          {(['month', 'week', 'day'] as const).map((m) => (
+            <button
+              key={m}
+              type="button"
+              onClick={() => setMode(m)}
+              className={`rounded-lg px-2.5 py-1 text-[11.5px] font-bold transition-colors ${
+                mode === m ? 'bg-[var(--surface)] text-[var(--text)] shadow-sm' : 'text-[var(--text-muted)]'
+              }`}
+            >
+              {m === 'month' ? '6 meses' : m === 'week' ? 'Por semana' : 'Por día'}
+            </button>
+          ))}
+        </div>
       </div>
 
       {data.transactions.length === 0 ? (
@@ -97,7 +115,7 @@ export function IncomeExpenseChart({ data }: { data: AppState }) {
         // dejar el área en blanco sin explicación.
         <ChartEmptyState icon="ph-chart-line" message="Con más movimientos aquí verás tu tendencia de ingresos y gastos." />
       ) : (
-        <div>
+        <div className="flex flex-1 flex-col justify-center">
           <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="Ingresos y gastos">
             <line x1={PAD} y1={H - PAD} x2={W - PAD} y2={H - PAD} stroke="var(--border-flat)" strokeWidth="1" />
             {ing.map((b, i) => (

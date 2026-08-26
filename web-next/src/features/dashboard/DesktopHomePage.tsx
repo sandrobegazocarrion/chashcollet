@@ -2,6 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { computeTotals, formatMoney, pocketsRemainingThisMonth } from '../../lib/finance';
 import { computeLineChartBuckets } from '../../lib/lineChartBuckets';
+import { cardUtilization, cardZone, ZONE_VAR } from '../../lib/cardHealth';
 import { IncomeExpenseChart } from './IncomeExpenseChart';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { ActivityFeed } from './ActivityFeed';
@@ -13,6 +14,7 @@ interface DesktopHomePageProps {
   onOpenSubView: (type: SubViewType) => void;
   onNewGoal: () => void;
   onOpenGoals: () => void;
+  onOpenTarjeta: () => void;
 }
 
 // Pase de refinamiento visual (pedido: "elegante, pro, minimalista, tecnológico,
@@ -25,7 +27,7 @@ interface DesktopHomePageProps {
 // dos capas más sutil. IncomeExpenseChart/CategoryDonutChart/ActivityFeed se
 // reutilizan tal cual (son también de mobile) para no duplicar lógica ni arriesgar
 // el diseño compartido.
-export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }: DesktopHomePageProps) {
+export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, onOpenTarjeta }: DesktopHomePageProps) {
   const totals = computeTotals(data);
   const now = new Date();
   const monthKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
@@ -80,6 +82,11 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }:
   const mainGoal = data.pockets[0];
   const goalPct = mainGoal && mainGoal.target && mainGoal.target > 0 ? Math.max(0, Math.min(100, Math.round((mainGoal.balance / mainGoal.target) * 100))) : 0;
   const goalRemaining = mainGoal && mainGoal.target ? Math.max(0, mainGoal.target - mainGoal.balance) : 0;
+
+  const cards = data.accounts.filter((a) => a.type === 'tarjeta');
+  const mainCard = cards[0];
+  const cardUtilPct = mainCard ? cardUtilization(mainCard.balance, mainCard.creditLimit || 0) : 0;
+  const cardAvailable = mainCard && mainCard.creditLimit ? Math.max(0, mainCard.creditLimit - mainCard.balance) : null;
 
   return (
     <div className="flex flex-col gap-5">
@@ -259,7 +266,7 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }:
         </TileCard>
 
         <MotionCard className="flex-[1.3]" delay={0.32} padded={false}>
-          <IncomeExpenseChart data={data} />
+          <IncomeExpenseChart data={data} onOpenSubView={onOpenSubView} />
         </MotionCard>
         <MotionCard className="flex-1" delay={0.38} padded={false}>
           <CategoryDonutChart data={data} />
@@ -267,6 +274,66 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals }:
         <MotionCard className="flex-1" delay={0.44} padded={false}>
           <ActivityFeed transactions={data.transactions} accounts={data.accounts} />
         </MotionCard>
+      </div>
+
+      {/* ROW 4 */}
+      <div className="flex items-stretch gap-5">
+        <TileCard className="w-[420px] shrink-0" delay={0.5}>
+          <div className="flex items-center justify-between">
+            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-faint)]">
+              <i className="ph ph-credit-card" aria-hidden="true" /> Tarjeta de crédito
+            </p>
+            <button type="button" onClick={onOpenTarjeta} className="text-[11.5px] font-bold text-[var(--brand)]">
+              {cards.length > 1 ? 'Ver todas →' : 'Ver tarjeta →'}
+            </button>
+          </div>
+
+          {!mainCard ? (
+            <div className="mt-3 flex flex-col gap-2">
+              <p className="text-[12.5px] leading-relaxed text-[var(--text-faint)]">Todavía no tienes tarjetas de crédito registradas.</p>
+              <button type="button" onClick={onOpenTarjeta} className="w-fit text-[12.5px] font-bold text-[var(--brand)]">
+                + Agregar tarjeta
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="mt-3 flex items-end justify-between gap-4">
+                <div>
+                  <p className="num text-2xl font-extrabold text-[var(--text)]">{formatMoney(mainCard.balance)}</p>
+                  <p className="mt-0.5 text-[11.5px] text-[var(--text-muted)]">
+                    {mainCard.name}
+                    {cards.length > 1 ? ` · +${cards.length - 1} más` : ''}
+                  </p>
+                </div>
+                <span
+                  className="num rounded-[var(--radius-pill)] px-2.5 py-1 text-[12px] font-bold"
+                  style={{ background: `color-mix(in srgb, var(${ZONE_VAR[cardZone(cardUtilPct)]}) 14%, transparent)`, color: `var(${ZONE_VAR[cardZone(cardUtilPct)]})` }}
+                >
+                  {Math.round(cardUtilPct)}% usado
+                </span>
+              </div>
+              {mainCard.creditLimit ? (
+                <>
+                  <div className="mt-3 h-1.5 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--surface-raised)]">
+                    <motion.div
+                      className="h-full rounded-[var(--radius-pill)]"
+                      style={{ background: `var(${ZONE_VAR[cardZone(cardUtilPct)]})` }}
+                      initial={{ width: 0 }}
+                      animate={{ width: `${Math.min(100, cardUtilPct)}%` }}
+                      transition={{ duration: 0.7, delay: 0.7, ease: EASE }}
+                    />
+                  </div>
+                  <p className="mt-2 text-[11.5px] leading-relaxed text-[var(--text-muted)]">
+                    <span className="num font-semibold text-[var(--text)]">{formatMoney(cardAvailable || 0)}</span> disponibles de{' '}
+                    <span className="num">{formatMoney(mainCard.creditLimit)}</span> de línea.
+                  </p>
+                </>
+              ) : (
+                <p className="mt-3 text-[11.5px] leading-relaxed text-[var(--text-faint)]">Agrega una línea de crédito a esta tarjeta para ver su utilización.</p>
+              )}
+            </>
+          )}
+        </TileCard>
       </div>
     </div>
   );
