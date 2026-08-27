@@ -418,6 +418,10 @@ function addAccount(store, { type, name, balance, network, bank, creditLimit, bi
     if (creditLimit) acc.creditLimit = Number(creditLimit) || null;
     if (billingDay) acc.billingDay = Number(billingDay) || null;
     if (closingDay) acc.closingDay = Number(closingDay) || null;
+    // TCEA de la tarjeta: se guarda en el mismo campo que la tasa de ahorro, pero
+    // applyAccountInterest() solo capitaliza cuentas ahorro/corriente — en tarjetas
+    // interestRate es puramente informativo, para la calculadora de costo del mínimo.
+    acc.interestRate = interestRate ? Number(interestRate) : null;
   }
   if (type === 'ahorro' || type === 'corriente') {
     acc.interestRate = interestRate ? Number(interestRate) : null;
@@ -448,6 +452,7 @@ function updateAccount(store, id, { name, balance, network, bank, creditLimit, b
     if (creditLimit !== undefined) acc.creditLimit = creditLimit ? Number(creditLimit) : null;
     if (billingDay !== undefined) acc.billingDay = billingDay ? Number(billingDay) : null;
     if (closingDay !== undefined) acc.closingDay = closingDay ? Number(closingDay) : null;
+    if (interestRate !== undefined) acc.interestRate = interestRate ? Number(interestRate) : null;
   }
   if (acc.type === 'ahorro' || acc.type === 'corriente') {
     if (interestRate !== undefined) acc.interestRate = interestRate ? Number(interestRate) : null;

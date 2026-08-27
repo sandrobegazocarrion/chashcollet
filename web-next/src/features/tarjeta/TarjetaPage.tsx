@@ -24,7 +24,7 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
-const EMPTY_NEW_CARD = { name: '', bank: '', network: 'otra' as CardNetwork, balance: '', creditLimit: '', billingDay: '', closingDay: '' };
+const EMPTY_NEW_CARD = { name: '', bank: '', network: 'otra' as CardNetwork, balance: '', creditLimit: '', billingDay: '', closingDay: '', interestRate: '' };
 
 // Tarjeta protagonista (380×240) centrada, con flechas a los lados para navegar entre
 // tarjetas reales + "Nueva tarjeta" al final (ver CardShell.tsx). Tocarla la encoge
@@ -52,6 +52,7 @@ export function TarjetaPage({ data }: { data: AppState }) {
 
   const addAccount = useApiMutation<unknown, Account>('POST', '/api/accounts');
   const setColor = useApiMutation<{ id: string; color: AccountColorKey }, Account>('PUT', (b) => `/api/accounts/${b.id}`);
+  const setInterestRate = useApiMutation<{ id: string; interestRate: number | null }, Account>('PUT', (b) => `/api/accounts/${b.id}`);
   const addCharge = useApiMutation<unknown, CardCharge>('POST', '/api/cardcharges');
   const deleteCharge = useApiMutation<{ id: string }, void>('DELETE', (b) => `/api/cardcharges/${b.id}`);
   const markInstallment = useApiMutation<{ id: string }, CardCharge>('POST', (b) => `/api/cardcharges/${b.id}/mark`);
@@ -89,6 +90,7 @@ export function TarjetaPage({ data }: { data: AppState }) {
         creditLimit: newCardForm.creditLimit ? Number(newCardForm.creditLimit) : undefined,
         billingDay: newCardForm.billingDay ? Number(newCardForm.billingDay) : undefined,
         closingDay: newCardForm.closingDay ? Number(newCardForm.closingDay) : undefined,
+        interestRate: newCardForm.interestRate ? Number(newCardForm.interestRate) : undefined,
       });
       setPosition(newPosition);
       setExpanded(false);
@@ -222,6 +224,8 @@ export function TarjetaPage({ data }: { data: AppState }) {
               setPaying(true);
             }}
             onSetColor={(color) => setColor.mutate({ id: activeCard.id, color })}
+            onSetInterestRate={(rate) => setInterestRate.mutate({ id: activeCard.id, interestRate: rate })}
+            savingRate={setInterestRate.isPending}
             onMarkInstallment={(id) => markInstallment.mutate({ id })}
             onDeleteCharge={(id) => deleteCharge.mutate({ id })}
             onDeletePayment={(id) => deletePayment.mutate({ id })}
@@ -320,6 +324,7 @@ interface NewCardFormState {
   creditLimit: string;
   billingDay: string;
   closingDay: string;
+  interestRate: string;
 }
 
 function NewCardModal({
@@ -391,6 +396,15 @@ function NewCardModal({
             onChange={(e) => setForm({ ...form, closingDay: e.target.value })}
           />
         </div>
+        <Input
+          label="TCEA / tasa de interés anual (opcional)"
+          type="number"
+          step="0.1"
+          min={0}
+          placeholder="Ej: 68.5"
+          value={form.interestRate}
+          onChange={(e) => setForm({ ...form, interestRate: e.target.value })}
+        />
         {error && (
           <p className="text-sm text-[var(--red)]" role="alert">
             {error}

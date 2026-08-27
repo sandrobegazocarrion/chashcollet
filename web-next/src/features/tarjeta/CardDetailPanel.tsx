@@ -6,6 +6,7 @@ import { ACCOUNT_COLOR_PALETTE, accountColorKey, accountColorVar, type AccountCo
 import { amountToReachIdeal, cardUtilization, cardZone, daysUntilDay, IDEAL_UTIL_PCT, ZONE_VAR } from '../../lib/cardHealth';
 import { CardHealthGauge } from './CardHealthGauge';
 import { CardCycleTrack } from './CardCycleTrack';
+import { CardInterestCalculator } from './CardInterestCalculator';
 import type { Account, AppState, CardCharge, CardPayment } from '../../lib/types';
 
 type Tab = 'resumen' | 'cuotas' | 'movimientos';
@@ -17,6 +18,8 @@ interface CardDetailPanelProps {
   onPay: () => void;
   onSimulateApply: (amount: string) => void;
   onSetColor: (color: AccountColorKey) => void;
+  onSetInterestRate: (rate: number | null) => void;
+  savingRate: boolean;
   onMarkInstallment: (chargeId: string) => void;
   onDeleteCharge: (chargeId: string) => void;
   onDeletePayment: (paymentId: string) => void;
@@ -33,6 +36,8 @@ export function CardDetailPanel({
   onPay,
   onSimulateApply,
   onSetColor,
+  onSetInterestRate,
+  savingRate,
   onMarkInstallment,
   onDeleteCharge,
   onDeletePayment,
@@ -86,6 +91,13 @@ export function CardDetailPanel({
           <div className="mt-3">
             {tab === 'resumen' && (
               <div>
+                <CardInterestCalculator
+                  balance={account.balance}
+                  interestRate={account.interestRate}
+                  onSetInterestRate={onSetInterestRate}
+                  savingRate={savingRate}
+                />
+
                 <p className="mb-0 text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Ciclo de facturación</p>
                 <CardCycleTrack closingDays={closingDays} billingDays={billingDays} zoneColorVar={zoneColorVar} />
 

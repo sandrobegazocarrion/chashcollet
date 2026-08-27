@@ -27,6 +27,7 @@ function rowToAccount(r) {
     if (r.credit_limit != null) acc.creditLimit = Number(r.credit_limit);
     if (r.billing_day != null) acc.billingDay = r.billing_day;
     if (r.closing_day != null) acc.closingDay = r.closing_day;
+    acc.interestRate = r.interest_rate != null ? Number(r.interest_rate) : null;
   }
   if (r.type === 'ahorro' || r.type === 'corriente') {
     acc.interestRate = r.interest_rate != null ? Number(r.interest_rate) : null;
