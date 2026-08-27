@@ -1,4 +1,4 @@
-import type { DeudaType, LenderType, PersonLoan, PersonLoanPayment } from './types';
+import type { DeudaType, LenderType, PersonLoan, PersonLoanPayment, PersonLoanRelation } from './types';
 
 // Portado de DEUDA_TYPES/DEUDA_TYPE_ICON/DEUDA_TYPE_COLOR_VAR en public/js/app.js.
 export const DEUDA_TYPE_LABELS: Record<DeudaType, string> = {
@@ -32,6 +32,11 @@ export const DEUDA_TYPE_COLOR_VARS: Record<DeudaType, string> = {
   otro: '--text-faint',
 };
 export const LENDER_LABELS: Record<LenderType, string> = { banco: 'Banco', financiera: 'Financiera', app: 'App / Fintech', persona: 'Persona' };
+
+// Relación con quien te debe — importa en Perú porque cobrarle a un familiar no se
+// maneja igual que a un conocido. Decorativos, ninguno reutiliza --red (semántico).
+export const RELATION_LABELS: Record<PersonLoanRelation, string> = { amigo: 'Amigo', familiar: 'Familiar', conocido: 'Conocido' };
+export const RELATION_COLOR_VARS: Record<PersonLoanRelation, string> = { amigo: '--lavender', familiar: '--sage', conocido: '--steel' };
 
 export function deudaTypeColorVar(type: DeudaType): string {
   return DEUDA_TYPE_COLOR_VARS[type] || '--text-faint';
@@ -81,18 +86,42 @@ export function personLoanUrgency(dueDate: string | null): Urgency {
 
 export interface CollectionStatus {
   label: string;
-  tone: 'green' | 'red' | 'muted';
+  tone: 'green' | 'amber' | 'red' | 'muted';
 }
 
-// Estado de cobro para "Préstamos que doy" (direction === 'me_deben'): a diferencia
-// de personLoanUrgency (una sola fecha), acá se considera también el recordatorio
-// mensual recurrente y si ya hay un abono registrado en el ciclo actual.
+function nextOccurrenceFromDay(day: number, from: Date): Date {
+  const y = from.getFullYear();
+  const m = from.getMonth();
+  const daysInThisMonth = new Date(y, m + 1, 0).getDate();
+  let candidate = new Date(y, m, Math.min(day, daysInThisMonth));
+  if (candidate < from) {
+    const daysInNextMonth = new Date(y, m + 2, 0).getDate();
+    candidate = new Date(y, m + 1, Math.min(day, daysInNextMonth));
+  }
+  return candidate;
+}
+
+// Estado de cobro para "Préstamos que doy" (direction === 'me_deben'), en 3 niveles
+// (semáforo, mismo lenguaje que el gauge de utilización de tarjeta): verde = al día,
+// ámbar = por vencer / atención, rojo = atrasado. A diferencia de personLoanUrgency
+// (una sola fecha), acá se considera también el recordatorio mensual recurrente, si
+// ya hay un abono registrado en el ciclo actual, y — sin fecha fija — cuánto tiempo
+// lleva prestado (30/60 días, la única señal real disponible en ese caso).
 export function personLoanCollectionStatus(loan: PersonLoan, payments: PersonLoanPayment[]): CollectionStatus {
   if (loan.paid) return { label: 'Saldado', tone: 'green' };
-  if (!loan.dueDate) return { label: 'Sin fecha definida', tone: 'muted' };
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  if (!loan.dueDate) {
+    if (!loan.date) return { label: 'Sin fecha definida', tone: 'muted' };
+    const lent = new Date(`${loan.date}T00:00:00`);
+    const daysSince = Math.round((today.getTime() - lent.getTime()) / 86400000);
+    if (daysSince > 60) return { label: 'Atrasado', tone: 'red' };
+    if (daysSince > 30) return { label: 'Por vencer', tone: 'amber' };
+    return { label: 'Al día', tone: 'green' };
+  }
+
   const myPayments = payments.filter((p) => p.personLoanId === loan.id);
   const lastPaymentDate = myPayments.length ? myPayments.map((p) => p.date).sort().slice(-1)[0] : null;
 
@@ -106,10 +135,19 @@ export function personLoanCollectionStatus(loan: PersonLoan, payments: PersonLoa
       const daysInPrevMonth = new Date(y, m, 0).getDate();
       mostRecentOccurrence = new Date(y, m - 1, Math.min(day, daysInPrevMonth));
     }
-    const overdue = !lastPaymentDate || new Date(`${lastPaymentDate}T00:00:00`) < mostRecentOccurrence;
-    return overdue ? { label: 'Atrasado', tone: 'red' } : { label: 'Al día', tone: 'green' };
+    const paidThisCycle = !!lastPaymentDate && new Date(`${lastPaymentDate}T00:00:00`) >= mostRecentOccurrence;
+    if (!paidThisCycle && mostRecentOccurrence < today) return { label: 'Atrasado', tone: 'red' };
+    if (!paidThisCycle && mostRecentOccurrence.getTime() === today.getTime()) return { label: 'Vence hoy', tone: 'red' };
+    const nextOcc = nextOccurrenceFromDay(day, new Date(today.getTime() + 86400000));
+    const daysToNext = Math.round((nextOcc.getTime() - today.getTime()) / 86400000);
+    if (daysToNext <= 7) return { label: 'Por vencer', tone: 'amber' };
+    return { label: 'Al día', tone: 'green' };
   }
 
   const d = new Date(`${loan.dueDate}T00:00:00`);
-  return d < today ? { label: 'Atrasado', tone: 'red' } : { label: 'Al día', tone: 'green' };
+  const days = Math.round((d.getTime() - today.getTime()) / 86400000);
+  if (days < 0) return { label: 'Atrasado', tone: 'red' };
+  if (days === 0) return { label: 'Vence hoy', tone: 'red' };
+  if (days <= 7) return { label: 'Por vencer', tone: 'amber' };
+  return { label: 'Al día', tone: 'green' };
 }

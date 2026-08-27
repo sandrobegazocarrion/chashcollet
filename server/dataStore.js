@@ -164,7 +164,8 @@ function rowToPersonLoan(r) {
     returnMode: r.return_mode || 'unico',
     installmentAmount: r.installment_amount != null ? Number(r.installment_amount) : null,
     totalInstallments: r.total_installments != null ? r.total_installments : null,
-    reminderFrequency: r.reminder_frequency || null
+    reminderFrequency: r.reminder_frequency || null,
+    relationType: r.relation_type || null
   };
 }
 function personLoanToRow(p, userId) {
@@ -178,7 +179,8 @@ function personLoanToRow(p, userId) {
     return_mode: p.returnMode || 'unico',
     installment_amount: p.installmentAmount != null ? p.installmentAmount : null,
     total_installments: p.totalInstallments != null ? p.totalInstallments : null,
-    reminder_frequency: p.reminderFrequency || null
+    reminder_frequency: p.reminderFrequency || null,
+    relation_type: p.relationType || null
   };
 }
 function rowToPersonLoanPayment(r) {
@@ -845,6 +847,13 @@ async function updatePersonLoan(sb, userId, id, patch) {
   return p;
 }
 
+async function getPersonLoan(sb, userId, id) {
+  const { data: existing, error: e0 } = await sb.from('person_loans').select('*').eq('id', id).eq('user_id', userId).maybeSingle();
+  must(e0);
+  if (!existing) throw new Error('Préstamo no encontrado');
+  return rowToPersonLoan(existing);
+}
+
 async function deletePersonLoan(sb, userId, id) {
   const { data: existing, error: e0 } = await sb.from('person_loans').select('id').eq('id', id).eq('user_id', userId).maybeSingle();
   must(e0);
@@ -1140,7 +1149,7 @@ module.exports = {
   addCardCharge, deleteCardCharge, markCardChargeInstallment, payCard, deleteCardPayment,
   addDeuda, updateDeuda, deleteDeuda, payDeuda, unPayDeuda,
   addPersonLoan, updatePersonLoan, deletePersonLoan, settlePersonLoan,
-  payPersonLoan, deletePersonLoanPayment,
+  payPersonLoan, deletePersonLoanPayment, getPersonLoan,
   addReminder, updateReminder, deleteReminder, payInstallment,
   markReminderNotified, markPocketNotified, markPersonLoanNotified,
   getMonthProgress, setMonthlyGoal,

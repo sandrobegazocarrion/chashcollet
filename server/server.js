@@ -244,6 +244,28 @@ app.post('/api/personloans/:id/pay', requireAuth, (req, res) => {
 app.delete('/api/personloan-payments/:id', requireAuth, (req, res) => {
   withUserData(req, res, (sb, userId) => dataStore.deletePersonLoanPayment(sb, userId, req.params.id));
 });
+// Envía un recordatorio inmediato al propio Telegram vinculado del usuario (no al
+// deudor — NUVA solo tiene un bot y un chat por usuario, nunca el Telegram de un
+// tercero). Complementa al scheduler automático de startReminderScheduler(), que
+// ya avisa "por vencer/hoy/atrasado" cada hora; esto es para cuando el usuario
+// quiere un empujón puntual, sin esperar al próximo ciclo.
+app.post('/api/personloans/:id/remind', requireAuth, async (req, res) => {
+  try {
+    if (!activeBot) return res.status(400).json({ error: 'El bot de Telegram no está activo en el servidor.' });
+    const chatId = await telegramLink.getChatIdForUser(req.userId);
+    if (!chatId) return res.status(400).json({ error: 'Vincula tu Telegram primero desde Configuración.' });
+    const sb = userClient(req.accessToken);
+    const loan = await dataStore.getPersonLoan(sb, req.userId, req.params.id);
+    if (loan.paid) return res.status(400).json({ error: 'Este préstamo ya está saldado.' });
+    const accion = loan.direction === 'debo' ? 'pagarle a' : 'cobrarle a';
+    const monto = finance.formatMoney(loan.amount);
+    const fecha = loan.dueDate ? ` · vence ${loan.dueDate.split('-').reverse().join('/')}` : '';
+    await activeBot.sendMessage(chatId, `🤝 Recordatorio: tienes que ${accion} *${loan.personName}* · ${monto}${fecha}`, { parse_mode: 'Markdown' });
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
 
 /* ---------------- Compras en cuotas de tarjeta ---------------- */
 app.post('/api/cardcharges', requireAuth, (req, res) => {

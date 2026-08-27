@@ -95,6 +95,7 @@ export interface DeudaPayment {
 
 export type PersonLoanReturnMode = 'unico' | 'cuotas';
 export type PersonLoanReminderFrequency = 'monthly' | 'once';
+export type PersonLoanRelation = 'amigo' | 'familiar' | 'conocido';
 
 export interface PersonLoan {
   id: string;
@@ -111,6 +112,7 @@ export interface PersonLoan {
   installmentAmount: number | null;
   totalInstallments: number | null;
   reminderFrequency: PersonLoanReminderFrequency | null;
+  relationType?: PersonLoanRelation | null;
 }
 
 export interface PersonLoanPayment {

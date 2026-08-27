@@ -8,8 +8,8 @@ import { IconButton } from '../../components/ui/IconButton';
 import { useApiMutation } from '../../hooks/useApiMutation';
 import { formatDate, formatMoney } from '../../lib/finance';
 import { monthlyRateToTEA, simulateExtraPayment, solveMonthlyRate } from '../../lib/loanMath';
-import { LENDER_LABELS, personLoanCollectionStatus } from '../../lib/deudaTypes';
-import type { AppState, Deuda, PersonLoan, PersonLoanReminderFrequency, PersonLoanReturnMode } from '../../lib/types';
+import { LENDER_LABELS, RELATION_LABELS, RELATION_COLOR_VARS, personLoanCollectionStatus } from '../../lib/deudaTypes';
+import type { AppState, Deuda, PersonLoan, PersonLoanReminderFrequency, PersonLoanRelation, PersonLoanReturnMode } from '../../lib/types';
 import { DeudaFormModal, deudaToForm, emptyDeudaForm, todayStr, type DeudaFormState } from './shared';
 import { EmptyState } from '../../components/ui/EmptyState';
 
@@ -23,9 +23,66 @@ type Tab = 'personales' | 'doy';
 export function PrestamosPage({ data }: { data: AppState }) {
   const [tab, setTab] = useState<Tab>('personales');
 
+  const prestamos = data.deudas.filter((d) => d.type === 'prestamo');
+  const debtoTotal = useMemo(() => prestamos.reduce((s, d) => s + (d.remainingBalance ?? d.principal ?? 0), 0), [prestamos]);
+
+  const cuotaMensualTotal = useMemo(() => {
+    const prestamoCuotas = prestamos
+      .filter((d) => d.totalInstallments && (d.paidInstallments || 0) < d.totalInstallments!)
+      .reduce((s, d) => s + (d.amount || 0), 0);
+    const tarjetaCuotas = (data.cardCharges || [])
+      .filter((c) => c.paidInstallments < c.totalInstallments)
+      .reduce((s, c) => s + (c.installmentAmount || 0), 0);
+    return prestamoCuotas + tarjetaCuotas;
+  }, [prestamos, data.cardCharges]);
+
+  const loansGiven = data.personLoans.filter((p) => p.direction === 'me_deben');
+  const { meDebenTotal, meDebenAlDia, meDebenAtrasado } = useMemo(() => {
+    const payments = data.personLoanPayments || [];
+    const pendingOf = (loan: PersonLoan) => {
+      const paid = payments.filter((p) => p.personLoanId === loan.id).reduce((s, p) => s + p.amount, 0);
+      return Math.max(0, Math.round((loan.amount - paid) * 100) / 100);
+    };
+    let total = 0;
+    let alDia = 0;
+    let atrasado = 0;
+    loansGiven
+      .filter((l) => !l.paid)
+      .forEach((l) => {
+        const pending = pendingOf(l);
+        total += pending;
+        const status = personLoanCollectionStatus(l, payments);
+        if (status.tone === 'red') atrasado += pending;
+        else alDia += pending;
+      });
+    return { meDebenTotal: total, meDebenAlDia: alDia, meDebenAtrasado: atrasado };
+  }, [loansGiven, data.personLoanPayments]);
+
   return (
     <div className="flex flex-col gap-6">
       <h1 className="text-lg font-semibold text-[var(--text)]">Préstamos</h1>
+
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <Card className="flex flex-col gap-1">
+          <p className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--text-faint)]">Debo en total</p>
+          <p className="num text-2xl font-extrabold" style={{ color: debtoTotal > 0 ? 'var(--red)' : 'var(--text)' }}>
+            {formatMoney(debtoTotal)}
+          </p>
+          <p className="text-[11.5px] text-[var(--text-muted)]">en {prestamos.length} préstamo{prestamos.length === 1 ? '' : 's'}</p>
+        </Card>
+        <Card className="flex flex-col gap-1 !border-[var(--brand)]/30" style={{ background: 'color-mix(in srgb, var(--brand) 8%, var(--surface))' }}>
+          <p className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--text-faint)]">Cuota mensual total</p>
+          <p className="num text-2xl font-extrabold text-[var(--brand)]">{formatMoney(cuotaMensualTotal)}</p>
+          <p className="text-[11.5px] text-[var(--text-muted)]">prestamos + compras en cuotas de tarjeta</p>
+        </Card>
+        <Card className="flex flex-col gap-1">
+          <p className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--text-faint)]">Me deben en total</p>
+          <p className="num text-2xl font-extrabold text-[var(--green)]">{formatMoney(meDebenTotal)}</p>
+          <p className="text-[11.5px] text-[var(--text-muted)]">
+            {formatMoney(meDebenAlDia)} al día · {formatMoney(meDebenAtrasado)} atrasado
+          </p>
+        </Card>
+      </div>
 
       <div className="inline-flex w-fit rounded-[var(--radius-pill)] border border-[var(--border)] bg-[var(--surface-raised)] p-1">
         <button
@@ -329,6 +386,18 @@ function PrestamosQueDoyTab({ data }: { data: AppState }) {
   const deleteLoan = useApiMutation<{ id: string }, void>('DELETE', (b) => `/api/personloans/${b.id}`);
   const payLoan = useApiMutation<{ id: string; accountId?: string; amount: number; date?: string }, unknown>('POST', (b) => `/api/personloans/${b.id}/pay`);
   const settleLoan = useApiMutation<{ id: string; accountId?: string }, PersonLoan>('POST', (b) => `/api/personloans/${b.id}/settle`);
+  const remindLoan = useApiMutation<{ id: string }, { ok: boolean }>('POST', (b) => `/api/personloans/${b.id}/remind`);
+  const [remindFeedback, setRemindFeedback] = useState<{ id: string; ok: boolean; msg: string } | null>(null);
+
+  async function handleRemind(loan: PersonLoan) {
+    try {
+      await remindLoan.mutateAsync({ id: loan.id });
+      setRemindFeedback({ id: loan.id, ok: true, msg: 'Enviado a tu Telegram ✓' });
+    } catch (err) {
+      setRemindFeedback({ id: loan.id, ok: false, msg: err instanceof Error ? err.message : 'No se pudo enviar.' });
+    }
+    setTimeout(() => setRemindFeedback((f) => (f?.id === loan.id ? null : f)), 4000);
+  }
 
   const personLoanPayments = data.personLoanPayments || [];
   const loans = data.personLoans.filter((p) => p.direction === 'me_deben');
@@ -336,8 +405,6 @@ function PrestamosQueDoyTab({ data }: { data: AppState }) {
     const paid = personLoanPayments.filter((p) => p.personLoanId === loan.id).reduce((s, p) => s + p.amount, 0);
     return Math.max(0, Math.round((loan.amount - paid) * 100) / 100);
   };
-  const totalMeDeben = useMemo(() => loans.filter((l) => !l.paid).reduce((s, l) => s + pendingOf(l), 0), [loans, personLoanPayments]);
-
   function openCreate() {
     setForm(emptyLoanForm());
     setError(null);
@@ -358,6 +425,7 @@ function PrestamosQueDoyTab({ data }: { data: AppState }) {
         totalInstallments: form.returnMode === 'cuotas' ? Number(form.totalInstallments) : undefined,
         reminderFrequency: form.reminderFrequency || undefined,
         dueDate: form.reminderFrequency ? form.reminderDate || undefined : undefined,
+        relationType: form.relationType || undefined,
       });
       setCreating(false);
     } catch (err) {
@@ -376,6 +444,7 @@ function PrestamosQueDoyTab({ data }: { data: AppState }) {
       totalInstallments: loan.totalInstallments != null ? String(loan.totalInstallments) : '',
       reminderFrequency: loan.reminderFrequency,
       reminderDate: loan.dueDate || todayStr(),
+      relationType: loan.relationType || null,
     });
     setError(null);
     setEditing(loan);
@@ -394,6 +463,7 @@ function PrestamosQueDoyTab({ data }: { data: AppState }) {
         totalInstallments: editForm.returnMode === 'cuotas' ? Number(editForm.totalInstallments) : undefined,
         reminderFrequency: editForm.reminderFrequency || null,
         dueDate: editForm.reminderFrequency ? editForm.reminderDate || undefined : null,
+        relationType: editForm.relationType || null,
       });
       setEditing(null);
     } catch (err) {
@@ -432,15 +502,15 @@ function PrestamosQueDoyTab({ data }: { data: AppState }) {
 
   return (
     <section className="flex flex-col gap-4">
-      <Card className="flex items-center justify-between !bg-[color-mix(in_srgb,var(--green)_10%,var(--surface))]">
+      <div className="flex items-center justify-between">
         <div>
-          <p className="text-[11px] font-bold uppercase tracking-wide text-[var(--text-muted)]">Te deben en total</p>
-          <p className="num text-2xl font-extrabold text-[var(--green)]">{formatMoney(totalMeDeben)}</p>
+          <p className="text-[13px] text-[var(--text-muted)]">Dinero que le prestaste a otra persona.</p>
+          <p className="text-[11.5px] text-[var(--text-faint)]">Los recordatorios de Telegram llegan a tu chat, no al de la persona que te debe.</p>
         </div>
         <GradientButton onClick={openCreate}>
           <i className="ph ph-plus" aria-hidden="true" /> Prestar
         </GradientButton>
-      </Card>
+      </div>
 
       {loans.length === 0 ? (
         <EmptyState icon="ph-hand-coins" title="No le prestaste dinero a nadie (todavía)" subtitle="Registra a quién le prestaste para no olvidarte de cobrar." />
@@ -460,6 +530,9 @@ function PrestamosQueDoyTab({ data }: { data: AppState }) {
               }}
               onEdit={() => openEdit(loan)}
               onDelete={() => deleteLoan.mutate({ id: loan.id })}
+              onRemind={() => handleRemind(loan)}
+              reminding={remindLoan.isPending}
+              remindFeedback={remindFeedback?.id === loan.id ? remindFeedback : null}
             />
           ))}
         </div>
@@ -534,9 +607,13 @@ interface LoanFormState {
   totalInstallments: string;
   reminderFrequency: PersonLoanReminderFrequency | null;
   reminderDate: string;
+  relationType: PersonLoanRelation | null;
 }
 function emptyLoanForm(): LoanFormState {
-  return { personName: '', amount: '', date: todayStr(), note: '', returnMode: 'unico', installmentAmount: '', totalInstallments: '', reminderFrequency: null, reminderDate: todayStr() };
+  return {
+    personName: '', amount: '', date: todayStr(), note: '', returnMode: 'unico', installmentAmount: '', totalInstallments: '',
+    reminderFrequency: null, reminderDate: todayStr(), relationType: null,
+  };
 }
 
 function PersonLoanForm({
@@ -559,6 +636,15 @@ function PersonLoanForm({
       <Input label="A quién le prestaste" required value={form.personName} onChange={(e) => setForm({ ...form, personName: e.target.value })} />
       {!isEdit && <Input label="Monto prestado" type="number" step="0.01" required value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />}
       {!isEdit && <Input label="Fecha" type="date" value={form.date} onChange={(e) => setForm({ ...form, date: e.target.value })} />}
+
+      <Select label="Relación (opcional)" value={form.relationType || ''} onChange={(e) => setForm({ ...form, relationType: (e.target.value || null) as PersonLoanRelation | null })}>
+        <option value="">Sin especificar</option>
+        {(Object.keys(RELATION_LABELS) as PersonLoanRelation[]).map((k) => (
+          <option key={k} value={k}>
+            {RELATION_LABELS[k]}
+          </option>
+        ))}
+      </Select>
 
       <Select label="Forma de devolución" value={form.returnMode} onChange={(e) => setForm({ ...form, returnMode: e.target.value as PersonLoanReturnMode })}>
         <option value="unico">Monto único, sin fecha fija</option>
@@ -604,6 +690,9 @@ function PersonLoanCard({
   onSettle,
   onEdit,
   onDelete,
+  onRemind,
+  reminding,
+  remindFeedback,
 }: {
   loan: PersonLoan;
   pending: number;
@@ -612,21 +701,42 @@ function PersonLoanCard({
   onSettle: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onRemind: () => void;
+  reminding: boolean;
+  remindFeedback: { ok: boolean; msg: string } | null;
 }) {
   const status = personLoanCollectionStatus(loan, payments);
   const myPayments = payments.filter((p) => p.personLoanId === loan.id).sort((a, b) => b.date.localeCompare(a.date));
   const lastPayment = myPayments[0] || null;
-  const toneVar = status.tone === 'green' ? '--green' : status.tone === 'red' ? '--red' : '--text-faint';
+  const toneVar = status.tone === 'green' ? '--green' : status.tone === 'amber' ? '--amber' : status.tone === 'red' ? '--red' : '--text-faint';
   const cuotaPct = loan.totalInstallments ? Math.min(100, Math.round((myPayments.length / loan.totalInstallments) * 100)) : null;
+  const modo = loan.returnMode === 'cuotas' ? 'en cuotas' : loan.reminderFrequency === 'monthly' ? 'recordatorio mensual' : loan.dueDate ? 'pago único' : 'sin fecha fija';
 
   return (
     <Card className="flex flex-col gap-3.5 border-l-2" style={{ borderLeftColor: `var(${toneVar})` }}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="truncate text-[15px] font-extrabold text-[var(--text)]">{loan.personName}</p>
-          {loan.note && <p className="truncate text-[12px] text-[var(--text-faint)]">{loan.note}</p>}
+          <div className="flex flex-wrap items-center gap-1.5">
+            {loan.relationType && (
+              <span
+                className="rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide"
+                style={{ color: `var(${RELATION_COLOR_VARS[loan.relationType]})`, background: `color-mix(in srgb, var(${RELATION_COLOR_VARS[loan.relationType]}) 14%, transparent)` }}
+              >
+                {RELATION_LABELS[loan.relationType]}
+              </span>
+            )}
+            <p className="truncate text-[15px] font-extrabold text-[var(--text)]">{loan.personName}</p>
+          </div>
+          <p className="truncate text-[12px] text-[var(--text-faint)]">
+            Prestado el {formatDate(loan.date)} · {modo}
+            {loan.note ? ` · ${loan.note}` : ''}
+          </p>
         </div>
-        <span className="shrink-0 rounded-full px-2 py-1 text-[10.5px] font-bold" style={{ color: `var(${toneVar})`, background: `color-mix(in srgb, var(${toneVar}) 14%, transparent)` }}>
+        <span
+          className="flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[10.5px] font-bold"
+          style={{ color: `var(${toneVar})`, background: `color-mix(in srgb, var(${toneVar}) 14%, transparent)` }}
+        >
+          <span className="h-1.5 w-1.5 rounded-full" style={{ background: `var(${toneVar})` }} />
           {status.label}
         </span>
       </div>
@@ -665,11 +775,17 @@ function PersonLoanCard({
             <GradientButton variant="ghost" onClick={onSettle} className="!px-3 !py-1.5 !text-xs">
               Saldar todo
             </GradientButton>
+            <GradientButton variant="ghost" onClick={onRemind} loading={reminding} className="!px-3 !py-1.5 !text-xs">
+              <i className="ph ph-telegram-logo" aria-hidden="true" /> Recordarme por Telegram
+            </GradientButton>
           </>
         )}
         <IconButton icon="ph-pencil-simple" label="Editar" onClick={onEdit} />
         <IconButton icon="ph-trash" variant="danger" label="Eliminar" onClick={onDelete} />
       </div>
+      {remindFeedback && (
+        <p className={`text-[11.5px] font-semibold ${remindFeedback.ok ? 'text-[var(--green)]' : 'text-[var(--red)]'}`}>{remindFeedback.msg}</p>
+      )}
     </Card>
   );
 }

@@ -8,7 +8,7 @@ import { IconButton } from '../../components/ui/IconButton';
 import { useApiMutation } from '../../hooks/useApiMutation';
 import { formatMoney } from '../../lib/finance';
 import { describeCalEvent, getMonthEvents, type CalEventDesc } from '../../lib/calendar';
-import type { AppState, Deuda, Reminder } from '../../lib/types';
+import type { AppState, Deuda, PersonLoan, Reminder } from '../../lib/types';
 import type { TabId } from '../../components/layout/Sidebar';
 
 const STATUS_CLASSES: Record<CalEventDesc['status']['kind'], string> = {
@@ -41,6 +41,8 @@ export function CalendarioPage({ data, onGoTab }: { data: AppState; onGoTab: (ta
   const [payDeudaForm, setPayDeudaForm] = useState({ accountId: '', amount: '' });
   const [payingReminder, setPayingReminder] = useState<Reminder | null>(null);
   const [payReminderAccountId, setPayReminderAccountId] = useState('');
+  const [payingPersonLoan, setPayingPersonLoan] = useState<PersonLoan | null>(null);
+  const [payLoanForm, setPayLoanForm] = useState({ accountId: '', amount: '' });
 
   const [pickerOpen, setPickerOpen] = useState(false);
   const [pickerMonth, setPickerMonth] = useState<number | null>(null);
@@ -50,6 +52,7 @@ export function CalendarioPage({ data, onGoTab }: { data: AppState; onGoTab: (ta
   const updateReminder = useApiMutation<{ id: string } & Record<string, unknown>, Reminder>('PUT', (b) => `/api/reminders/${b.id}`);
   const payDeuda = useApiMutation<{ id: string; accountId?: string; amount?: number }, unknown>('POST', (b) => `/api/deudas/${b.id}/pay`);
   const payInstallment = useApiMutation<{ id: string; accountId?: string }, unknown>('POST', (b) => `/api/reminders/${b.id}/pay`);
+  const payPersonLoan = useApiMutation<{ id: string; accountId?: string; amount: number }, unknown>('POST', (b) => `/api/personloans/${b.id}/pay`);
 
   const year = viewDate.getFullYear();
   const month = viewDate.getMonth();
@@ -109,6 +112,25 @@ export function CalendarioPage({ data, onGoTab }: { data: AppState; onGoTab: (ta
       setError(null);
       setPayingReminder(r);
       setDayModal(null);
+    } else if (desc.etype === 'personloan') {
+      const p = data.personLoans.find((x) => x.id === desc.eid);
+      if (!p) return;
+      setPayLoanForm({ accountId: data.accounts.find((a) => a.type !== 'tarjeta')?.id || '', amount: String(desc.amount) });
+      setError(null);
+      setPayingPersonLoan(p);
+      setDayModal(null);
+    }
+  }
+
+  async function handlePayPersonLoan(e: FormEvent) {
+    e.preventDefault();
+    if (!payingPersonLoan) return;
+    setError(null);
+    try {
+      await payPersonLoan.mutateAsync({ id: payingPersonLoan.id, accountId: payLoanForm.accountId || undefined, amount: Number(payLoanForm.amount) });
+      setPayingPersonLoan(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo registrar el abono.');
     }
   }
 
@@ -135,7 +157,7 @@ export function CalendarioPage({ data, onGoTab }: { data: AppState; onGoTab: (ta
     }
   }
 
-  const dayEvents = dayModal ? (byDay[dayModal] || []).map((ev) => describeCalEvent(ev, data.deudaPayments)) : [];
+  const dayEvents = dayModal ? (byDay[dayModal] || []).map((ev) => describeCalEvent(ev, data.deudaPayments, data.personLoanPayments)) : [];
 
   return (
     <div className="flex flex-col gap-4">
@@ -243,12 +265,12 @@ export function CalendarioPage({ data, onGoTab }: { data: AppState; onGoTab: (ta
                     isToday ? 'border-[var(--brand)]' : 'border-transparent hover:border-[var(--border)]'
                   }`}
                 >
-                  {isIncomeDay && <i className="ph ph-hand-coins absolute right-1 top-1 text-[10px] text-[var(--green)]" aria-hidden="true" title="Día de sueldo" />}
+                  {isIncomeDay && <i className="ph ph-wallet absolute right-1 top-1 text-[10px] text-[var(--green)]" aria-hidden="true" title="Día de sueldo" />}
                   <span className={`font-semibold ${isToday ? 'text-[var(--brand)]' : 'text-[var(--text)]'}`}>{d}</span>
                   {events.length > 0 && (
                     <div className="flex flex-wrap justify-center gap-0.5">
                       {events.slice(0, 4).map((ev, i) => {
-                        const desc = describeCalEvent(ev, data.deudaPayments);
+                        const desc = describeCalEvent(ev, data.deudaPayments, data.personLoanPayments);
                         return <span key={i} className="h-1.5 w-1.5 rounded-full" style={{ background: `var(${desc.colorVar})` }} />;
                       })}
                     </div>
@@ -267,8 +289,11 @@ export function CalendarioPage({ data, onGoTab }: { data: AppState; onGoTab: (ta
             <span className="flex items-center gap-1">
               <i className="ph ph-scissors" aria-hidden="true" /> Corte de tarjeta
             </span>
+            <span className="flex items-center gap-1">
+              <i className="ph ph-hand-coins" aria-hidden="true" /> Préstamo personal
+            </span>
             <span className="flex items-center gap-1 text-[var(--green)]">
-              <i className="ph ph-hand-coins" aria-hidden="true" /> Día de sueldo
+              <i className="ph ph-wallet" aria-hidden="true" /> Día de sueldo
             </span>
           </div>
         </div>
@@ -284,7 +309,7 @@ export function CalendarioPage({ data, onGoTab }: { data: AppState; onGoTab: (ta
                 .sort((a, b) => a - b)
                 .map((day) =>
                   byDay[day].map((ev, i) => {
-                    const desc = describeCalEvent(ev, data.deudaPayments);
+                    const desc = describeCalEvent(ev, data.deudaPayments, data.personLoanPayments);
                     return <CalEventRow key={`${day}-${i}`} day={day} desc={desc} onPay={() => openPay(desc)} />;
                   })
                 )}
@@ -428,6 +453,31 @@ export function CalendarioPage({ data, onGoTab }: { data: AppState; onGoTab: (ta
           )}
           <GradientButton type="submit" loading={payInstallment.isPending} className="w-full">
             Confirmar pago
+          </GradientButton>
+        </form>
+      </Modal>
+
+      {/* Cobrar abono de préstamo personal */}
+      <Modal open={!!payingPersonLoan} onClose={() => setPayingPersonLoan(null)} title={payingPersonLoan ? `Cobrar abono · ${payingPersonLoan.personName}` : ''}>
+        <form onSubmit={handlePayPersonLoan} className="flex flex-col gap-4">
+          <Select label="Cuenta destino" value={payLoanForm.accountId} onChange={(e) => setPayLoanForm({ ...payLoanForm, accountId: e.target.value })}>
+            <option value="">No mover dinero (solo registrar)</option>
+            {data.accounts
+              .filter((a) => a.type !== 'tarjeta')
+              .map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name} · {formatMoney(a.balance)}
+                </option>
+              ))}
+          </Select>
+          <Input label="Monto abonado" type="number" step="0.01" required value={payLoanForm.amount} onChange={(e) => setPayLoanForm({ ...payLoanForm, amount: e.target.value })} />
+          {error && (
+            <p className="text-sm text-[var(--red)]" role="alert">
+              {error}
+            </p>
+          )}
+          <GradientButton type="submit" loading={payPersonLoan.isPending} className="w-full">
+            Registrar abono
           </GradientButton>
         </form>
       </Modal>

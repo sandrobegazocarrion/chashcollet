@@ -776,7 +776,9 @@ function unPayDeuda(store, paymentId) {
 // prestó y que le devuelven en cuotas) — es lo que pide la sección "Préstamos que
 // doy"; para 'debo' (yo le debo a una persona) ese caso vive en `deudas` con
 // lenderType==='persona', que ya soporta cuotas/interés/tasa.
-function addPersonLoan(store, { direction, personName, amount, date, dueDate, note, phone, returnMode, installmentAmount, totalInstallments, reminderFrequency }) {
+const PERSON_LOAN_RELATIONS = ['amigo', 'familiar', 'conocido'];
+
+function addPersonLoan(store, { direction, personName, amount, date, dueDate, note, phone, returnMode, installmentAmount, totalInstallments, reminderFrequency, relationType }) {
   if (!personName || !personName.trim()) throw new Error('El nombre de la persona es obligatorio');
   const amt = Number(amount);
   if (!amt || amt <= 0) throw new Error('Monto inválido');
@@ -796,7 +798,8 @@ function addPersonLoan(store, { direction, personName, amount, date, dueDate, no
     returnMode: isCuotas ? 'cuotas' : 'unico',
     installmentAmount: isCuotas && installmentAmount ? Number(installmentAmount) : null,
     totalInstallments: isCuotas && totalInstallments ? Number(totalInstallments) : null,
-    reminderFrequency: (dir === 'me_deben' && ['monthly', 'once'].includes(reminderFrequency)) ? reminderFrequency : null
+    reminderFrequency: (dir === 'me_deben' && ['monthly', 'once'].includes(reminderFrequency)) ? reminderFrequency : null,
+    relationType: PERSON_LOAN_RELATIONS.includes(relationType) ? relationType : null
   };
   store.personLoans.push(loan);
   return loan;
@@ -819,6 +822,7 @@ function updatePersonLoan(store, id, patch) {
   if (patch.dueDate !== undefined) p.dueDate = patch.dueDate || null;
   if (patch.note !== undefined) p.note = capLen(patch.note, LEN_NOTE);
   if (patch.phone !== undefined) p.phone = capLen(patch.phone, LEN_PHONE) || null;
+  if (patch.relationType !== undefined) p.relationType = PERSON_LOAN_RELATIONS.includes(patch.relationType) ? patch.relationType : null;
   if (p.direction === 'me_deben') {
     if (patch.returnMode !== undefined) p.returnMode = patch.returnMode === 'cuotas' ? 'cuotas' : 'unico';
     if (patch.installmentAmount !== undefined) p.installmentAmount = (p.returnMode === 'cuotas' && patch.installmentAmount) ? Number(patch.installmentAmount) : null;

@@ -76,6 +76,13 @@ async function getAllLinkedUsers() {
   return data;
 }
 
+async function getChatIdForUser(userId) {
+  if (!supabaseAdmin) throw new Error('Supabase no está configurado en el servidor.');
+  const { data, error } = await supabaseAdmin.from('telegram_links').select('chat_id').eq('user_id', userId).maybeSingle();
+  must(error);
+  return data ? data.chat_id : null;
+}
+
 async function unlink(userId) {
   if (!supabaseAdmin) throw new Error('Supabase no está configurado en el servidor.');
   const { error } = await supabaseAdmin.from('telegram_links').delete().eq('user_id', userId);
@@ -89,4 +96,4 @@ async function isLinked(userId) {
   return !!data;
 }
 
-module.exports = { generateLinkCode, consumeLinkCode, getLinkedUserId, getAllLinkedUsers, unlink, isLinked };
+module.exports = { generateLinkCode, consumeLinkCode, getLinkedUserId, getAllLinkedUsers, getChatIdForUser, unlink, isLinked };
