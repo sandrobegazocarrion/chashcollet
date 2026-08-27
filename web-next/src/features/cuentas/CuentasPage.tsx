@@ -415,10 +415,13 @@ export function CuentasPage({ data }: { data: AppState }) {
         <button
           type="button"
           onClick={openCreate}
-          className="flex min-h-[150px] flex-row items-center justify-center gap-1.5 rounded-[var(--radius-card)] border-[1.5px] border-dashed border-[var(--border)] text-[13px] font-semibold text-[var(--text-faint)] hover:border-[var(--text-muted)] hover:text-[var(--text)]"
+          className="flex min-h-[150px] flex-col items-center justify-center gap-2 rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface-raised)] text-center transition-colors hover:border-[var(--text-muted)]"
         >
-          <i className="ph ph-plus" aria-hidden="true" />
-          <span>Nueva cuenta</span>
+          <span className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--text)] shadow-[0_2px_6px_rgba(16,10,40,0.08)]">
+            <i className="ph ph-plus" aria-hidden="true" />
+          </span>
+          <span className="text-[13px] font-bold text-[var(--text)]">Agregar una cuenta</span>
+          <span className="text-[11.5px] text-[var(--text-faint)]">Banco, efectivo o billetera digital</span>
         </button>
       </div>
 
