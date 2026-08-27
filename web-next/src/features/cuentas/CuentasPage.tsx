@@ -26,6 +26,26 @@ const TYPE_ICONS: Record<Exclude<AccountType, 'tarjeta'>, string> = {
   corriente: 'ph-bank',
   efectivo: 'ph-coins',
 };
+// Versión corta de TYPE_LABELS para el chip de la tarjeta de cuenta — la larga
+// ("Cuenta de ahorros") se repite con el propio nombre de la cuenta y no deja
+// espacio para nombres largos.
+const TYPE_LABELS_SHORT: Record<Exclude<AccountType, 'tarjeta'>, string> = {
+  ahorro: 'Ahorros',
+  corriente: 'Corriente',
+  efectivo: 'Efectivo',
+};
+// "Hoy"/"Ayer" cuando aplica, si no la fecha corta — mismo criterio que el resto
+// de la app para no mostrar hora (los movimientos reales solo tienen fecha).
+function relativeDate(iso: string): string {
+  const today = new Date().toISOString().slice(0, 10);
+  const yestDate = new Date();
+  yestDate.setDate(yestDate.getDate() - 1);
+  const yesterday = yestDate.toISOString().slice(0, 10);
+  if (iso === today) return 'Hoy';
+  if (iso === yesterday) return 'Ayer';
+  return formatDate(iso);
+}
+
 const CATEGORY_ICONS: Record<string, string> = {
   Comida: 'ph-hamburger',
   Transporte: 'ph-car',
@@ -170,6 +190,11 @@ export function CuentasPage({ data }: { data: AppState }) {
     .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
     .slice(0, 6);
 
+  const lastMovementFor = (accountId: string) =>
+    [...data.transactions]
+      .filter((t) => t.accountId === accountId)
+      .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))[0] || null;
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Mi Billetera" actionLabel="Nueva cuenta" onAction={openCreate} />
@@ -226,47 +251,79 @@ export function CuentasPage({ data }: { data: AppState }) {
       <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
         {liquid.map((a) => {
           const key = accountColorKey(a);
+          const colorVar = accountColorVar(key);
           const isCashDescalce = a.type === 'efectivo' && a.balance < 0;
           const locked = lockedFor(a.id);
+          const pct = total > 0 ? Math.max(0, Math.round((a.balance / total) * 100)) : 0;
+          const last = lastMovementFor(a.id);
           return (
             <button
               key={a.id}
               type="button"
               onClick={() => setDetailId(a.id)}
-              className={`group relative flex min-h-[150px] flex-col gap-2.5 rounded-[var(--radius-card)] border-[1.5px] p-4.5 text-left transition-all hover:border-[var(--text-muted)] ${
+              className={`group relative flex flex-col gap-3 rounded-[var(--radius-card)] border-[1.5px] p-4.5 text-left transition-all hover:border-[var(--text-muted)] ${
                 isCashDescalce ? 'border-[var(--amber)]' : 'border-[var(--border)]'
               }`}
             >
               <span className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-[var(--surface)] text-[var(--text-muted)] opacity-0 shadow-[0_4px_10px_rgba(10,10,10,.1)] transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
                 <i className="ph ph-pencil-simple text-sm" aria-hidden="true" />
               </span>
-              <span
-                className="flex h-10 w-10 items-center justify-center rounded-full"
-                style={{ background: accountColorSoft(key, 15), color: accountColorVar(key) }}
-              >
-                <i className={`ph ${TYPE_ICONS[a.type as Exclude<AccountType, 'tarjeta'>]}`} aria-hidden="true" />
-              </span>
-              <p className="text-[11.5px] font-bold uppercase tracking-wide text-[var(--text-muted)]">
-                {locked && <i className="ph ph-lock-simple mr-1" aria-hidden="true" title={`Apartada para: ${locked.name}`} />}
-                {a.name}
-              </p>
-              <p className="num -mt-1 text-xl font-extrabold text-[var(--text)]">{formatMoney(isCashDescalce ? 0 : a.balance)}</p>
-              {isCashDescalce && (
+
+              <div className="flex items-center justify-between gap-2 pr-7">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+                    style={{ background: accountColorSoft(key, 15), color: colorVar }}
+                  >
+                    <i className={`ph ${TYPE_ICONS[a.type as Exclude<AccountType, 'tarjeta'>]}`} aria-hidden="true" />
+                  </span>
+                  <p className="min-w-0 truncate text-[13px] font-bold text-[var(--text)]">
+                    {locked && <i className="ph ph-lock-simple mr-1" aria-hidden="true" title={`Apartada para: ${locked.name}`} />}
+                    {a.name}
+                  </p>
+                </div>
+                <span className="shrink-0 rounded-full border border-[var(--border)] bg-[var(--surface-raised)] px-2.5 py-0.5 text-[10.5px] font-semibold text-[var(--text-muted)]">
+                  {TYPE_LABELS_SHORT[a.type as Exclude<AccountType, 'tarjeta'>]}
+                </span>
+              </div>
+
+              <p className="num text-xl font-extrabold text-[var(--text)]">{formatMoney(isCashDescalce ? 0 : a.balance)}</p>
+
+              {isCashDescalce ? (
                 <span className="inline-flex w-fit items-center gap-1 rounded-full border border-[var(--amber)]/35 bg-[var(--amber)]/[0.16] px-2 py-0.5 text-[10.5px] font-bold text-[var(--amber)]">
                   <i className="ph ph-warning" aria-hidden="true" /> Descalce {formatMoney(-a.balance)}
                 </span>
+              ) : (
+                <>
+                  <div className="h-1.5 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--surface-raised)]">
+                    <div className="h-full rounded-[var(--radius-pill)]" style={{ width: `${pct}%`, background: colorVar }} />
+                  </div>
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-[var(--text-faint)]">{pct}% de tu billetera</span>
+                    {last && (
+                      <span className={`num font-bold ${last.type === 'ingreso' ? 'text-[var(--green)]' : 'text-[var(--text-muted)]'}`}>
+                        {last.type === 'ingreso' ? '+' : '-'}
+                        {formatMoney(last.amount)}
+                      </span>
+                    )}
+                  </div>
+                </>
               )}
-              <div className="mt-auto flex flex-wrap items-center gap-1.5">
-                {a.bank ? (
-                  <>
-                    <BankBadge code={a.bank} />
-                    <span className="text-xs text-[var(--text-muted)]">{TYPE_LABELS[a.type as Exclude<AccountType, 'tarjeta'>]}</span>
-                  </>
-                ) : (
-                  <span className="rounded-full border border-[var(--border)] bg-[var(--surface-raised)] px-2.5 py-0.5 text-[10.5px] text-[var(--text)]">
-                    {TYPE_LABELS[a.type as Exclude<AccountType, 'tarjeta'>]}
-                  </span>
-                )}
+
+              {a.bank && (
+                <div>
+                  <BankBadge code={a.bank} />
+                </div>
+              )}
+
+              <div className="flex items-center justify-between border-t border-[var(--border)] pt-2.5 text-[11px] text-[var(--text-faint)]">
+                <span className="flex items-center gap-1">
+                  <i className="ph ph-clock-counter-clockwise" aria-hidden="true" />
+                  Último movimiento · {last ? relativeDate(last.date) : '—'}
+                </span>
+                <span className="flex items-center gap-0.5 font-bold text-[var(--brand)]">
+                  Ver <i className="ph ph-caret-right text-[10px]" aria-hidden="true" />
+                </span>
               </div>
             </button>
           );
