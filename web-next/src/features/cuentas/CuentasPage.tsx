@@ -237,7 +237,7 @@ export function CuentasPage({ data }: { data: AppState }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Mi Billetera" actionLabel="Nueva cuenta" onAction={openCreate} />
+      <PageHeader title="Mi Billetera" />
 
       {/* Hero: panel de tinta navy (mismo tratamiento que "Lo que tengo" de Inicio) —
           total + badge de flujo neto del mes + reparto por cuenta con el color real
@@ -345,7 +345,7 @@ export function CuentasPage({ data }: { data: AppState }) {
               key={a.id}
               type="button"
               onClick={() => setDetailId(a.id)}
-              className={`group relative flex flex-col gap-3 rounded-[var(--radius-card)] border-[1.5px] p-4.5 text-left transition-all hover:border-[var(--text-muted)] ${
+              className={`group relative flex flex-col gap-3 rounded-[var(--radius-card)] border-[1.5px] bg-[var(--surface)] p-4.5 text-left transition-all hover:border-[var(--text-muted)] ${
                 isCashDescalce ? 'border-[var(--amber)]' : 'border-[var(--border)]'
               }`}
             >
