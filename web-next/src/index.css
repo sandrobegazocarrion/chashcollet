@@ -39,6 +39,7 @@
   --accent2: #52525b;
   --ochre: #a56c1f;
   --lavender: #6f7590;
+  --steel: #3d6a8a;
 
   /* Zonas del velocímetro de salud de tarjeta: la zona de peligro es semánticamente
      roja (--red), no --brand — un gauge de riesgo no debe cambiar de significado solo
@@ -50,6 +51,26 @@
   --sidebar-bg: var(--nuva-navy);
   --sidebar-text: #9797ad;
   --sidebar-fill: #10162e;
+
+  /* Paleta fija para paneles "de tinta" (siempre navy, sin importar el tema
+     claro/oscuro activo — ej. el hero de Inicio, futuros heroes de Cuentas/
+     Tarjetas). No son tokens reactivos al tema: existen para que ese contexto
+     tenga su propio verde/rojo/violeta legibles sobre fondo oscuro fijo, en vez
+     de hex sueltos repetidos por componente. */
+  --ink-success: #5fe0a6;
+  --ink-danger: #f0937d;
+  --ink-accent: #b7a9ff;
+  --ink-chip: #f5f3ef;
+
+  /* Rampa de violetas de marca para gráficos con varios segmentos decorativos
+     (ej. donut de "Gastos por categoría") — nunca comparte hex con los colores
+     semánticos (--green/--red/--amber). */
+  --chart-violet-1: #4e3cb0;
+  --chart-violet-2: #6d4ae0;
+  --chart-violet-3: #8567ea;
+  --chart-violet-4: #a78bfa;
+  --chart-violet-5: #c9bbfa;
+  --chart-violet-6: #9c97a8;
 
   --radius-card: 24px;
   --radius-control: 14px;
@@ -93,6 +114,7 @@
     --ochre: #d9a866;
     --lavender: #a9adc4;
     --sage: #9fd1b8;
+    --steel: #7fb1d4;
 
     --gauge-safe: #22c55e;
     --gauge-warn: #f59e0b;
@@ -123,6 +145,7 @@
   --ochre: #d9a866;
   --lavender: #a9adc4;
   --sage: #9fd1b8;
+  --steel: #7fb1d4;
 
   --gauge-safe: #22c55e;
   --gauge-warn: #f59e0b;

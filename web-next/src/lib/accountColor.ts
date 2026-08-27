@@ -2,7 +2,10 @@
 // por el usuario, con respaldo determinístico por hash del id si no eligió ninguno.
 // Mismos 6 nombres que ACCOUNT_COLORS en server/finance.js — no inventar otros acá,
 // el backend rechazaría un valor fuera de esta lista.
-export const ACCOUNT_COLOR_PALETTE = ['accent', 'accent2', 'ochre', 'lavender', 'sage', 'red'] as const;
+// 'red' se sacó de esta paleta a propósito: es el mismo rojo semántico de gastos/
+// alertas (--red), y una cuenta o meta decorada de "rojo" no debería leerse como
+// una alerta real. 'steel' lo reemplaza como color decorativo neutro.
+export const ACCOUNT_COLOR_PALETTE = ['accent', 'accent2', 'ochre', 'lavender', 'sage', 'steel'] as const;
 export type AccountColorKey = (typeof ACCOUNT_COLOR_PALETTE)[number];
 
 export function accountColorKey(acc: { color?: string | null; id: string }): AccountColorKey {

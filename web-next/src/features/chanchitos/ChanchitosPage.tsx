@@ -1,6 +1,7 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Card } from '../../components/ui/Card';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
@@ -137,10 +138,12 @@ export function ChanchitosPage({ data }: { data: AppState }) {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title="Chanchito · Ahorro" actionLabel="Nueva meta" onAction={openCreate} />
-        <Card className="flex flex-col items-center gap-2 py-14 text-center">
-          <i className="ph ph-piggy-bank text-3xl text-[var(--text-faint)]" aria-hidden="true" />
-          <p className="font-semibold text-[var(--text)]">No tienes chanchitos de ahorro</p>
-        </Card>
+        <EmptyState
+          icon="ph-piggy-bank"
+          title="No tienes chanchitos de ahorro"
+          subtitle="Crea uno para empezar a apartar dinero hacia una meta."
+          cta={{ label: '+ Nueva meta', onClick: openCreate }}
+        />
         <PocketFormModal open={creating} onClose={closeModal} title="Nueva meta de ahorro" form={form} setForm={setForm} onSubmit={handleSubmit} loading={addPocket.isPending} error={error} data={data} isNew />
       </div>
     );

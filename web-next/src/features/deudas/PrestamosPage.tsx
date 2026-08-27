@@ -10,7 +10,8 @@ import { formatDate, formatMoney } from '../../lib/finance';
 import { monthlyRateToTEA, simulateExtraPayment, solveMonthlyRate } from '../../lib/loanMath';
 import { LENDER_LABELS, personLoanCollectionStatus } from '../../lib/deudaTypes';
 import type { AppState, Deuda, PersonLoan, PersonLoanReminderFrequency, PersonLoanReturnMode } from '../../lib/types';
-import { DeudaFormModal, EmptyState, deudaToForm, emptyDeudaForm, todayStr, type DeudaFormState } from './shared';
+import { DeudaFormModal, deudaToForm, emptyDeudaForm, todayStr, type DeudaFormState } from './shared';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 type Tab = 'personales' | 'doy';
 

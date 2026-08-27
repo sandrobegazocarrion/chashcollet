@@ -1,4 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
@@ -275,7 +276,7 @@ export function CalendarioPage({ data, onGoTab }: { data: AppState; onGoTab: (ta
         <div className="rounded-[var(--radius-card)] border border-[var(--border-flat)] bg-[var(--surface)] p-4">
           <p className="mb-3 text-sm font-semibold text-[var(--text)]">Todos los pagos de {monthLabel}</p>
           {Object.keys(byDay).length === 0 ? (
-            <p className="py-4 text-sm text-[var(--text-muted)]">No hay pagos programados este mes.</p>
+            <EmptyState bare compact icon="ph-calendar-blank" title="No hay pagos programados este mes." />
           ) : (
             <div className="flex flex-col divide-y divide-[var(--border)]">
               {Object.keys(byDay)

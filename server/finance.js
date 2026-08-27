@@ -404,7 +404,9 @@ function checkPocketsBehind(store, now = new Date()) {
 /* ---------------- Accounts ---------------- */
 const CARD_NETWORKS = ['visa', 'mastercard', 'amex', 'diners', 'otra'];
 const LIQUID_TYPES = ['ahorro', 'corriente', 'efectivo'];
-const ACCOUNT_COLORS = ['accent', 'accent2', 'ochre', 'lavender', 'sage', 'red'];
+// 'red' no es una opción decorativa: es el mismo rojo semántico de gastos/alertas
+// en el frontend (--red). 'steel' lo reemplaza.
+const ACCOUNT_COLORS = ['accent', 'accent2', 'ochre', 'lavender', 'sage', 'steel'];
 
 function addAccount(store, { type, name, balance, network, bank, creditLimit, billingDay, closingDay, interestRate, monthlyDeposit, color }) {
   if (!['ahorro', 'corriente', 'efectivo', 'tarjeta'].includes(type)) throw new Error('Tipo de cuenta inválido');

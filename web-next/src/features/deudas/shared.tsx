@@ -63,16 +63,6 @@ export function deudaToForm(d: Deuda): DeudaFormState {
   };
 }
 
-export function EmptyState({ icon, title, subtitle }: { icon: string; title: string; subtitle: string }) {
-  return (
-    <Card className="flex flex-col items-center gap-2 py-12 text-center">
-      <i className={`ph ${icon} text-3xl text-[var(--text-faint)]`} aria-hidden="true" />
-      <p className="font-semibold text-[var(--text)]">{title}</p>
-      <p className="text-sm text-[var(--text-muted)]">{subtitle}</p>
-    </Card>
-  );
-}
-
 // Espeja .deudas-summary: total del mes + cuántas pagadas + barra de progreso.
 export function DeudaSummary({ deudas, payments }: { deudas: Deuda[]; payments: AppState['deudaPayments'] }) {
   const monthKey = todayStr().slice(0, 7);

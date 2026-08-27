@@ -6,7 +6,8 @@ import { GradientButton } from '../../components/ui/GradientButton';
 import { useApiMutation } from '../../hooks/useApiMutation';
 import { formatMoney } from '../../lib/finance';
 import type { AppState, Deuda } from '../../lib/types';
-import { DeudaFormModal, DeudaGroupedList, DeudaSummary, EmptyState, deudaToForm, emptyDeudaForm, todayStr, type DeudaFormState } from './shared';
+import { DeudaFormModal, DeudaGroupedList, DeudaSummary, deudaToForm, emptyDeudaForm, todayStr, type DeudaFormState } from './shared';
+import { EmptyState } from '../../components/ui/EmptyState';
 
 // Espeja #tab-servicios de public/index.html: pagos recurrentes (agua, luz, alquiler,
 // internet, etc.) — los préstamos (bancarios y entre personas) viven en su propia

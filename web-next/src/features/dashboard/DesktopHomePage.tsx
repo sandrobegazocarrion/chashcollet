@@ -107,7 +107,7 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, o
               <p className="num text-[64px] font-extrabold leading-none tracking-[-0.02em] text-white">{formatMoney(totals.totalLiquid)}</p>
               <span
                 className={`num mt-4 inline-flex w-fit items-center gap-1.5 rounded-[var(--radius-pill)] bg-white/10 px-3 py-1.5 text-[12px] font-bold ${
-                  monthNet >= 0 ? 'text-[#5FE0A6]' : 'text-[#F0937D]'
+                  monthNet >= 0 ? 'text-[var(--ink-success)]' : 'text-[var(--ink-danger)]'
                 }`}
               >
                 <i className={`ph ${monthNet >= 0 ? 'ph-trend-up' : 'ph-trend-down'}`} aria-hidden="true" />
@@ -416,9 +416,9 @@ function TrendMini({
   const active = bars[activeIdx];
   const tooltipDelay = reduceMotion ? 0 : 0.9;
 
-  const activeFill = dark ? '#B7A9FF' : 'var(--brand)';
+  const activeFill = dark ? 'var(--ink-accent)' : 'var(--brand)';
   const idleFill = dark ? 'rgba(255,255,255,0.16)' : 'var(--border-flat)';
-  const tooltipBg = dark ? '#F5F3EF' : 'var(--text)';
+  const tooltipBg = dark ? 'var(--ink-chip)' : 'var(--text)';
   const tooltipText = dark ? 'var(--sidebar-bg)' : 'var(--bg)';
   const axisClass = dark ? 'text-white/40' : 'text-[var(--text-faint)]';
 
@@ -469,7 +469,7 @@ function TrendMini({
             type="button"
             onClick={() => setSelected(i)}
             className={`num transition-opacity ${i === activeIdx ? 'font-bold opacity-100' : 'opacity-70 hover:opacity-100'}`}
-            style={i === activeIdx && dark ? { color: '#F5F3EF' } : i === activeIdx ? { color: 'var(--text)' } : undefined}
+            style={i === activeIdx && dark ? { color: 'var(--ink-chip)' } : i === activeIdx ? { color: 'var(--text)' } : undefined}
           >
             {l}
           </button>

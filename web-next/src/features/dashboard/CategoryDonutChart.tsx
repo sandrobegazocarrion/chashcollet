@@ -10,7 +10,14 @@ import type { AppState } from '../../lib/types';
 // categoría) en vez de los colores semánticos de categoryColor.ts — esos quedan
 // reservados para badges/iconos de transacciones en el resto de la app.
 const EASE = [0.16, 1, 0.3, 1] as const;
-const VIOLET_RAMP = ['#4E3CB0', '#6D4AE0', '#8567EA', '#A78BFA', '#C9BBFA', '#9C97A8'];
+const VIOLET_RAMP = [
+  'var(--chart-violet-1)',
+  'var(--chart-violet-2)',
+  'var(--chart-violet-3)',
+  'var(--chart-violet-4)',
+  'var(--chart-violet-5)',
+  'var(--chart-violet-6)',
+];
 
 export function CategoryDonutChart({ data }: { data: AppState }) {
   const reduceMotion = useReducedMotion();
