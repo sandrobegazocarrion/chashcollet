@@ -1,6 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Card } from '../../components/ui/Card';
+import { EmptyState } from '../../components/ui/EmptyState';
+import { RingChart } from '../../components/ui/RingChart';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
@@ -8,7 +10,7 @@ import { GradientButton } from '../../components/ui/GradientButton';
 import { IconButton } from '../../components/ui/IconButton';
 import { useApiMutation } from '../../hooks/useApiMutation';
 import { formatDate, formatMoney } from '../../lib/finance';
-import { ACCOUNT_COLOR_PALETTE, accountColorKey, accountColorVar, type AccountColorKey } from '../../lib/accountColor';
+import { ACCOUNT_COLOR_PALETTE, accountColorKey, accountColorVar, accountColorSoft, type AccountColorKey } from '../../lib/accountColor';
 import { categoryColorVar } from '../../lib/categoryColor';
 import { PERUVIAN_BANKS } from '../../lib/banks';
 import { BankBadge } from '../../components/ui/BankBadge';
@@ -131,13 +133,12 @@ export function CuentasPage({ data }: { data: AppState }) {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title="Mi Billetera" actionLabel="Nueva cuenta" onAction={openCreate} />
-        <Card className="flex flex-col items-center gap-2 py-14 text-center">
-          <i className="ph ph-wallet text-3xl text-[var(--text-faint)]" aria-hidden="true" />
-          <p className="font-semibold text-[var(--text)]">Todavía no tienes cuentas en tu billetera</p>
-          <p className="text-sm text-[var(--text-muted)]">
-            Crea una cuenta de ahorros, corriente o efectivo para ver el total de tu dinero aquí.
-          </p>
-        </Card>
+        <EmptyState
+          icon="ph-wallet"
+          title="Todavía no tienes cuentas en tu billetera"
+          subtitle="Crea una cuenta de ahorros, corriente o efectivo para ver el total de tu dinero aquí."
+          cta={{ label: '+ Nueva cuenta', onClick: openCreate }}
+        />
         <AccountFormModal open={creating} onClose={closeModal} title="Nueva cuenta" form={form} setForm={setForm} onSubmit={handleSubmit} loading={addAccount.isPending} error={error} />
       </div>
     );
@@ -148,34 +149,75 @@ export function CuentasPage({ data }: { data: AppState }) {
 
   const lockedFor = (accountId: string) => data.pockets.find((p) => p.linkedAccountId === accountId) || null;
 
+  // Flujo neto del mes, sumando solo las cuentas líquidas (la misma billetera que
+  // muestra el hero) — igual que el "flujo neto de este mes" de Inicio, pero
+  // acotado a esta billetera en vez de toda la app.
+  const monthKey = new Date().toISOString().slice(0, 7);
+  let monthIn = 0;
+  let monthOut = 0;
+  const liquidIds = new Set(liquid.map((a) => a.id));
+  data.transactions.forEach((t) => {
+    if (!t.date || t.date.slice(0, 7) !== monthKey || !liquidIds.has(t.accountId || '')) return;
+    if (t.type === 'ingreso') monthIn += t.amount;
+    else monthOut += t.amount;
+  });
+  const monthNet = monthIn - monthOut;
+
+  const lockedCount = liquid.filter((a) => lockedFor(a.id)).length;
+
+  const recentAcrossLiquid = [...data.transactions]
+    .filter((t) => liquidIds.has(t.accountId || ''))
+    .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
+    .slice(0, 6);
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Mi Billetera" actionLabel="Nueva cuenta" onAction={openCreate} />
 
-      {/* Hero: total + reparto por cuenta (.wallet-hero) */}
-      <Card variant="hero">
-        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
-          <i className="ph ph-wallet" aria-hidden="true" /> Total en tu Billetera
+      {/* Hero: panel de tinta navy (mismo tratamiento que "Lo que tengo" de Inicio) —
+          total + badge de flujo neto del mes + reparto por cuenta con el color real
+          de cada una. */}
+      <div className="rounded-[var(--radius-card)] p-8" style={{ background: 'var(--sidebar-bg)' }}>
+        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-white/50">
+          <i className="ph ph-wallet" aria-hidden="true" /> Total en tu billetera
         </p>
-        <p className="num mt-1.5 break-words text-3xl font-extrabold tracking-tight text-[var(--text)] sm:text-4xl">{formatMoney(total)}</p>
-        <div className="mt-5 flex flex-col gap-2">
+        <p className="num mt-3 text-[52px] font-extrabold leading-none tracking-tight text-white">{formatMoney(total)}</p>
+        {monthIn > 0 || monthOut > 0 ? (
+          <span
+            className={`num mt-4 inline-flex w-fit items-center gap-1.5 rounded-[var(--radius-pill)] bg-white/10 px-3 py-1.5 text-[12px] font-bold ${
+              monthNet >= 0 ? 'text-[var(--ink-success)]' : 'text-[var(--ink-danger)]'
+            }`}
+          >
+            <i className={`ph ${monthNet >= 0 ? 'ph-trend-up' : 'ph-trend-down'}`} aria-hidden="true" />
+            {monthNet >= 0 ? '+' : ''}
+            {formatMoney(monthNet)} · Flujo neto de este mes
+          </span>
+        ) : (
+          <p className="mt-4 text-[12.5px] text-white/45">Sin movimientos este mes todavía.</p>
+        )}
+        <p className="mt-2 text-[12.5px] text-white/45">
+          {liquid.length} cuenta{liquid.length === 1 ? '' : 's'}
+          {lockedCount > 0 ? ` · ${lockedCount} apartada${lockedCount === 1 ? '' : 's'} para metas` : ''}
+        </p>
+
+        <div className="mt-6 flex flex-col gap-2.5">
           {sorted.map((a) => {
             const pct = total > 0 ? Math.max(2, Math.round((a.balance / total) * 100)) : 0;
             return (
               <div key={a.id} className="flex items-center gap-2.5">
-                <span className="w-28 shrink-0 truncate text-xs text-[var(--text-muted)]">{a.name}</span>
-                <div className="h-2 flex-1 overflow-hidden rounded-[var(--radius-pill)] border border-[var(--border)] bg-[var(--surface-raised)]">
+                <span className="w-28 shrink-0 truncate text-xs text-white/55">{a.name}</span>
+                <div className="h-2 flex-1 overflow-hidden rounded-[var(--radius-pill)] bg-white/10">
                   <div
                     className="h-full rounded-[var(--radius-pill)] transition-[width]"
                     style={{ width: `${pct}%`, background: accountColorVar(accountColorKey(a)) }}
                   />
                 </div>
-                <span className="num w-24 shrink-0 text-right text-xs font-bold text-[var(--text)]">{formatMoney(a.balance)}</span>
+                <span className="num w-24 shrink-0 text-right text-xs font-bold text-white">{formatMoney(a.balance)}</span>
               </div>
             );
           })}
         </div>
-      </Card>
+      </div>
 
       {/* Grid de cuentas (.wallet-cards / .wcard): cada tarjeta abre su detalle bajo
           demanda en un modal — ya no hay una cuenta "activa" fija con panel siempre
@@ -199,8 +241,8 @@ export function CuentasPage({ data }: { data: AppState }) {
                 <i className="ph ph-pencil-simple text-sm" aria-hidden="true" />
               </span>
               <span
-                className="flex h-[34px] w-[34px] items-center justify-center rounded-[9px] text-white"
-                style={{ background: accountColorVar(key) }}
+                className="flex h-10 w-10 items-center justify-center rounded-full"
+                style={{ background: accountColorSoft(key, 15), color: accountColorVar(key) }}
               >
                 <i className={`ph ${TYPE_ICONS[a.type as Exclude<AccountType, 'tarjeta'>]}`} aria-hidden="true" />
               </span>
@@ -237,6 +279,76 @@ export function CuentasPage({ data }: { data: AppState }) {
           <i className="ph ph-plus" aria-hidden="true" />
           <span>Nueva cuenta</span>
         </button>
+      </div>
+
+      {/* Movimientos recientes de la billetera + distribución del dinero entre cuentas. */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.5fr_1fr]">
+        <Card>
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Movimientos por cuenta</p>
+          </div>
+          {recentAcrossLiquid.length === 0 ? (
+            <EmptyState bare compact icon="ph-receipt" title="Todavía no hay movimientos en tu billetera." />
+          ) : (
+            <div className="flex flex-col divide-y divide-[var(--border)]">
+              {recentAcrossLiquid.map((t) => {
+                const acc = liquid.find((a) => a.id === t.accountId);
+                const isIncome = t.type === 'ingreso';
+                return (
+                  <div key={t.id} className="flex items-center gap-2.5 py-2.5 first:pt-0 last:pb-0">
+                    <span
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[13px]"
+                      style={{ background: `color-mix(in srgb, var(${categoryColorVar(t.category)}) 13%, transparent)`, color: `var(${categoryColorVar(t.category)})` }}
+                    >
+                      <i className={`ph ${CATEGORY_ICONS[t.category] || 'ph-credit-card'}`} aria-hidden="true" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[12.5px] font-semibold text-[var(--text)]">{t.description || t.category}</p>
+                      <p className="text-[11px] text-[var(--text-faint)]">
+                        {acc?.name || '—'} · {formatDate(t.date)}
+                      </p>
+                    </div>
+                    <span className={`num shrink-0 text-[12.5px] font-bold ${isIncome ? 'text-[var(--green)]' : 'text-[var(--text-muted)]'}`}>
+                      {isIncome ? '+' : '-'}
+                      {formatMoney(t.amount)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+
+        <Card>
+          <p className="mb-4 text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">Distribución de tu dinero</p>
+          <div className="flex flex-col items-center gap-4">
+            <RingChart
+              size={140}
+              strokeWidth={16}
+              rounded={false}
+              segments={sorted.map((a) => ({
+                pct: total > 0 ? (a.balance / total) * 100 : 0,
+                color: accountColorVar(accountColorKey(a)),
+              }))}
+            >
+              <span className="text-[9.5px] font-bold uppercase tracking-wide text-[var(--text-faint)]">Total</span>
+              <span className="num text-sm font-extrabold text-[var(--text)]">{formatMoney(total)}</span>
+            </RingChart>
+            <ul className="flex w-full flex-col gap-2">
+              {sorted.map((a) => {
+                const pct = total > 0 ? Math.round((a.balance / total) * 100) : 0;
+                return (
+                  <li key={a.id} className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: accountColorVar(accountColorKey(a)) }} />
+                    <span className="min-w-0 flex-1 truncate">{a.name}</span>
+                    <b className="num shrink-0 text-xs font-bold text-[var(--text)]">{formatMoney(a.balance)}</b>
+                    <span className="w-8 shrink-0 text-right text-[11px] text-[var(--text-faint)]">{pct}%</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        </Card>
       </div>
 
       {/* Detalle bajo demanda (antes .wb-detail, siempre visible debajo de la grilla;
