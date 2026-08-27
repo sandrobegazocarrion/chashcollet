@@ -254,7 +254,7 @@ export function CuentasPage({ data }: { data: AppState }) {
           const colorVar = accountColorVar(key);
           const isCashDescalce = a.type === 'efectivo' && a.balance < 0;
           const locked = lockedFor(a.id);
-          const pct = total > 0 ? Math.max(0, Math.round((a.balance / total) * 100)) : 0;
+          const pct = total > 0 ? Math.max(0, (a.balance / total) * 100) : 0;
           const last = lastMovementFor(a.id);
           return (
             <button
@@ -296,10 +296,10 @@ export function CuentasPage({ data }: { data: AppState }) {
               ) : (
                 <>
                   <div className="h-1.5 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--surface-raised)]">
-                    <div className="h-full rounded-[var(--radius-pill)]" style={{ width: `${pct}%`, background: colorVar }} />
+                    <div className="h-full rounded-[var(--radius-pill)]" style={{ width: `${pct}%`, background: 'var(--brand)' }} />
                   </div>
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-[var(--text-faint)]">{pct}% de tu billetera</span>
+                    <span className="text-[var(--text-faint)]">{pct.toFixed(1)}% de tu billetera</span>
                     {last && (
                       <span className={`num font-bold ${last.type === 'ingreso' ? 'text-[var(--green)]' : 'text-[var(--text-muted)]'}`}>
                         {last.type === 'ingreso' ? '+' : '-'}
