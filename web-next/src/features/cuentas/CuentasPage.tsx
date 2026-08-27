@@ -1,4 +1,5 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Card } from '../../components/ui/Card';
 import { EmptyState } from '../../components/ui/EmptyState';
@@ -95,6 +96,7 @@ function formToBody(f: FormState) {
 // se abre bajo demanda en un modal al hacer clic en la tarjeta o en su lápiz.
 export function CuentasPage({ data }: { data: AppState }) {
   const liquid = data.accounts.filter((a) => a.type !== 'tarjeta');
+  const liquidIds = useMemo(() => new Set(liquid.map((a) => a.id)), [liquid]);
   const [detailId, setDetailId] = useState<string | null>(null);
   const detailAccount = liquid.find((a) => a.id === detailId) || null;
 
@@ -102,6 +104,34 @@ export function CuentasPage({ data }: { data: AppState }) {
   const [creating, setCreating] = useState(false);
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [error, setError] = useState<string | null>(null);
+  const [selectedMonthIdx, setSelectedMonthIdx] = useState<number | null>(null);
+  const [monthPickerOpen, setMonthPickerOpen] = useState(false);
+
+  // Evolución mensual del total de la billetera (solo cuentas líquidas, últimos
+  // 6 meses con actividad) — mismo criterio que computeLineChartBuckets pero
+  // acotado a esta billetera, para no mezclar movimientos de tarjeta de crédito.
+  const liquidMonthBuckets = useMemo(() => {
+    const now = new Date();
+    const currentKey = now.toISOString().slice(0, 7);
+    const map: Record<string, { ingreso: number; gasto: number }> = {};
+    data.transactions.forEach((tx) => {
+      if (!liquidIds.has(tx.accountId || '')) return;
+      const key = tx.date ? tx.date.slice(0, 7) : currentKey;
+      (map[key] ||= { ingreso: 0, gasto: 0 })[tx.type] += tx.amount;
+    });
+    if (!map[currentKey]) map[currentKey] = { ingreso: 0, gasto: 0 };
+    const keys = Object.keys(map).sort().slice(-6);
+    const labels = keys.map((k) => {
+      const [y, m] = k.split('-');
+      return new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('es-PE', { month: 'short', year: '2-digit' });
+    });
+    const fullLabels = keys.map((k) => {
+      const [y, m] = k.split('-');
+      const label = new Date(Number(y), Number(m) - 1, 1).toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
+      return label.charAt(0).toUpperCase() + label.slice(1);
+    });
+    return { keys, labels, fullLabels, ingresos: keys.map((k) => map[k].ingreso), gastos: keys.map((k) => map[k].gasto) };
+  }, [data.transactions, liquidIds]);
 
   const addAccount = useApiMutation<unknown, Account>('POST', '/api/accounts');
   const updateAccount = useApiMutation<{ id: string } & Record<string, unknown>, Account>('PUT', (b) => `/api/accounts/${b.id}`);
@@ -167,6 +197,17 @@ export function CuentasPage({ data }: { data: AppState }) {
   const total = liquid.reduce((s, a) => s + a.balance, 0);
   const sorted = [...liquid].sort((a, b) => b.balance - a.balance);
 
+  // Reconstrucción hacia atrás del total de la billetera mes a mes, igual técnica
+  // que "Lo que tengo" de Inicio: no hay snapshots históricos de saldo guardados,
+  // así que se resta el flujo neto de cada mes desde el total actual.
+  const liquidNets = liquidMonthBuckets.ingresos.map((v, i) => v - liquidMonthBuckets.gastos[i]);
+  const trendPoints = new Array<number>(liquidNets.length);
+  if (liquidNets.length > 0) {
+    trendPoints[liquidNets.length - 1] = total;
+    for (let i = liquidNets.length - 2; i >= 0; i--) trendPoints[i] = trendPoints[i + 1] - liquidNets[i + 1];
+  }
+  const activeMonthIdx = selectedMonthIdx !== null ? Math.min(selectedMonthIdx, trendPoints.length - 1) : trendPoints.length - 1;
+
   const lockedFor = (accountId: string) => data.pockets.find((p) => p.linkedAccountId === accountId) || null;
 
   // Flujo neto del mes, sumando solo las cuentas líquidas (la misma billetera que
@@ -175,7 +216,6 @@ export function CuentasPage({ data }: { data: AppState }) {
   const monthKey = new Date().toISOString().slice(0, 7);
   let monthIn = 0;
   let monthOut = 0;
-  const liquidIds = new Set(liquid.map((a) => a.id));
   data.transactions.forEach((t) => {
     if (!t.date || t.date.slice(0, 7) !== monthKey || !liquidIds.has(t.accountId || '')) return;
     if (t.type === 'ingreso') monthIn += t.amount;
@@ -203,27 +243,71 @@ export function CuentasPage({ data }: { data: AppState }) {
           total + badge de flujo neto del mes + reparto por cuenta con el color real
           de cada una. */}
       <div className="rounded-[var(--radius-card)] p-8" style={{ background: 'var(--sidebar-bg)' }}>
-        <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-white/50">
-          <i className="ph ph-wallet" aria-hidden="true" /> Total en tu billetera
-        </p>
-        <p className="num mt-3 text-[52px] font-extrabold leading-none tracking-tight text-white">{formatMoney(total)}</p>
-        {monthIn > 0 || monthOut > 0 ? (
-          <span
-            className={`num mt-4 inline-flex w-fit items-center gap-1.5 rounded-[var(--radius-pill)] bg-white/10 px-3 py-1.5 text-[12px] font-bold ${
-              monthNet >= 0 ? 'text-[var(--ink-success)]' : 'text-[var(--ink-danger)]'
-            }`}
-          >
-            <i className={`ph ${monthNet >= 0 ? 'ph-trend-up' : 'ph-trend-down'}`} aria-hidden="true" />
-            {monthNet >= 0 ? '+' : ''}
-            {formatMoney(monthNet)} · Flujo neto de este mes
-          </span>
-        ) : (
-          <p className="mt-4 text-[12.5px] text-white/45">Sin movimientos este mes todavía.</p>
-        )}
-        <p className="mt-2 text-[12.5px] text-white/45">
-          {liquid.length} cuenta{liquid.length === 1 ? '' : 's'}
-          {lockedCount > 0 ? ` · ${lockedCount} apartada${lockedCount === 1 ? '' : 's'} para metas` : ''}
-        </p>
+        <div className="flex items-start justify-between">
+          <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-white/50">
+            <i className="ph ph-wallet" aria-hidden="true" /> Total en tu billetera
+          </p>
+          {liquidMonthBuckets.fullLabels.length > 0 && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setMonthPickerOpen((v) => !v)}
+                className="flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-white/15 px-2.5 py-1 text-[10.5px] font-bold text-white/70 hover:border-white/30"
+              >
+                {liquidMonthBuckets.fullLabels[activeMonthIdx]}
+                <i className="ph ph-caret-down text-[9px]" aria-hidden="true" />
+              </button>
+              {monthPickerOpen && (
+                <div className="absolute right-0 top-[calc(100%+6px)] z-10 w-48 rounded-[14px] border border-white/10 bg-[#171e38] p-1.5 shadow-[0_18px_36px_-12px_rgba(0,0,0,.5)]">
+                  {liquidMonthBuckets.fullLabels.map((l, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => {
+                        setSelectedMonthIdx(i);
+                        setMonthPickerOpen(false);
+                      }}
+                      className={`block w-full rounded-[10px] px-3 py-1.5 text-left text-[12.5px] ${
+                        i === activeMonthIdx ? 'bg-white/10 font-bold text-white' : 'text-white/70 hover:bg-white/5'
+                      }`}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="mt-5 flex flex-col gap-8 lg:flex-row lg:items-start">
+          <div className="lg:w-[380px] lg:shrink-0">
+            <p className="num text-[52px] font-extrabold leading-none tracking-tight text-white">{formatMoney(total)}</p>
+            {monthIn > 0 || monthOut > 0 ? (
+              <span
+                className={`num mt-4 inline-flex w-fit items-center gap-1.5 rounded-[var(--radius-pill)] bg-white/10 px-3 py-1.5 text-[12px] font-bold ${
+                  monthNet >= 0 ? 'text-[var(--ink-success)]' : 'text-[var(--ink-danger)]'
+                }`}
+              >
+                <i className={`ph ${monthNet >= 0 ? 'ph-trend-up' : 'ph-trend-down'}`} aria-hidden="true" />
+                {monthNet >= 0 ? '+' : ''}
+                {formatMoney(monthNet)} · Flujo neto de este mes
+              </span>
+            ) : (
+              <p className="mt-4 text-[12.5px] text-white/45">Sin movimientos este mes todavía.</p>
+            )}
+            <p className="mt-2 text-[12.5px] text-white/45">
+              {liquid.length} cuenta{liquid.length === 1 ? '' : 's'}
+              {lockedCount > 0 ? ` · ${lockedCount} apartada${lockedCount === 1 ? '' : 's'} para metas` : ''}
+            </p>
+          </div>
+
+          {trendPoints.length >= 2 && (
+            <div className="min-w-0 flex-1 lg:border-l lg:border-white/10 lg:pl-8">
+              <EvolutionBars points={trendPoints} labels={liquidMonthBuckets.labels} selectedIdx={activeMonthIdx} onSelect={setSelectedMonthIdx} />
+            </div>
+          )}
+        </div>
 
         <div className="mt-6 flex flex-col gap-2.5">
           {sorted.map((a) => {
@@ -672,5 +756,98 @@ function AccountFormModal({
         </GradientButton>
       </form>
     </Modal>
+  );
+}
+
+const EASE = [0.16, 1, 0.3, 1] as const;
+
+// Barras de evolución mensual del total de la billetera, seleccionables por
+// click — mismo patrón que el hero "Lo que tengo" de Inicio (barra activa
+// resaltada + tooltip animado), acá acotado a las cuentas líquidas de esta
+// pantalla. `selectedIdx`/`onSelect` viven en el componente padre para que el
+// chip de mes y las barras compartan el mismo estado.
+function EvolutionBars({
+  points,
+  labels,
+  selectedIdx,
+  onSelect,
+}: {
+  points: number[];
+  labels: string[];
+  selectedIdx: number;
+  onSelect: (i: number) => void;
+}) {
+  const reduceMotion = useReducedMotion();
+  const W = 480;
+  const H = 170;
+  const PAD_Y = 14;
+
+  const bars = useMemo(() => {
+    if (points.length === 0) return [];
+    const min = Math.min(...points, 0);
+    const max = Math.max(...points, min + 1);
+    const range = max - min || 1;
+    const n = points.length;
+    const groupW = W / n;
+    const barW = Math.min(40, groupW * 0.5);
+    return points.map((v, i) => {
+      const cx = i * groupW + groupW / 2;
+      const barH = Math.max(3, ((v - min) / range) * (H - PAD_Y * 2));
+      return { x: cx - barW / 2, y: H - PAD_Y - barH, width: barW, height: barH, cx };
+    });
+  }, [points]);
+
+  if (bars.length < 2) return <div style={{ height: H }} aria-hidden="true" />;
+  const active = bars[Math.min(selectedIdx, bars.length - 1)];
+  const tooltipDelay = reduceMotion ? 0 : 0.9;
+
+  return (
+    <div className="relative">
+      <div className="relative" style={{ height: H }}>
+        <svg viewBox={`0 0 ${W} ${H}`} className="h-full w-full" preserveAspectRatio="none">
+          {bars.map((b, i) => (
+            <motion.rect
+              key={i}
+              width={b.width}
+              rx={6}
+              onClick={() => onSelect(i)}
+              className="cursor-pointer"
+              initial={reduceMotion ? false : { x: b.x, y: H - PAD_Y, height: 0, fill: 'rgba(255,255,255,0.16)' }}
+              animate={{ x: b.x, y: b.y, height: b.height, fill: i === selectedIdx ? 'var(--ink-accent)' : 'rgba(255,255,255,0.16)' }}
+              transition={{
+                height: { duration: 0.6, delay: reduceMotion ? 0 : 0.15 + i * 0.05, ease: EASE },
+                y: { duration: 0.6, delay: reduceMotion ? 0 : 0.15 + i * 0.05, ease: EASE },
+                fill: { duration: 0.25 },
+              }}
+            />
+          ))}
+        </svg>
+        <motion.div
+          className="num absolute rounded-[8px] px-2 py-1 text-[10px] font-bold"
+          style={{ transform: 'translate(-50%,-100%)', whiteSpace: 'nowrap', background: 'var(--ink-chip)', color: 'var(--sidebar-bg)' }}
+          initial={reduceMotion ? false : { opacity: 0 }}
+          animate={{
+            opacity: 1,
+            left: `${Math.min(92, Math.max(8, (active.cx / W) * 100))}%`,
+            top: `${Math.max(0, (active.y / H) * 100 - 12)}%`,
+          }}
+          transition={{ duration: reduceMotion ? 0 : 0.35, delay: reduceMotion ? 0 : tooltipDelay, ease: EASE }}
+        >
+          {formatMoney(points[Math.min(selectedIdx, points.length - 1)])}
+        </motion.div>
+      </div>
+      <div className="mt-1.5 flex justify-between text-[10.5px] text-white/40">
+        {labels.map((l, i) => (
+          <button
+            key={i}
+            type="button"
+            onClick={() => onSelect(i)}
+            className={`transition-opacity ${i === selectedIdx ? 'font-bold text-white' : 'opacity-70 hover:opacity-100'}`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
