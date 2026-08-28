@@ -1,4 +1,5 @@
 import { Card } from './Card';
+import { Mascot } from './Mascot';
 
 interface EmptyStateProps {
   icon: string;
@@ -32,7 +33,7 @@ export function EmptyState({ icon, title, subtitle, cta, bare = false, compact =
   const content = (
     <div className={`flex flex-col items-center gap-2.5 text-center ${compact ? 'py-6' : 'py-12'} ${className}`}>
       {mascot ? (
-        <img src={`/mascot/${mascot}.webp`} alt="" aria-hidden="true" className="h-24 w-24 object-contain" width={96} height={96} />
+        <Mascot pose={mascot} size={96} />
       ) : (
         <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-raised)] text-[var(--text-faint)]">
           <i className={`ph ${icon} text-lg`} aria-hidden="true" />

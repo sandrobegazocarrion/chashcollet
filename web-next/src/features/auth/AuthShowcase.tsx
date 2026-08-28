@@ -1,5 +1,6 @@
 import { BrandMark } from '../../components/brand/BrandMark';
 import { AnimatedDigits } from '../../components/ui/AnimatedDigits';
+import { FloatingMascot } from '../../components/ui/Mascot';
 
 // Mini-vista del Panel real de NUVA (mismos textos/cifras de estilo que Dashboard),
 // puesta dentro de un marco de celular — no una captura de pantalla, sino los mismos
@@ -82,8 +83,10 @@ export function AuthShowcase() {
       <div className="relative flex flex-1 items-center gap-10 xl:gap-16">
         <div className="max-w-xs shrink-0">
           {/* Chas, la mascota de NUVA — llena justo el hueco que quedaba entre lg y
-              xl cuando el celular todavía no cabe (ver nota más abajo). */}
-          <img src="/mascot/bienvenido.webp" alt="" aria-hidden="true" className="mb-5 h-24 w-24 object-contain" width={96} height={96} />
+              xl cuando el celular todavía no cabe (ver nota más abajo). Flota en
+              bucle continuo: es el único punto de la pantalla donde vive sola, así
+              que el movimiento constante suma en vez de distraer. */}
+          <FloatingMascot pose="bienvenido" size={96} className="mb-5" />
           <h1 className="text-[40px] font-extrabold leading-[1.05] tracking-tight xl:text-5xl">
             Todo tu dinero,
             <br />
