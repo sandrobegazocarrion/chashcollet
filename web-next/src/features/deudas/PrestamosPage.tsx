@@ -200,7 +200,7 @@ function PrestamosPersonalesTab({ data }: { data: AppState }) {
       </div>
 
       {prestamos.length === 0 ? (
-        <EmptyState icon="ph-bank" title="No tienes préstamos registrados" subtitle="Registra lo que le debes a un banco, financiera, app o persona." />
+        <EmptyState mascot="descanso" icon="ph-bank" title="No tienes préstamos registrados" subtitle="Registra lo que le debes a un banco, financiera, app o persona." />
       ) : (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {prestamos.map((d) => (
@@ -513,7 +513,7 @@ function PrestamosQueDoyTab({ data }: { data: AppState }) {
       </div>
 
       {loans.length === 0 ? (
-        <EmptyState icon="ph-hand-coins" title="No le prestaste dinero a nadie (todavía)" subtitle="Registra a quién le prestaste para no olvidarte de cobrar." />
+        <EmptyState mascot="descanso" icon="ph-hand-coins" title="No le prestaste dinero a nadie (todavía)" subtitle="Registra a quién le prestaste para no olvidarte de cobrar." />
       ) : (
         <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
           {loans.map((loan) => (

@@ -81,6 +81,9 @@ export function AuthShowcase() {
 
       <div className="relative flex flex-1 items-center gap-10 xl:gap-16">
         <div className="max-w-xs shrink-0">
+          {/* Chas, la mascota de NUVA — llena justo el hueco que quedaba entre lg y
+              xl cuando el celular todavía no cabe (ver nota más abajo). */}
+          <img src="/mascot/bienvenido.webp" alt="" aria-hidden="true" className="mb-5 h-24 w-24 object-contain" width={96} height={96} />
           <h1 className="text-[40px] font-extrabold leading-[1.05] tracking-tight xl:text-5xl">
             Todo tu dinero,
             <br />

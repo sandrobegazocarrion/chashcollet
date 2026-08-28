@@ -118,6 +118,7 @@ export function PresupuestosPage({ data }: { data: AppState }) {
 
       {!hasAny ? (
         <EmptyState
+          mascot="planificando"
           icon="ph-wallet"
           title={`Todavía no configuraste un presupuesto para ${monthLabel(period)}`}
           subtitle="Ponle un tope a tu gasto general, a una categoría, o a una cuenta/tarjeta específica — así 'Gastos por categoría' deja de ser solo un espejo retrovisor."

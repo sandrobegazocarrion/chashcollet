@@ -139,6 +139,7 @@ export function ChanchitosPage({ data }: { data: AppState }) {
       <div className="flex flex-col gap-6">
         <PageHeader title="Chanchito · Ahorro" actionLabel="Nueva meta" onAction={openCreate} />
         <EmptyState
+          mascot="ahorro"
           icon="ph-piggy-bank"
           title="No tienes chanchitos de ahorro"
           subtitle="Crea uno para empezar a apartar dinero hacia una meta."

@@ -10,6 +10,10 @@ interface EmptyStateProps {
   bare?: boolean;
   /** Menos padding vertical, para espacios más chicos. */
   compact?: boolean;
+  /** Ilustración de Chas (mascota) en vez del ícono en placa — para los estados
+      vacíos principales de cada pantalla, no para los compactos/anidados. Archivo
+      en /public/mascot/<pose>.webp (ver ese folder para las poses disponibles). */
+  mascot?: string;
   className?: string;
 }
 
@@ -22,12 +26,18 @@ interface EmptyStateProps {
 //   <EmptyState icon="ph-piggy-bank" title="No tienes metas de ahorro" subtitle="Crea una para empezar." cta={{ label: '+ Nueva meta', onClick: openCreate }} />
 // Dentro de una tarjeta que ya es un <Card> (ej. un gráfico):
 //   <EmptyState bare compact icon="ph-chart-line" title="Aún no hay datos para graficar" />
-export function EmptyState({ icon, title, subtitle, cta, bare = false, compact = false, className = '' }: EmptyStateProps) {
+// Con la mascota (Chas) en vez del ícono, para el estado vacío principal de una pantalla:
+//   <EmptyState mascot="ahorro" icon="ph-piggy-bank" title="No tienes metas de ahorro" cta={{ label: '+ Nueva meta', onClick: openCreate }} />
+export function EmptyState({ icon, title, subtitle, cta, bare = false, compact = false, mascot, className = '' }: EmptyStateProps) {
   const content = (
     <div className={`flex flex-col items-center gap-2.5 text-center ${compact ? 'py-6' : 'py-12'} ${className}`}>
-      <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-raised)] text-[var(--text-faint)]">
-        <i className={`ph ${icon} text-lg`} aria-hidden="true" />
-      </span>
+      {mascot ? (
+        <img src={`/mascot/${mascot}.webp`} alt="" aria-hidden="true" className="h-24 w-24 object-contain" width={96} height={96} />
+      ) : (
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-[var(--surface-raised)] text-[var(--text-faint)]">
+          <i className={`ph ${icon} text-lg`} aria-hidden="true" />
+        </span>
+      )}
       <p className="font-semibold text-[var(--text)]">{title}</p>
       {subtitle && <p className="max-w-[280px] text-sm leading-relaxed text-[var(--text-muted)]">{subtitle}</p>}
       {cta && (

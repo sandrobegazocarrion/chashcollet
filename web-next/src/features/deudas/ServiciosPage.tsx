@@ -100,7 +100,7 @@ export function ServiciosPage({ data }: { data: AppState }) {
       </div>
 
       {servicios.length === 0 ? (
-        <EmptyState icon="ph-receipt" title="No tienes servicios registrados" subtitle="Agrega tus pagos recurrentes: agua, luz, alquiler, internet, etc." />
+        <EmptyState mascot="descanso" icon="ph-receipt" title="No tienes servicios registrados" subtitle="Agrega tus pagos recurrentes: agua, luz, alquiler, internet, etc." />
       ) : (
         <>
           <DeudaSummary deudas={servicios} payments={data.deudaPayments} />

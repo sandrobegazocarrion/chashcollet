@@ -184,6 +184,7 @@ export function CuentasPage({ data }: { data: AppState }) {
       <div className="flex flex-col gap-6">
         <PageHeader title="Mi Billetera" actionLabel="Nueva cuenta" onAction={openCreate} />
         <EmptyState
+          mascot="listo-para-ayudarte"
           icon="ph-wallet"
           title="Todavía no tienes cuentas en tu billetera"
           subtitle="Crea una cuenta de ahorros, corriente o efectivo para ver el total de tu dinero aquí."
