@@ -238,9 +238,24 @@ function reminderToRow(r, userId) {
   };
 }
 
+function rowToBudget(r) {
+  return {
+    id: r.id, period: r.period, type: r.type,
+    categoryName: r.category_name || null, accountId: r.account_id || null,
+    amountLimit: Number(r.amount_limit),
+  };
+}
+function budgetToRow(b, userId) {
+  return {
+    id: b.id, user_id: userId, period: b.period, type: b.type,
+    category_name: b.categoryName || null, account_id: b.accountId || null,
+    amount_limit: b.amountLimit,
+  };
+}
+
 /* ---------------- Carga completa (para /api/state) ---------------- */
 async function loadUserStore(sb, userId) {
-  const [accRes, txRes, catRes, profRes, pockRes, contribRes, chargeRes, payRes, deudaRes, deudaPayRes, loanRes, loanPayRes, remRes] = await Promise.all([
+  const [accRes, txRes, catRes, profRes, pockRes, contribRes, chargeRes, payRes, deudaRes, deudaPayRes, loanRes, loanPayRes, remRes, budgetRes] = await Promise.all([
     sb.from('accounts').select('*').eq('user_id', userId).order('created_at'),
     sb.from('transactions').select('*').eq('user_id', userId).order('date', { ascending: false }),
     sb.from('user_categories').select('*').eq('user_id', userId),
@@ -253,11 +268,13 @@ async function loadUserStore(sb, userId) {
     sb.from('deuda_payments').select('*').eq('user_id', userId),
     sb.from('person_loans').select('*').eq('user_id', userId).order('created_at'),
     sb.from('person_loan_payments').select('*').eq('user_id', userId).order('date', { ascending: false }),
-    sb.from('reminders').select('*').eq('user_id', userId).order('created_at')
+    sb.from('reminders').select('*').eq('user_id', userId).order('created_at'),
+    sb.from('budgets').select('*').eq('user_id', userId).order('created_at')
   ]);
   must(accRes.error); must(txRes.error); must(catRes.error); must(profRes.error);
   must(pockRes.error); must(contribRes.error); must(chargeRes.error); must(payRes.error);
   must(deudaRes.error); must(deudaPayRes.error); must(loanRes.error); must(loanPayRes.error); must(remRes.error);
+  must(budgetRes.error);
 
   const pockets = pockRes.data.map(r => rowToPocket(r, contribRes.data.filter(c => c.pocket_id === r.id)));
   const pocketGrowthChanged = finance.applyPocketGrowth({ pockets });
@@ -299,6 +316,7 @@ async function loadUserStore(sb, userId) {
     personLoans: loanRes.data.map(rowToPersonLoan),
     personLoanPayments: loanPayRes.data.map(rowToPersonLoanPayment),
     reminders: remRes.data.map(rowToReminder),
+    budgets: budgetRes.data.map(rowToBudget),
     monthlyGoal: profileRow ? Number(profileRow.monthly_goal) || null : null,
     ownerChatId: null,
     settings: {
@@ -981,6 +999,40 @@ async function deletePersonLoanPayment(sb, userId, paymentId) {
 }
 
 /* ---------------- Recordatorios / pagos programados (calendario) ---------------- */
+/* ---------------- Presupuestos ---------------- */
+async function addBudget(sb, userId, body) {
+  const [{ data: accRows, error: e0 }, { data: budgetRows, error: e1 }] = await Promise.all([
+    sb.from('accounts').select('id').eq('user_id', userId),
+    sb.from('budgets').select('*').eq('user_id', userId),
+  ]);
+  must(e0); must(e1);
+  const fakeStore = { accounts: accRows, budgets: budgetRows.map(rowToBudget) };
+  const budget = finance.addBudget(fakeStore, body);
+  const { error } = await sb.from('budgets').insert(budgetToRow(budget, userId));
+  must(error);
+  return budget;
+}
+
+async function updateBudget(sb, userId, id, patch) {
+  const { data: existing, error: e0 } = await sb.from('budgets').select('*').eq('id', id).eq('user_id', userId).maybeSingle();
+  must(e0);
+  if (!existing) throw new Error('Presupuesto no encontrado');
+  const fakeStore = { budgets: [rowToBudget(existing)] };
+  const budget = finance.updateBudget(fakeStore, id, patch);
+  const row = budgetToRow(budget, userId); delete row.id; delete row.user_id;
+  const { error } = await sb.from('budgets').update(row).eq('id', id).eq('user_id', userId);
+  must(error);
+  return budget;
+}
+
+async function deleteBudget(sb, userId, id) {
+  const { data: existing, error: e0 } = await sb.from('budgets').select('id').eq('id', id).eq('user_id', userId).maybeSingle();
+  must(e0);
+  if (!existing) throw new Error('Presupuesto no encontrado');
+  const { error: e1 } = await sb.from('budgets').delete().eq('id', id).eq('user_id', userId);
+  must(e1);
+}
+
 async function addReminder(sb, userId, body) {
   const fakeStore = { reminders: [] };
   const reminder = finance.addReminder(fakeStore, body);
@@ -1150,6 +1202,7 @@ module.exports = {
   addDeuda, updateDeuda, deleteDeuda, payDeuda, unPayDeuda,
   addPersonLoan, updatePersonLoan, deletePersonLoan, settlePersonLoan,
   payPersonLoan, deletePersonLoanPayment, getPersonLoan,
+  addBudget, updateBudget, deleteBudget,
   addReminder, updateReminder, deleteReminder, payInstallment,
   markReminderNotified, markPocketNotified, markPersonLoanNotified,
   getMonthProgress, setMonthlyGoal,

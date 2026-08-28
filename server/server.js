@@ -194,6 +194,17 @@ app.put('/api/goal', requireAuth, (req, res) => {
   withUserData(req, res, (sb, userId) => dataStore.setMonthlyGoal(sb, userId, req.body.amount));
 });
 
+/* ---------------- Presupuestos ---------------- */
+app.post('/api/budgets', requireAuth, (req, res) => {
+  withUserData(req, res, (sb, userId) => dataStore.addBudget(sb, userId, req.body));
+});
+app.put('/api/budgets/:id', requireAuth, (req, res) => {
+  withUserData(req, res, (sb, userId) => dataStore.updateBudget(sb, userId, req.params.id, req.body));
+});
+app.delete('/api/budgets/:id', requireAuth, (req, res) => {
+  withUserData(req, res, (sb, userId) => dataStore.deleteBudget(sb, userId, req.params.id));
+});
+
 /* ---------------- Reminders (calendario de pagos) ---------------- */
 app.post('/api/reminders', requireAuth, (req, res) => {
   withUserData(req, res, (sb, userId) => dataStore.addReminder(sb, userId, req.body));

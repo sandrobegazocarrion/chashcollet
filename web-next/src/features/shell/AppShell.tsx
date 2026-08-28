@@ -15,6 +15,7 @@ import { TarjetaPage } from '../tarjeta/TarjetaPage';
 import { ChanchitosPage } from '../chanchitos/ChanchitosPage';
 import { ServiciosPage } from '../deudas/ServiciosPage';
 import { PrestamosPage } from '../deudas/PrestamosPage';
+import { PresupuestosPage } from '../presupuestos/PresupuestosPage';
 import { CalendarioPage } from '../calendario/CalendarioPage';
 import { AdminPage } from '../admin/AdminPage';
 
@@ -108,6 +109,7 @@ export function AppShell() {
                 onNewGoal={() => goTab('chanchitos')}
                 onOpenGoals={() => goTab('chanchitos')}
                 onOpenTarjeta={() => goTab('tarjeta')}
+                onOpenPresupuestos={() => goTab('presupuestos')}
               />
             </div>
           )}
@@ -133,6 +135,7 @@ export function AppShell() {
           {tab === 'chanchitos' && <ChanchitosPage data={data} />}
           {tab === 'servicios' && <ServiciosPage data={data} />}
           {tab === 'prestamos' && <PrestamosPage data={data} />}
+          {tab === 'presupuestos' && <PresupuestosPage data={data} />}
           {tab === 'calendario' && <CalendarioPage data={data} onGoTab={goTab} />}
           {tab === 'admin' && data.profile.isAdmin && <AdminPage />}
           {tab === 'configuracion' && <SettingsPage data={data} onBack={() => goTab('panel')} />}

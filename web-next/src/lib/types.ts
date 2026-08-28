@@ -142,6 +142,17 @@ export interface CardPayment {
   date: string;
 }
 
+export type BudgetType = 'general' | 'categoria' | 'cuenta';
+
+export interface Budget {
+  id: string;
+  period: string; // YYYY-MM
+  type: BudgetType;
+  categoryName?: string | null;
+  accountId?: string | null;
+  amountLimit: number;
+}
+
 export interface Profile {
   ownerName: string | null;
   birthDate: string | null;
@@ -161,6 +172,7 @@ export interface AppState {
   personLoans: PersonLoan[];
   personLoanPayments: PersonLoanPayment[];
   reminders: Reminder[];
+  budgets: Budget[];
   monthlyGoal: number | null;
   profile: Profile;
   settings: {

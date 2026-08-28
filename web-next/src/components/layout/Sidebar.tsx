@@ -8,6 +8,7 @@ export type TabId =
   | 'transacciones'
   | 'servicios'
   | 'chanchitos'
+  | 'presupuestos'
   | 'calendario'
   | 'admin'
   | 'configuracion';
@@ -29,6 +30,7 @@ const TABS: TabDef[] = [
   { id: 'transacciones', label: 'Historial', icon: 'ph-clock-counter-clockwise' },
   { id: 'servicios', label: 'Servicios', icon: 'ph-receipt' },
   { id: 'chanchitos', label: 'Metas', icon: 'ph-piggy-bank' },
+  { id: 'presupuestos', label: 'Presupuestos', icon: 'ph-wallet' },
   { id: 'calendario', label: 'Pagos', icon: 'ph-calendar-blank' },
   { id: 'admin', label: 'Admin', icon: 'ph-shield-check' },
 ];

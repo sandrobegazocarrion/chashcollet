@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { computeTotals, formatMoney, pocketsRemainingThisMonth } from '../../lib/finance';
+import { currentGeneralBudget, budgetHealth, BUDGET_TONE_VAR } from '../../lib/budgets';
 import { computeLineChartBuckets } from '../../lib/lineChartBuckets';
 import { IncomeExpenseChart } from './IncomeExpenseChart';
 import { CategoryDonutChart } from './CategoryDonutChart';
@@ -15,6 +16,7 @@ interface DesktopHomePageProps {
   onNewGoal: () => void;
   onOpenGoals: () => void;
   onOpenTarjeta: () => void;
+  onOpenPresupuestos: () => void;
 }
 
 // Pase de refinamiento visual (pedido: "elegante, pro, minimalista, tecnológico,
@@ -27,7 +29,7 @@ interface DesktopHomePageProps {
 // dos capas más sutil. IncomeExpenseChart/CategoryDonutChart/ActivityFeed se
 // reutilizan tal cual (son también de mobile) para no duplicar lógica ni arriesgar
 // el diseño compartido.
-export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, onOpenTarjeta }: DesktopHomePageProps) {
+export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, onOpenTarjeta, onOpenPresupuestos }: DesktopHomePageProps) {
   const totals = computeTotals(data);
   const now = new Date();
   const monthKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
@@ -65,12 +67,15 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, o
     return points;
   }, [monthBuckets, totals.totalLiquid]);
 
-  // "Presupuesto" implícito = promedio de gasto de los últimos meses completos
-  // (sin contar el actual, que sigue en curso) — no existe un campo real de
-  // presupuesto en la app, así que se deriva 100% de gastos históricos reales.
+  // Presupuesto (Fase 5): si el usuario configuró un tope general real para este
+  // mes, se usa ese — si no, se cae al promedio de gasto de los últimos meses
+  // completos como antes (aproximación honesta, no un presupuesto real).
+  const realBudget = currentGeneralBudget(data);
   const pastMonthsGastos = monthBuckets.gastos.slice(0, -1).filter((_, i) => monthBuckets.ingresos[i] > 0 || monthBuckets.gastos[i] > 0);
   const avgBudget = pastMonthsGastos.length > 0 ? pastMonthsGastos.reduce((s, v) => s + v, 0) / pastMonthsGastos.length : null;
-  const budgetPct = avgBudget && avgBudget > 0 ? Math.round((monthOut / avgBudget) * 100) : null;
+  const budgetCap = realBudget ? realBudget.amountLimit : avgBudget;
+  const budgetPct = budgetCap && budgetCap > 0 ? Math.round((monthOut / budgetCap) * 100) : null;
+  const budgetTone = budgetPct !== null ? budgetHealth(budgetPct) : null;
   const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
   const daysLeft = daysInMonth - now.getDate();
 
@@ -199,22 +204,35 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, o
             <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.08em] text-[var(--text-faint)]">
               <i className="ph ph-gauge" aria-hidden="true" /> ¿Cómo voy este mes?
             </p>
-            {budgetPct !== null && budgetPct >= 90 && (
-              <span className="flex items-center gap-1.5 text-[10.5px] font-bold text-[var(--amber)]">
-                <span className="h-1.5 w-1.5 rounded-full bg-[var(--amber)]" /> Atención
+            {budgetTone && budgetTone !== 'green' && (
+              <span className="flex items-center gap-1.5 text-[10.5px] font-bold" style={{ color: `var(${BUDGET_TONE_VAR[budgetTone]})` }}>
+                <span className="h-1.5 w-1.5 rounded-full" style={{ background: `var(${BUDGET_TONE_VAR[budgetTone]})` }} />
+                {budgetTone === 'red' ? 'Superado' : 'Atención'}
               </span>
             )}
           </div>
           {budgetPct === null ? (
             <p className="mt-3 text-[12.5px] leading-relaxed text-[var(--text-faint)]">Con más meses de historial verás cómo va tu gasto acá.</p>
           ) : (
-            <p className="mt-3 text-[13px] leading-relaxed text-[var(--text)]">
-              Has usado el <b className="num text-[var(--text)]">{budgetPct}%</b> de tu gasto promedio y quedan{' '}
-              <b className="num text-[var(--text)]">{daysLeft}</b> día{daysLeft === 1 ? '' : 's'}.
-            </p>
+            <>
+              <p className="mt-3 text-[13px] leading-relaxed text-[var(--text)]">
+                Has usado el <b className="num text-[var(--text)]">{budgetPct}%</b> de tu {realBudget ? 'presupuesto' : 'gasto promedio'} y quedan{' '}
+                <b className="num text-[var(--text)]">{daysLeft}</b> día{daysLeft === 1 ? '' : 's'}.
+              </p>
+              <div className="mt-2.5 h-1.5 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--surface-raised)]">
+                <div
+                  className="h-full rounded-[var(--radius-pill)]"
+                  style={{ width: `${Math.min(100, budgetPct)}%`, background: budgetTone ? `var(${BUDGET_TONE_VAR[budgetTone]})` : 'var(--brand)' }}
+                />
+              </div>
+            </>
           )}
-          <button type="button" onClick={() => onOpenSubView('gastos')} className="mt-4 text-left text-[12.5px] font-bold text-[var(--brand)]">
-            Ver detalles →
+          <button
+            type="button"
+            onClick={() => (realBudget ? onOpenPresupuestos() : onOpenSubView('gastos'))}
+            className="mt-4 text-left text-[12.5px] font-bold text-[var(--brand)]"
+          >
+            {realBudget ? 'Ver presupuestos →' : 'Ver detalles →'}
           </button>
         </TileCard>
       </div>

@@ -43,6 +43,7 @@ function emptyStore() {
     personLoans: [],
     personLoanPayments: [],
     cardCharges: [],
+    budgets: [],
     monthlyGoal: 0,
     ownerChatId: null,
     settings: { telegramNotifications: true, notifyDaysBefore: 2, incomeDays: [] },
@@ -82,6 +83,7 @@ function normalizeStore(store) {
   store.pockets = store.pockets || [];
   store.transactions = store.transactions || [];
   store.categories = (store.categories && store.categories.length) ? store.categories : DEFAULT_CATEGORIES.slice();
+  store.budgets = store.budgets || [];
   store.cardPayments = store.cardPayments || [];
   store.reminders = store.reminders || [];
   store.deudas = store.deudas || [];
@@ -1022,6 +1024,57 @@ function deleteCardPayment(store, id) {
   store.cardPayments = store.cardPayments.filter(x => x.id !== id);
 }
 
+/* ---------------- Presupuestos ----------------
+ * monto_gastado nunca se guarda acá — se computa en el frontend (lib/budgets.ts en
+ * web-next) filtrando transactions por período+tipo+categoría/cuenta, así nunca
+ * queda desincronizado con la realidad. Acá solo se valida y persiste el tope. */
+const BUDGET_TYPES = ['general', 'categoria', 'cuenta'];
+
+function addBudget(store, { period, type, categoryName, accountId, amountLimit }) {
+  if (!period || !/^\d{4}-\d{2}$/.test(period)) throw new Error('Periodo inválido (formato YYYY-MM)');
+  if (!BUDGET_TYPES.includes(type)) throw new Error('Tipo de presupuesto inválido');
+  const limit = Number(amountLimit);
+  if (!limit || limit <= 0) throw new Error('El monto tope debe ser mayor a 0');
+  if (type === 'categoria' && !categoryName) throw new Error('Falta la categoría');
+  if (type === 'cuenta') {
+    if (!accountId) throw new Error('Falta la cuenta');
+    if (!store.accounts.some(a => a.id === accountId)) throw new Error('Cuenta no encontrada');
+  }
+  // Un solo presupuesto por período+tipo+categoría/cuenta — evita topes duplicados
+  // que compitan entre sí para el mismo balde de gasto.
+  const dup = store.budgets.find(b => b.period === period && b.type === type &&
+    (type === 'categoria' ? b.categoryName === categoryName : type === 'cuenta' ? b.accountId === accountId : true));
+  if (dup) throw new Error('Ya existe un presupuesto para ese período y categoría/cuenta');
+
+  const budget = {
+    id: genId(),
+    period,
+    type,
+    categoryName: type === 'categoria' ? capLen(categoryName, LEN_NAME) : null,
+    accountId: type === 'cuenta' ? accountId : null,
+    amountLimit: limit,
+  };
+  store.budgets.push(budget);
+  return budget;
+}
+
+function updateBudget(store, id, { amountLimit }) {
+  const b = store.budgets.find(x => x.id === id);
+  if (!b) throw new Error('Presupuesto no encontrado');
+  if (amountLimit !== undefined) {
+    const limit = Number(amountLimit);
+    if (!limit || limit <= 0) throw new Error('El monto tope debe ser mayor a 0');
+    b.amountLimit = limit;
+  }
+  return b;
+}
+
+function deleteBudget(store, id) {
+  const idx = store.budgets.findIndex(b => b.id === id);
+  if (idx === -1) throw new Error('Presupuesto no encontrado');
+  store.budgets.splice(idx, 1);
+}
+
 /* ---------------- Asistente de primera configuración ---------------- */
 const GENDER_VALID = ['femenino', 'masculino', 'otro', 'prefiero_no_decir'];
 const MIN_AGE_YEARS = 18;
@@ -1078,5 +1131,6 @@ module.exports = {
   addDeuda, updateDeuda, deleteDeuda, payDeuda, unPayDeuda,
   addPersonLoan, updatePersonLoan, deletePersonLoan, settlePersonLoan, checkPersonLoansDue,
   payPersonLoan, unPayPersonLoan, personLoanPending,
-  addCardCharge, deleteCardCharge, markCardChargeInstallment
+  addCardCharge, deleteCardCharge, markCardChargeInstallment,
+  addBudget, updateBudget, deleteBudget
 };
