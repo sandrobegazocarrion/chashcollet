@@ -200,8 +200,8 @@ export function LoginPage({ initialMode = 'login' }: { initialMode?: Mode }) {
             baja para que nunca compita con el contraste del texto de encima. */}
         <Mascot
           pose="listo-para-ayudarte"
-          sizeClassName="w-[300px] h-[300px] sm:w-[340px] sm:h-[340px]"
-          className="pointer-events-none absolute bottom-8 left-1/2 z-0 -translate-x-1/2 opacity-[0.13]"
+          sizeClassName="w-[340px] h-[340px] sm:w-[400px] sm:h-[400px]"
+          className="pointer-events-none absolute -bottom-20 left-1/2 z-0 -translate-x-1/2 opacity-[0.18]"
         />
 
         <div className="relative z-10 flex items-center justify-between">
