@@ -1,26 +1,20 @@
 import { BrandMark } from '../../components/brand/BrandMark';
 import { AnimatedDigits } from '../../components/ui/AnimatedDigits';
-import { FloatingMascot } from '../../components/ui/Mascot';
 
 // Mini-vista del Panel real de NUVA (mismos textos/cifras de estilo que Dashboard),
 // puesta dentro de un marco de celular — no una captura de pantalla, sino los mismos
 // componentes en miniatura, para que quede fiel si el diseño del Panel cambia.
-function PhoneScreen({ compact = false }: { compact?: boolean }) {
-  const rows = [
-    { icon: 'ph-hamburger', name: 'Almuerzo', amt: '-S/ 24.50', color: '#e2836b' },
-    { icon: 'ph-credit-card', name: 'Sueldo', amt: '+S/ 3,200', color: '#34d399' },
-    { icon: 'ph-car', name: 'Taxi', amt: '-S/ 18.00', color: '#a9adc4' },
-  ];
+function PhoneScreen() {
   return (
-    <div className={`flex h-full flex-col gap-2.5 bg-[#060b1f] text-white ${compact ? 'p-3 pt-6' : 'p-4 pt-8'}`}>
+    <div className="flex h-full flex-col gap-3 bg-[#060b1f] p-4 pt-8 text-white">
       <div className="flex items-center justify-between">
         <BrandMark className="h-4 w-4 text-white" />
         <div className="flex h-6 w-6 items-center justify-center rounded-full bg-[#614cd1] text-[10px] font-bold">D</div>
       </div>
 
-      <div className={`rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-transparent ${compact ? 'p-2.5' : 'p-3.5'}`}>
+      <div className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/[0.06] to-transparent p-3.5">
         <p className="text-[9px] font-bold uppercase tracking-wide text-white/50">Lo que tengo</p>
-        <p className={`num mt-1 font-extrabold leading-none tracking-tight ${compact ? 'text-[19px]' : 'text-[26px]'}`}>
+        <p className="num mt-1 text-[26px] font-extrabold leading-none tracking-tight">
           <AnimatedDigits value="S/ 12,910.50" />
         </p>
         <span className="num mt-2 inline-flex items-center gap-1 rounded-full bg-[#34d399]/20 px-2 py-0.5 text-[9px] font-bold text-[#34d399]">
@@ -39,24 +33,26 @@ function PhoneScreen({ compact = false }: { compact?: boolean }) {
         </div>
       </div>
 
-      {!compact && (
-        <div className="flex-1 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
-          <p className="mb-2 text-[9px] font-bold text-white/60">Actividad reciente</p>
-          <div className="flex flex-col gap-2.5">
-            {rows.map((row) => (
-              <div key={row.name} className="flex items-center gap-2">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.06]" style={{ color: row.color }}>
-                  <i className={`ph ${row.icon} text-[11px]`} aria-hidden="true" />
-                </span>
-                <span className="flex-1 truncate text-[10px] font-semibold">{row.name}</span>
-                <span className="num text-[10px] font-bold" style={{ color: row.amt.startsWith('+') ? '#34d399' : '#fff' }}>
-                  {row.amt}
-                </span>
-              </div>
-            ))}
-          </div>
+      <div className="flex-1 rounded-2xl border border-white/10 bg-white/[0.03] p-3">
+        <p className="mb-2 text-[9px] font-bold text-white/60">Actividad reciente</p>
+        <div className="flex flex-col gap-2.5">
+          {[
+            { icon: 'ph-hamburger', name: 'Almuerzo', amt: '-S/ 24.50', color: '#e2836b' },
+            { icon: 'ph-credit-card', name: 'Sueldo', amt: '+S/ 3,200', color: '#34d399' },
+            { icon: 'ph-car', name: 'Taxi', amt: '-S/ 18.00', color: '#a9adc4' },
+          ].map((row) => (
+            <div key={row.name} className="flex items-center gap-2">
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.06]" style={{ color: row.color }}>
+                <i className={`ph ${row.icon} text-[11px]`} aria-hidden="true" />
+              </span>
+              <span className="flex-1 truncate text-[10px] font-semibold">{row.name}</span>
+              <span className="num text-[10px] font-bold" style={{ color: row.amt.startsWith('+') ? '#34d399' : '#fff' }}>
+                {row.amt}
+              </span>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -83,34 +79,29 @@ export function AuthShowcase() {
         <span className="text-lg font-extrabold tracking-tight">NUVA</span>
       </div>
 
-      {/* Titular a todo lo ancho arriba, bajada en columna angosta para no invadir a
-          Chas — deja libre la mitad derecha del panel para la mascota grande. */}
-      <div className="relative mt-6">
-        <h1 className="text-[40px] font-extrabold leading-[1.05] tracking-tight xl:text-5xl">
-          Todo tu dinero,
-          <br />
-          un solo panel.
-        </h1>
-        <p className="mt-3 max-w-[260px] text-[15px] leading-relaxed text-white/60">
-          Cuentas, tarjetas, metas de ahorro y pagos por vencer — sin hojas de cálculo, sin sorpresas a fin de mes.
-        </p>
-      </div>
+      <div className="relative flex flex-1 items-center gap-10 xl:gap-16">
+        <div className="max-w-xs shrink-0">
+          <h1 className="text-[40px] font-extrabold leading-[1.05] tracking-tight xl:text-5xl">
+            Todo tu dinero,
+            <br />
+            un solo panel.
+          </h1>
+          <p className="mt-5 text-[15px] leading-relaxed text-white/60">
+            Cuentas, tarjetas, metas de ahorro y pagos por vencer — sin hojas de cálculo, sin sorpresas a fin de mes.
+          </p>
+        </div>
 
-      {/* Chas apoyada contra el borde derecho del panel, justo donde arranca el
-          formulario de login — la protagonista del panel, no un detalle en una
-          esquina. El celular queda como apoyo secundario abajo a la izquierda (solo
-          a partir de xl: a 1024px, ~lg, ya no entra cómodo junto a una Chas grande). */}
-      <div className="relative flex flex-1 items-end gap-6 overflow-hidden">
-        <div className="relative hidden shrink-0 xl:block">
-          <div className="h-[300px] w-[150px] rounded-[1.75rem] border-[5px] border-[#1c1c1f] bg-[#1c1c1f] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)]">
-            <div className="relative h-full w-full overflow-hidden rounded-[1.35rem]">
-              <div className="absolute left-1/2 top-0 z-10 h-3 w-14 -translate-x-1/2 rounded-b-xl bg-[#1c1c1f]" aria-hidden="true" />
-              <PhoneScreen compact />
+        {/* El celular necesita ~220px + el titular ~320px + gap — no entra en la mitad
+            de la pantalla a 1024px (lg), recién a partir de 1280px (xl) sobra espacio.
+            Entre lg y xl el panel se queda solo con el titular, no con el celular a medias. */}
+        <div className="relative mx-auto hidden shrink-0 xl:block">
+          <div className="h-[440px] w-[220px] rounded-[2.25rem] border-[6px] border-[#1c1c1f] bg-[#1c1c1f] shadow-[0_40px_80px_-20px_rgba(0,0,0,0.6)]">
+            <div className="relative h-full w-full overflow-hidden rounded-[1.75rem]">
+              <div className="absolute left-1/2 top-0 z-10 h-4 w-20 -translate-x-1/2 rounded-b-xl bg-[#1c1c1f]" aria-hidden="true" />
+              <PhoneScreen />
             </div>
           </div>
         </div>
-
-        <FloatingMascot pose="bienvenido" sizeClassName="w-48 h-48 xl:w-60 xl:h-60" className="mx-auto shrink-0 xl:mx-0 xl:ml-auto" delay={0.15} />
       </div>
 
       <p className="relative text-xs text-white/35">© {new Date().getFullYear()} NUVA — hecho para tus finanzas en soles.</p>

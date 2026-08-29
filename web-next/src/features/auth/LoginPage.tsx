@@ -4,6 +4,7 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { GradientButton } from '../../components/ui/GradientButton';
 import { BrandMark } from '../../components/brand/BrandMark';
+import { Mascot } from '../../components/ui/Mascot';
 import { AuthShowcase } from './AuthShowcase';
 import { ageFromBirthDate, MIN_AGE_YEARS, passwordMeetsAllRules, passwordRuleResults, passwordStrength, STRENGTH_LEVELS } from '../../lib/passwordRules';
 import type { SignupProfileData } from '../../hooks/useAuth';
@@ -193,8 +194,17 @@ export function LoginPage({ initialMode = 'login' }: { initialMode?: Mode }) {
     <div className="grid min-h-screen bg-[var(--bg)] lg:grid-cols-2">
       <AuthShowcase />
 
-      <div className="flex flex-col px-6 py-8 sm:px-12 sm:py-10 lg:px-16">
-        <div className="flex items-center justify-between">
+      <div className="relative flex flex-col overflow-hidden px-6 py-8 sm:px-12 sm:py-10 lg:px-16">
+        {/* Chas de fondo, brazos abiertos, detrás del formulario — de la mano de
+            marca del panel navy, ahora ella sola del lado de "Inicia sesión". Opacidad
+            baja para que nunca compita con el contraste del texto de encima. */}
+        <Mascot
+          pose="listo-para-ayudarte"
+          sizeClassName="w-[300px] h-[300px] sm:w-[340px] sm:h-[340px]"
+          className="pointer-events-none absolute bottom-8 left-1/2 z-0 -translate-x-1/2 opacity-[0.13]"
+        />
+
+        <div className="relative z-10 flex items-center justify-between">
           <div className="flex items-center gap-2 lg:hidden">
             <BrandMark className="h-6 w-6 text-[var(--brand)]" />
             <span className="text-base font-extrabold tracking-tight text-[var(--text)]">NUVA</span>
@@ -212,7 +222,7 @@ export function LoginPage({ initialMode = 'login' }: { initialMode?: Mode }) {
           )}
         </div>
 
-        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-start py-8 lg:justify-center">
+        <div className="relative z-10 mx-auto flex w-full max-w-sm flex-1 flex-col justify-start py-8 lg:justify-center">
           <h1 className="mb-1 text-[26px] font-extrabold tracking-tight text-[var(--text)]">
             {mode === 'login' && 'Inicia sesión'}
             {mode === 'signup' && 'Crea tu cuenta'}
