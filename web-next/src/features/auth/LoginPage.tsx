@@ -4,7 +4,8 @@ import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { GradientButton } from '../../components/ui/GradientButton';
 import { BrandMark } from '../../components/brand/BrandMark';
-import { FloatingMascot } from '../../components/ui/Mascot';
+import { Mascot } from '../../components/ui/Mascot';
+import { AuthShowcase } from './AuthShowcase';
 import { ageFromBirthDate, MIN_AGE_YEARS, passwordMeetsAllRules, passwordRuleResults, passwordStrength, STRENGTH_LEVELS } from '../../lib/passwordRules';
 import type { SignupProfileData } from '../../hooks/useAuth';
 
@@ -190,44 +191,33 @@ export function LoginPage({ initialMode = 'login' }: { initialMode?: Mode }) {
   const showModeSwitch = mode === 'login' || mode === 'signup';
 
   return (
-    <div className="relative flex min-h-screen flex-col overflow-hidden bg-[var(--sidebar-bg)] text-white">
-      {/* Chas protagonista a pantalla completa (navy), la tarjeta del formulario
-          flota encima superpuesta a sus piernas — así el texto nunca puede cruzarse
-          con la mascota, porque la tarjeta tiene su propio fondo opaco. Mismo trazo
-          del logo como marca de agua discreta que ya usaba AuthShowcase. */}
-      <svg
-        className="pointer-events-none absolute -bottom-24 -right-20 h-[480px] w-[480px] text-white opacity-[0.05] sm:h-[600px] sm:w-[600px]"
-        viewBox="0 0 136.03 120.25"
-        fill="currentColor"
-        aria-hidden="true"
-      >
-        <path d="M17.45,81.94c-1.55,4.69-6.61,7.24-11.3,5.7-4.69-1.55-7.24-6.61-5.7-11.3,4.08-12.36,8.15-24.71,12.23-37.07,3.62-5.5,10.03-8.51,16.57-7.76,6.55.74,12.12,5.11,14.41,11.28-.91-2.99-3.66-5.04-6.78-5.06-3.13-.02-5.9,1.99-6.86,4.97-4.19,13.08-8.38,26.17-12.57,39.25Z" />
-        <path d="M54.82,35.24c-4.36-8.22-13.24-13-22.5-12.12-9.26.88-17.07,7.26-19.8,16.15,3.62-5.5,10.03-8.51,16.57-7.76,6.55.74,12.12,5.11,14.41,11.28,7.17,10.74,14.33,21.47,21.5,32.21,5.42,8.54,15,13.53,25.1,13.05,10.03-.47,19.29-6.13,23.75-15.28,6.58-13.17,13.17-26.33,19.75-39.5,5.68-11.36,1.08-25.17-10.28-30.85-11.36-5.68-25.17-1.08-30.85,10.28-5.42,10.85-10.85,21.7-16.27,32.55-1.93,3.55-.53,7.99,3.08,9.8s8.01.26,9.69-3.41l16.06-32.12c2.21-4.42,7.59-6.21,12.01-4,4.42,2.21,6.21,7.59,4,12.01-6.31,12.63-12.63,25.26-18.94,37.89-2.34,4.69-6.99,7.79-12.22,8.14-5.23.36-10.26-2.08-13.22-6.41-7.28-10.64-14.56-21.28-21.84-31.92Z" />
-      </svg>
+    <div className="grid min-h-screen bg-[var(--bg)] lg:grid-cols-2">
+      <AuthShowcase />
 
-      <div className="relative z-10 flex items-center justify-between px-6 py-6 sm:px-10 sm:py-8">
-        <div className="flex items-center gap-2">
-          <BrandMark className="h-6 w-6 text-white" />
-          <span className="text-base font-extrabold tracking-tight">NUVA</span>
+      <div className="relative flex flex-col px-6 py-8 sm:px-12 sm:py-10 lg:px-16">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 lg:hidden">
+            <BrandMark className="h-6 w-6 text-[var(--brand)]" />
+            <span className="text-base font-extrabold tracking-tight text-[var(--text)]">NUVA</span>
+          </div>
+          <span className="hidden lg:block" />
+          {showModeSwitch && (
+            <button
+              type="button"
+              onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}
+              className="flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text)] hover:bg-[var(--surface-raised)]"
+            >
+              <i className={`ph ${mode === 'login' ? 'ph-user-plus' : 'ph-sign-in'}`} aria-hidden="true" />
+              {mode === 'login' ? 'Regístrate' : 'Inicia sesión'}
+            </button>
+          )}
         </div>
-        {showModeSwitch && (
-          <button
-            type="button"
-            onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}
-            className="flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-white/15 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-white/10"
-          >
-            <i className={`ph ${mode === 'login' ? 'ph-user-plus' : 'ph-sign-in'}`} aria-hidden="true" />
-            {mode === 'login' ? 'Regístrate' : 'Inicia sesión'}
-          </button>
-        )}
-      </div>
 
-      <div className="relative z-10 flex flex-1 flex-col items-center justify-end px-6 pt-2 text-center">
-        <p className="mb-2 text-[13px] font-semibold text-white/50">Todo tu dinero, un solo panel.</p>
-        <FloatingMascot pose="listo-para-ayudarte" sizeClassName="w-48 h-48 sm:w-60 sm:h-60" />
-      </div>
-
-      <div className="relative z-10 mx-auto -mt-8 w-full max-w-md rounded-t-[2.5rem] bg-[var(--surface)] px-6 pb-8 pt-8 text-[var(--text)] shadow-[0_-24px_60px_-24px_rgba(0,0,0,0.5)] sm:mb-10 sm:rounded-[2.5rem] sm:px-10">
+        <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-start py-8 lg:justify-center">
+          {/* Chas en flujo normal, arriba de todo — a color completo, protagonista de
+              verdad, y sin riesgo de cruzar texto en ningún ancho de pantalla (ya no
+              está posicionada absoluta detrás del formulario, ver commit anterior). */}
+          <Mascot pose="listo-para-ayudarte" sizeClassName="w-32 h-32 sm:w-40 sm:h-40" className="mx-auto mb-3" />
           <h1 className="mb-1 text-center text-[26px] font-extrabold tracking-tight text-[var(--text)]">
             {mode === 'login' && 'Inicia sesión'}
             {mode === 'signup' && 'Crea tu cuenta'}
@@ -373,11 +363,8 @@ export function LoginPage({ initialMode = 'login' }: { initialMode?: Mode }) {
               </GradientButton>
             </>
           )}
+        </div>
       </div>
-
-      <p className="relative z-10 hidden pb-6 text-center text-xs text-white/35 sm:block">
-        © {new Date().getFullYear()} NUVA — hecho para tus finanzas en soles.
-      </p>
     </div>
   );
 }
