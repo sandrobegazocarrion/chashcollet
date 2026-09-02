@@ -202,15 +202,17 @@ export function LoginPage({ initialMode = 'login' }: { initialMode?: Mode }) {
         </div>
 
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-start py-8 lg:justify-center">
-          {/* Chas en flujo normal, arriba de todo — a color completo, protagonista de
-              verdad, y sin riesgo de cruzar texto en ningún ancho de pantalla (ya no
-              está posicionada absoluta detrás del formulario, ver commit anterior). */}
-          <Mascot pose="listo-para-ayudarte" sizeClassName="w-32 h-32 sm:w-40 sm:h-40" className="mx-auto mb-3" />
+          {/* Chas de fondo, en flujo normal (no posicionada absoluta) — así queda
+              siempre bien alineada con la tarjeta sin importar el alto/ancho de
+              pantalla, a diferencia de intentarlo con coordenadas fijas. El margen
+              negativo hace que la tarjeta la tape desde la mitad para abajo. */}
+          <Mascot pose="listo-para-ayudarte" sizeClassName="w-56 h-56 sm:w-64 sm:h-64" className="relative z-0 mx-auto -mb-20 opacity-30 sm:-mb-24" />
 
           {/* Formulario encapsulado en su propia tarjeta (idea del prototipo que trajo
               Sandro) en vez de campos sueltos sobre el fondo crema — le da más peso
-              y separación visual al bloque de acción principal de la pantalla. */}
-          <div className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_20px_50px_-24px_rgba(6,11,31,0.25)] sm:p-8">
+              y separación visual al bloque de acción principal de la pantalla, y de
+              paso protege el texto de Chas de fondo. */}
+          <div className="relative z-10 rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_20px_50px_-24px_rgba(6,11,31,0.25)] sm:p-8">
           <h1 className="mb-1 text-center text-[26px] font-extrabold tracking-tight text-[var(--text)]">
             {mode === 'login' && 'Inicia sesión'}
             {mode === 'signup' && 'Crea tu cuenta'}
