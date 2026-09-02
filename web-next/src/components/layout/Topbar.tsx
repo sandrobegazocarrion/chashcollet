@@ -10,20 +10,19 @@ import type { TabId } from './Sidebar';
 
 interface TopbarProps {
   title: string;
-  onOpenMenu: () => void;
   avatarLabel: string;
   data: AppState;
   onGoTab: (tab: TabId) => void;
   onSearchClick: () => void;
 }
 
-// Espeja .topbar de public/index.html: hamburger (solo móvil), título/saludo de la
-// pestaña activa, buscador (focus-search, con atajo ⌘K/Ctrl+K), descarga en Excel
-// (download-excel), campana de notificaciones (toggle-notif-panel), toggle de
-// tema, y el avatar — que acá abre un popover de 3 botones en vez del modal de
-// Configuración directo (open-settings ya no cuelga del avatar, ver
-// AccountPopover más abajo).
-export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearchClick }: TopbarProps) {
+// Título/saludo de la pestaña activa, buscador (focus-search, con atajo ⌘K/Ctrl+K),
+// descarga en Excel (download-excel), campana de notificaciones
+// (toggle-notif-panel), toggle de tema, y el avatar — que acá abre un popover de 3
+// botones en vez del modal de Configuración directo. El hamburger que abría el
+// riel/drawer se sacó de acá: en mobile esa función ahora la cumple "Más" de
+// <BottomTabBar>, no tenía sentido tener dos entradas al mismo menú.
+export function Topbar({ title, avatarLabel, data, onGoTab, onSearchClick }: TopbarProps) {
   const { theme, toggle } = useTheme();
   const { signOut } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -87,15 +86,6 @@ export function Topbar({ title, onOpenMenu, avatarLabel, data, onGoTab, onSearch
 
   return (
     <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-[var(--border-flat)] bg-[var(--bg)]/80 px-4 py-3 backdrop-blur-md sm:gap-3 sm:px-6">
-      <button
-        type="button"
-        onClick={onOpenMenu}
-        aria-label="Abrir menú"
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] md:hidden"
-      >
-        <i className="ph ph-list" aria-hidden="true" />
-      </button>
-
       <div className="min-w-0 shrink-0 truncate text-[15px] font-bold text-[var(--text)]">{title}</div>
 
       <button

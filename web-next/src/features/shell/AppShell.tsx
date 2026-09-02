@@ -3,6 +3,7 @@ import { useAppState } from '../../hooks/useAppState';
 import { useAuth } from '../../hooks/useAuth';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Sidebar, TAB_LABELS, type TabId } from '../../components/layout/Sidebar';
+import { BottomTabBar } from '../../components/layout/BottomTabBar';
 import { Topbar } from '../../components/layout/Topbar';
 import { SettingsPage } from '../settings/SettingsPage';
 import { greetingText } from '../../lib/greeting';
@@ -36,6 +37,8 @@ export function AppShell() {
   });
 
   const avatarLabel = (session?.user.email || '?').charAt(0);
+  const PRIMARY_MOBILE_TABS: TabId[] = ['panel', 'cuentas', 'tarjeta', 'transacciones', 'chanchitos'];
+  const moreActive = !PRIMARY_MOBILE_TABS.includes(tab);
 
   // Espeja switchTab(): navegar a cualquier pestaña (desde el sidebar, el topbar o
   // dentro de una página) siempre cierra una sub-vista de Ingresos/Gastos/Balance
@@ -91,7 +94,6 @@ export function AppShell() {
       <div className="flex min-h-screen flex-col md:pl-[88px]">
         <Topbar
           title={title}
-          onOpenMenu={() => setSidebarOpen(true)}
           avatarLabel={avatarLabel}
           data={data}
           onGoTab={goTab}
@@ -100,7 +102,7 @@ export function AppShell() {
             setSearchFocusTick((t) => t + 1);
           }}
         />
-        <main className="w-full flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="w-full flex-1 p-4 pb-24 sm:p-6 md:pb-6 lg:p-8">
           {tab === 'panel' && !subView && (
             <div className="hidden lg:block">
               <DesktopHomePage
@@ -141,6 +143,8 @@ export function AppShell() {
           {tab === 'configuracion' && <SettingsPage data={data} onBack={() => goTab('panel')} />}
         </main>
       </div>
+
+      <BottomTabBar active={tab} onChange={goTab} onMore={() => setSidebarOpen(true)} moreActive={moreActive} />
     </div>
   );
 }
