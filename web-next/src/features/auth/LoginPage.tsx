@@ -189,28 +189,16 @@ export function LoginPage({ initialMode = 'login' }: { initialMode?: Mode }) {
 
   const shownError = localError || error;
   const showModeSwitch = mode === 'login' || mode === 'signup';
+  const emailValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
   return (
     <div className="grid min-h-screen bg-[var(--bg)] lg:grid-cols-2">
       <AuthShowcase />
 
       <div className="relative flex flex-col px-6 py-8 sm:px-12 sm:py-10 lg:px-16">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 lg:hidden">
-            <BrandMark className="h-6 w-6 text-[var(--brand)]" />
-            <span className="text-base font-extrabold tracking-tight text-[var(--text)]">NUVA</span>
-          </div>
-          <span className="hidden lg:block" />
-          {showModeSwitch && (
-            <button
-              type="button"
-              onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')}
-              className="flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border)] px-3.5 py-1.5 text-xs font-semibold text-[var(--text)] hover:bg-[var(--surface-raised)]"
-            >
-              <i className={`ph ${mode === 'login' ? 'ph-user-plus' : 'ph-sign-in'}`} aria-hidden="true" />
-              {mode === 'login' ? 'Regístrate' : 'Inicia sesión'}
-            </button>
-          )}
+        <div className="flex items-center gap-2 lg:hidden">
+          <BrandMark className="h-6 w-6 text-[var(--brand)]" />
+          <span className="text-base font-extrabold tracking-tight text-[var(--text)]">NUVA</span>
         </div>
 
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-start py-8 lg:justify-center">
@@ -218,6 +206,11 @@ export function LoginPage({ initialMode = 'login' }: { initialMode?: Mode }) {
               verdad, y sin riesgo de cruzar texto en ningún ancho de pantalla (ya no
               está posicionada absoluta detrás del formulario, ver commit anterior). */}
           <Mascot pose="listo-para-ayudarte" sizeClassName="w-32 h-32 sm:w-40 sm:h-40" className="mx-auto mb-3" />
+
+          {/* Formulario encapsulado en su propia tarjeta (idea del prototipo que trajo
+              Sandro) en vez de campos sueltos sobre el fondo crema — le da más peso
+              y separación visual al bloque de acción principal de la pantalla. */}
+          <div className="rounded-[28px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[0_20px_50px_-24px_rgba(6,11,31,0.25)] sm:p-8">
           <h1 className="mb-1 text-center text-[26px] font-extrabold tracking-tight text-[var(--text)]">
             {mode === 'login' && 'Inicia sesión'}
             {mode === 'signup' && 'Crea tu cuenta'}
@@ -249,30 +242,39 @@ export function LoginPage({ initialMode = 'login' }: { initialMode?: Mode }) {
             )}
 
             {(mode === 'login' || mode === 'signup' || mode === 'forgot') && (
-              <Input label="Correo o usuario" type="email" autoComplete="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+              <Input
+                label="Correo o usuario"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                icon={<i className="ph ph-envelope-simple" aria-hidden="true" />}
+                trailing={emailValid ? <i className="ph-fill ph-check-circle text-[var(--green)]" aria-hidden="true" /> : undefined}
+              />
             )}
 
             {(mode === 'login' || mode === 'signup' || mode === 'reset') && (
               <div className="flex flex-col gap-1.5">
-                <div className="relative">
-                  <Input
-                    label="Contraseña"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pr-11"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((v) => !v)}
-                    aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                    className="absolute bottom-2.5 right-3 text-[var(--text-faint)] hover:text-[var(--text-muted)]"
-                  >
-                    <i className={`ph ${showPassword ? 'ph-eye-slash' : 'ph-eye'}`} aria-hidden="true" />
-                  </button>
-                </div>
+                <Input
+                  label="Contraseña"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  icon={<i className="ph ph-lock-simple" aria-hidden="true" />}
+                  trailing={
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                      className="text-[var(--text-faint)] hover:text-[var(--text-muted)]"
+                    >
+                      <i className={`ph ${showPassword ? 'ph-eye-slash' : 'ph-eye'}`} aria-hidden="true" />
+                    </button>
+                  }
+                />
                 {(mode === 'signup' || mode === 'reset') && password && (
                   <>
                     <div className="h-1 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--surface-raised)]">
@@ -363,6 +365,16 @@ export function LoginPage({ initialMode = 'login' }: { initialMode?: Mode }) {
               </GradientButton>
             </>
           )}
+
+          {showModeSwitch && (
+            <p className="mt-6 text-center text-sm text-[var(--text-muted)]">
+              {mode === 'login' ? '¿No tienes cuenta?' : '¿Ya tienes cuenta?'}{' '}
+              <button type="button" onClick={() => switchMode(mode === 'login' ? 'signup' : 'login')} className="font-bold text-[var(--brand)] hover:underline">
+                {mode === 'login' ? 'Crear cuenta gratis' : 'Inicia sesión'}
+              </button>
+            </p>
+          )}
+          </div>
         </div>
       </div>
     </div>
