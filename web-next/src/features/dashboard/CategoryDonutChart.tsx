@@ -19,7 +19,7 @@ const VIOLET_RAMP = [
   'var(--chart-violet-6)',
 ];
 
-export function CategoryDonutChart({ data }: { data: AppState }) {
+export function CategoryDonutChart({ data, bare = false }: { data: AppState; bare?: boolean }) {
   const reduceMotion = useReducedMotion();
   const catMap: Record<string, number> = {};
   data.transactions.forEach((tx) => {
@@ -39,7 +39,7 @@ export function CategoryDonutChart({ data }: { data: AppState }) {
   });
 
   return (
-    <Card className="flex h-full min-h-[320px] flex-col">
+    <Card variant={bare ? 'bare' : 'default'} className="flex h-full min-h-[320px] flex-col">
       <h2 className="mb-3.5 text-sm font-bold text-[var(--text)]">Gastos por categoría</h2>
       {cats.length === 0 ? (
         <div className="flex flex-1 flex-col justify-center">

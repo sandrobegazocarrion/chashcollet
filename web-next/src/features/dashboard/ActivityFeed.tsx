@@ -15,17 +15,19 @@ const CATEGORY_ICONS: Record<string, string> = {
 interface ActivityFeedProps {
   transactions: Transaction[];
   accounts: Account[];
+  limit?: number;
+  bare?: boolean;
 }
 
 // Espeja renderActivity(): últimos 7 movimientos, más recientes primero.
 // Sin editar/eliminar todavía (Transacciones no está migrado en v1).
-export function ActivityFeed({ transactions, accounts }: ActivityFeedProps) {
+export function ActivityFeed({ transactions, accounts, limit = 7, bare = false }: ActivityFeedProps) {
   const list = [...transactions]
     .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
-    .slice(0, 7);
+    .slice(0, limit);
 
   return (
-    <Card className="col-span-full">
+    <Card variant={bare ? 'bare' : 'default'} className="col-span-full">
       <h2 className="mb-3 text-sm font-medium text-[var(--text)]">Actividad reciente</h2>
       {list.length === 0 ? (
         <ChartEmptyState icon="ph-receipt" message="Todavía no hay movimientos." compact />

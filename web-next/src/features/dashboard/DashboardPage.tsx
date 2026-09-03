@@ -100,15 +100,13 @@ export function DashboardPage({
           onOpenSubView={onOpenSubView}
         />
 
-        {/* Balance disponible y Tasa de ahorro van lado a lado incluso en mobile —
-            son dos números cortos, apilarlos era solo alargar el scroll sin motivo. */}
-        <div className="grid grid-cols-2 gap-3">
-          <StatsRow safeToSpend={safeToSpend} savingsRate={savingsRate} onRegisterIncome={onRegisterIncome} />
-        </div>
+        {/* Balance disponible y Tasa de ahorro van lado a lado con un solo hairline
+            vertical entre ambos, mismo lenguaje que <MonthCompareCard>. */}
+        <StatsRow safeToSpend={safeToSpend} savingsRate={savingsRate} onRegisterIncome={onRegisterIncome} />
 
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-          <IncomeExpenseChart data={data} onOpenSubView={onOpenSubView} />
-          <CategoryDonutChart data={data} />
+        <div className="flex flex-col gap-6 border-b border-[var(--border-flat)] pb-6 lg:flex-row">
+          <IncomeExpenseChart data={data} onOpenSubView={onOpenSubView} bare />
+          <CategoryDonutChart data={data} bare />
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -119,9 +117,9 @@ export function DashboardPage({
           <button
             type="button"
             onClick={() => onGoTab('configuracion')}
-            className="flex w-full flex-col items-start rounded-[var(--radius-card)] border border-[var(--border)] bg-[var(--surface)] p-[22px] text-left shadow-[0_24px_48px_-20px_rgba(10,10,10,.16),0_4px_14px_rgba(10,10,10,.05)] transition-transform hover:-translate-y-0.5"
+            className="flex w-full flex-col items-start rounded-[var(--radius-card)] border border-[var(--border-flat)] p-[22px] text-left transition-colors hover:bg-[var(--surface-raised)]"
           >
-            <span className="mb-3 flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-[var(--surface-raised)] text-[var(--text)] shadow-[0_4px_10px_rgba(10,10,10,.06)]">
+            <span className="mb-3 flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[11px] bg-[var(--surface-raised)] text-[var(--text)]">
               <i className="ph ph-telegram-logo text-sm" aria-hidden="true" />
             </span>
             <p className="text-sm font-bold text-[var(--text)]">Bot de Telegram</p>
@@ -136,7 +134,7 @@ export function DashboardPage({
 
         <TipBanner />
 
-        <ActivityFeed transactions={data.transactions} accounts={data.accounts} />
+        <ActivityFeed transactions={data.transactions} accounts={data.accounts} limit={5} bare />
       </div>
     </div>
   );

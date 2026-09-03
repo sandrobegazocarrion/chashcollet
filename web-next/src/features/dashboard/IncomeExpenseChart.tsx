@@ -48,7 +48,15 @@ function buildBars(ingresos: number[], gastos: number[], max: number): { ing: Ba
 // pasa `onOpenSubView` (Inicio, mobile y desktop) los totales de Ingresos/Gastos se
 // vuelven clickeables y llevan al historial filtrado — igual que el resto de
 // montos-resumen del dashboard.
-export function IncomeExpenseChart({ data, onOpenSubView }: { data: AppState; onOpenSubView?: (type: SubViewType) => void }) {
+export function IncomeExpenseChart({
+  data,
+  onOpenSubView,
+  bare = false,
+}: {
+  data: AppState;
+  onOpenSubView?: (type: SubViewType) => void;
+  bare?: boolean;
+}) {
   const reduceMotion = useReducedMotion();
   const [mode, setMode] = useState<LineChartMode>('month');
   const { labels, ingresos, gastos } = computeLineChartBuckets(data, mode);
@@ -58,7 +66,7 @@ export function IncomeExpenseChart({ data, onOpenSubView }: { data: AppState; on
   const totalGas = gastos.reduce((s, v) => s + v, 0);
 
   return (
-    <Card className="flex h-full min-h-[320px] flex-col">
+    <Card variant={bare ? 'bare' : 'default'} className="flex h-full min-h-[320px] flex-col">
       <h2 className="mb-3 text-sm font-bold text-[var(--text)]">Ingresos vs. gastos</h2>
 
       {/* Totales del periodo visible, en grande — no solo la forma de las barras. */}
