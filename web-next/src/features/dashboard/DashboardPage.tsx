@@ -77,8 +77,11 @@ export function DashboardPage({
         {/* Hero: aire generoso, es el dato que manda en la pantalla. */}
         <NetWorthHero totalLiquid={totals.totalLiquid} monthNet={monthNet} />
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-4">
-          <MonthCompareCard monthIn={monthIn} monthOut={monthOut} monthNet={monthNet} onOpenSubView={onOpenSubView} />
+        <MonthCompareCard monthIn={monthIn} monthOut={monthOut} monthNet={monthNet} onOpenSubView={onOpenSubView} />
+
+        {/* Balance disponible y Tasa de ahorro van lado a lado incluso en mobile —
+            son dos números cortos, apilarlos era solo alargar el scroll sin motivo. */}
+        <div className="grid grid-cols-2 gap-3">
           <StatsRow safeToSpend={safeToSpend} savingsRate={savingsRate} />
         </div>
 

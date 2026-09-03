@@ -21,7 +21,7 @@ export function MonthCompareCard({ monthIn, monthOut, monthNet, onOpenSubView }:
   const positive = monthNet >= 0;
 
   return (
-    <Card className="col-span-full sm:col-span-2">
+    <Card>
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold uppercase tracking-wide text-[var(--text-muted)]">
           {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
