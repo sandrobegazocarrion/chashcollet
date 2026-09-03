@@ -86,7 +86,7 @@ export function Topbar({ title, avatarLabel, data, onGoTab, onSearchClick }: Top
 
   return (
     <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-[var(--border-flat)] bg-[var(--bg)]/80 px-4 py-3 backdrop-blur-md sm:gap-3 sm:px-6">
-      <div className="min-w-0 shrink-0 truncate text-[15px] font-bold text-[var(--text)]">{title}</div>
+      <div className="min-w-0 truncate text-[15px] font-bold text-[var(--text)]">{title}</div>
 
       <button
         type="button"
