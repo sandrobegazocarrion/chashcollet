@@ -69,14 +69,19 @@ export function IncomeExpenseChart({
     <Card variant={bare ? 'bare' : 'default'} className="flex h-full min-h-[320px] flex-col">
       <h2 className="mb-3 text-sm font-bold text-[var(--text)]">Ingresos vs. gastos</h2>
 
-      {/* Totales del periodo visible, en grande — no solo la forma de las barras. */}
-      <div className="mb-4 grid grid-cols-2 gap-3">
+      {/* Totales del periodo visible, en grande — no solo la forma de las barras.
+          En "bare" (boceto blanco) van como texto plano + punto de color, no cajas. */}
+      <div className={`mb-4 grid grid-cols-2 ${bare ? 'gap-4' : 'gap-3'}`}>
         <button
           type="button"
           onClick={onOpenSubView ? () => onOpenSubView('ingresos') : undefined}
-          className={`rounded-[var(--radius-control)] border border-[var(--border-flat)] bg-[var(--surface-raised)] p-3 text-left ${
-            onOpenSubView ? 'cursor-pointer transition-colors hover:border-[var(--green)]/40 hover:bg-[var(--green)]/5' : 'cursor-default'
-          }`}
+          className={
+            bare
+              ? `text-left ${onOpenSubView ? 'cursor-pointer' : 'cursor-default'}`
+              : `rounded-[var(--radius-control)] border border-[var(--border-flat)] bg-[var(--surface-raised)] p-3 text-left ${
+                  onOpenSubView ? 'cursor-pointer transition-colors hover:border-[var(--green)]/40 hover:bg-[var(--green)]/5' : 'cursor-default'
+                }`
+          }
         >
           <span className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide text-[var(--text-faint)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--green)]" /> Ingresos
@@ -86,9 +91,13 @@ export function IncomeExpenseChart({
         <button
           type="button"
           onClick={onOpenSubView ? () => onOpenSubView('gastos') : undefined}
-          className={`rounded-[var(--radius-control)] border border-[var(--border-flat)] bg-[var(--surface-raised)] p-3 text-left ${
-            onOpenSubView ? 'cursor-pointer transition-colors hover:border-[var(--red)]/40 hover:bg-[var(--red)]/5' : 'cursor-default'
-          }`}
+          className={
+            bare
+              ? `text-left ${onOpenSubView ? 'cursor-pointer' : 'cursor-default'}`
+              : `rounded-[var(--radius-control)] border border-[var(--border-flat)] bg-[var(--surface-raised)] p-3 text-left ${
+                  onOpenSubView ? 'cursor-pointer transition-colors hover:border-[var(--red)]/40 hover:bg-[var(--red)]/5' : 'cursor-default'
+                }`
+          }
         >
           <span className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide text-[var(--text-faint)]">
             <span className="h-1.5 w-1.5 rounded-full bg-[var(--red)]" /> Gastos

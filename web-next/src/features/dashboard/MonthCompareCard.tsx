@@ -10,9 +10,12 @@ interface MonthCompareCardProps {
   onOpenSubView: (type: 'ingresos' | 'gastos' | 'balance') => void;
 }
 
-// Fiel al boceto blanco: sin <Card>, hairline abajo en vez de borde alrededor.
-// Ingresos/Gastos/Flujo neto van en tinta (no verde/rojo) — el boceto reserva el
-// color para acentos puntuales (la barra de proporción), no para cada monto.
+// Fiel al boceto blanco: sin <Card>, sin borde propio — fluye directo hacia
+// <StatsRow>, que cierra el bloque combinado con un solo hairline abajo (dos
+// hairlines separados con espacio entre "Resumen del mes" y "Balance disponible"
+// se leían como dos tarjetas, no como una sola sección continua). Ingresos/Gastos/
+// Flujo neto van en tinta (no verde/rojo) — el boceto reserva el color para
+// acentos puntuales (la barra de proporción), no para cada monto.
 export function MonthCompareCard({ monthIn, monthOut, monthNet, spendVsPrevPct, prevMonthLabel, onOpenSubView }: MonthCompareCardProps) {
   const total = monthIn + monthOut;
   const outPct = total > 0 ? Math.round((monthOut / total) * 100) : 0;
@@ -23,7 +26,7 @@ export function MonthCompareCard({ monthIn, monthOut, monthNet, spendVsPrevPct, 
   const spendingUp = spendVsPrevPct !== null && spendVsPrevPct > 0;
 
   return (
-    <div className="border-b border-[var(--border-flat)] pb-5">
+    <div>
       <div className="flex items-center justify-between">
         <span className="text-xs font-bold uppercase tracking-wide text-[var(--text-faint)]">
           {monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
