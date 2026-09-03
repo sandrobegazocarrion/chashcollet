@@ -83,22 +83,21 @@ export function Topbar({ title, avatarLabel, data, onGoTab, onSearchClick, brand
   }, []);
 
   const upcoming = computeUpcomingPayments(data, 14).slice(0, 6);
-  const hasUrgent = computeUpcomingPayments(data, 2).length > 0;
+  const urgentCount = computeUpcomingPayments(data, 2).length;
 
   // "brand" (Inicio en mobile/tablet, hasta el mismo quiebre lg en el que
-  // DashboardPage cede el paso a DesktopHomePage) quita el borde/blur y pone el
-  // header sobre blanco puro sin costura con <NetWorthHero> de abajo — fiel al
-  // boceto blanco de pen.dev. A partir de lg vuelve al tratamiento neutro de
-  // siempre, donde ya existe el hero oscuro propio de escritorio.
+  // DashboardPage cede el paso a DesktopHomePage) funde este header con el saludo
+  // en un solo bloque morado sólido, igual que el mockup — a partir de lg vuelve al
+  // tratamiento neutro de siempre, donde ya existe el hero oscuro propio de escritorio.
   return (
     <header
-      className={`sticky top-0 z-20 flex items-center gap-2 px-4 py-3 sm:gap-3 sm:px-6 ${
+      className={`sticky top-0 z-20 flex items-center gap-2 px-4 py-3 backdrop-blur-md sm:gap-3 sm:px-6 ${
         brand
-          ? 'bg-white lg:border-b lg:border-[var(--border-flat)] lg:bg-[var(--bg)]/80 lg:backdrop-blur-md'
-          : 'border-b border-[var(--border-flat)] bg-[var(--bg)]/80 backdrop-blur-md'
+          ? 'bg-[var(--brand)] lg:border-b lg:border-[var(--border-flat)] lg:bg-[var(--bg)]/80'
+          : 'border-b border-[var(--border-flat)] bg-[var(--bg)]/80'
       }`}
     >
-      <div className="min-w-0 truncate text-[15px] font-bold text-[var(--text)]">{title}</div>
+      <div className={`min-w-0 truncate text-[15px] font-bold ${brand ? 'text-white lg:text-[var(--text)]' : 'text-[var(--text)]'}`}>{title}</div>
 
       <button
         type="button"
@@ -114,15 +113,16 @@ export function Topbar({ title, avatarLabel, data, onGoTab, onSearchClick, brand
       </button>
 
       <div className="relative ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-        <IconPill icon="ph-magnifying-glass" label="Buscar movimientos" onClick={onSearchClick} ghost className="md:hidden" />
+        <IconPill icon="ph-magnifying-glass" label="Buscar movimientos" onClick={onSearchClick} ghost onBrand={brand} className="md:hidden" />
 
         <div ref={notifRef}>
           <IconPill
             icon="ph-bell"
             label="Notificaciones"
-            dot={hasUrgent}
+            badgeCount={urgentCount}
             expanded={notifOpen}
             ghost
+            onBrand={brand}
             onClick={() => {
               setNotifOpen((v) => !v);
               setAccountOpen(false);
@@ -165,14 +165,18 @@ export function Topbar({ title, avatarLabel, data, onGoTab, onSearchClick, brand
           </div>
         )}
 
-        <IconPill icon="ph-download-simple" label="Descargar en Excel" onClick={() => exportExcel(data)} ghost className="hidden sm:flex" />
+        <IconPill icon="ph-download-simple" label="Descargar en Excel" onClick={() => exportExcel(data)} ghost onBrand={brand} className="hidden sm:flex" />
 
         <button
           type="button"
           onClick={toggle}
           title="Cambiar tema"
           aria-label="Cambiar tema"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]"
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] ${
+            brand
+              ? 'text-white/90 hover:bg-white/15 hover:text-white lg:text-[var(--text-muted)] lg:hover:bg-[var(--surface-raised)] lg:hover:text-[var(--text)]'
+              : 'text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]'
+          }`}
         >
           <i className={`ph ${theme === 'dark' ? 'ph-sun' : 'ph-moon'}`} aria-hidden="true" />
         </button>
@@ -188,8 +192,8 @@ export function Topbar({ title, avatarLabel, data, onGoTab, onSearchClick, brand
             aria-label="Cuenta"
             aria-haspopup="menu"
             aria-expanded={accountOpen}
-            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold uppercase text-white ${
-              brand ? 'bg-[var(--text)] lg:bg-[var(--brand)]' : 'bg-[var(--brand)]'
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold uppercase ${
+              brand ? 'bg-white text-[var(--brand)] lg:bg-[var(--brand)] lg:text-white' : 'bg-[var(--brand)] text-white'
             }`}
           >
             {avatarLabel}
@@ -243,34 +247,46 @@ function IconPill({
   icon,
   label,
   onClick,
-  dot,
+  badgeCount,
   expanded,
   ghost = false,
+  onBrand = false,
   className = '',
 }: {
   icon: string;
   label: string;
   onClick: () => void;
-  dot?: boolean;
+  badgeCount?: number;
   expanded?: boolean;
   ghost?: boolean;
+  onBrand?: boolean;
   className?: string;
 }) {
-  const tone = ghost
-    ? 'text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]'
-    : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-raised)]';
+  const tone = onBrand
+    ? 'text-white/90 hover:bg-white/15 hover:text-white lg:text-[var(--text-muted)] lg:hover:bg-[var(--surface-raised)] lg:hover:text-[var(--text)]'
+    : ghost
+      ? 'text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]'
+      : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-raised)]';
+  const hasBadge = !!badgeCount && badgeCount > 0;
   return (
     <button
       type="button"
       onClick={onClick}
       title={label}
-      aria-label={dot ? `${label} (vencimientos próximos)` : label}
+      aria-label={hasBadge ? `${label} (${badgeCount} vencimientos próximos)` : label}
       aria-haspopup={expanded !== undefined ? 'dialog' : undefined}
       aria-expanded={expanded}
       className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] ${tone} ${className}`}
     >
       <i className={`ph ${icon}`} aria-hidden="true" />
-      {dot && <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--red)]" aria-hidden="true" />}
+      {hasBadge && (
+        <span
+          className="absolute right-1 top-1 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[var(--red)] px-1 text-[9.5px] font-bold text-white"
+          aria-hidden="true"
+        >
+          {badgeCount > 9 ? '9+' : badgeCount}
+        </span>
+      )}
     </button>
   );
 }

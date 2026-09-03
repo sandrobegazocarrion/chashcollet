@@ -100,13 +100,14 @@ export function DashboardPage({
           onOpenSubView={onOpenSubView}
         />
 
-        {/* Balance disponible y Tasa de ahorro van lado a lado con un solo hairline
-            vertical entre ambos, mismo lenguaje que <MonthCompareCard>. */}
-        <StatsRow safeToSpend={safeToSpend} savingsRate={savingsRate} onRegisterIncome={onRegisterIncome} />
+        {/* Balance disponible y Tasa de ahorro, cada uno su propia tarjeta. */}
+        <div className="grid grid-cols-2 gap-3">
+          <StatsRow safeToSpend={safeToSpend} savingsRate={savingsRate} onRegisterIncome={onRegisterIncome} />
+        </div>
 
-        <div className="flex flex-col gap-6 border-b border-[var(--border-flat)] pb-6 lg:flex-row">
-          <IncomeExpenseChart data={data} onOpenSubView={onOpenSubView} bare />
-          <CategoryDonutChart data={data} bare />
+        <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+          <IncomeExpenseChart data={data} onOpenSubView={onOpenSubView} />
+          <CategoryDonutChart data={data} />
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -134,7 +135,7 @@ export function DashboardPage({
 
         <TipBanner />
 
-        <ActivityFeed transactions={data.transactions} accounts={data.accounts} limit={5} bare />
+        <ActivityFeed transactions={data.transactions} accounts={data.accounts} limit={5} onViewAll={() => onGoTab('transacciones')} />
       </div>
     </div>
   );

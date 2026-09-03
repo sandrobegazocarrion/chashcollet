@@ -17,18 +17,26 @@ interface ActivityFeedProps {
   accounts: Account[];
   limit?: number;
   bare?: boolean;
+  onViewAll?: () => void;
 }
 
 // Espeja renderActivity(): últimos 7 movimientos, más recientes primero.
 // Sin editar/eliminar todavía (Transacciones no está migrado en v1).
-export function ActivityFeed({ transactions, accounts, limit = 7, bare = false }: ActivityFeedProps) {
+export function ActivityFeed({ transactions, accounts, limit = 7, bare = false, onViewAll }: ActivityFeedProps) {
   const list = [...transactions]
     .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
     .slice(0, limit);
 
   return (
     <Card variant={bare ? 'bare' : 'default'} className="col-span-full">
-      <h2 className="mb-3 text-sm font-medium text-[var(--text)]">Actividad reciente</h2>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-sm font-medium text-[var(--text)]">Actividad reciente</h2>
+        {onViewAll && (
+          <button type="button" onClick={onViewAll} className="text-[12.5px] font-bold text-[var(--brand)]">
+            Ver todos
+          </button>
+        )}
+      </div>
       {list.length === 0 ? (
         <ChartEmptyState icon="ph-receipt" message="Todavía no hay movimientos." compact />
       ) : (

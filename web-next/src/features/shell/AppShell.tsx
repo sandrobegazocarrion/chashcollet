@@ -123,13 +123,7 @@ export function AppShell() {
             </div>
           )}
           {tab === 'panel' && (
-            <div
-              className={
-                subView
-                  ? ''
-                  : 'lg:hidden -mx-4 -mt-4 bg-white px-4 pt-4 pb-8 sm:-mx-6 sm:-mt-6 sm:px-6 sm:pt-6'
-              }
-            >
+            <div className={subView ? '' : 'lg:hidden'}>
               <DashboardPage
                 data={data}
                 onNewGoal={() => goTab('chanchitos')}
