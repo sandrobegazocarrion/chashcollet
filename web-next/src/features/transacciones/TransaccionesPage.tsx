@@ -40,7 +40,15 @@ function dateGroupLabel(iso: string): string {
 // Espeja #tab-transacciones de la app vieja: buscador + 3 chips de filtro, stats de
 // la lista filtrada, barra de proporción por categoría, y la lista agrupada por
 // fecha (Hoy/Ayer/fecha) con acciones que aparecen al pasar el mouse.
-export function TransaccionesPage({ data, focusSearchSignal }: { data: AppState; focusSearchSignal?: number }) {
+export function TransaccionesPage({
+  data,
+  focusSearchSignal,
+  newTxSignal,
+}: {
+  data: AppState;
+  focusSearchSignal?: number;
+  newTxSignal?: number;
+}) {
   const [creating, setCreating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
@@ -61,6 +69,13 @@ export function TransaccionesPage({ data, focusSearchSignal }: { data: AppState;
     }, 50);
     return () => clearTimeout(t);
   }, [focusSearchSignal]);
+
+  // Mismo mecanismo que focusSearchSignal, para el FAB de mobile: al tocarlo desde
+  // cualquier pestaña, <AppShell> navega acá e incrementa newTxSignal.
+  useEffect(() => {
+    if (!newTxSignal) return;
+    setCreating(true);
+  }, [newTxSignal]);
 
   const deleteTx = useApiMutation<{ id: string }, void>('DELETE', (body) => `/api/transactions/${body.id}`);
 

@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import { Skeleton } from '../../components/ui/Skeleton';
 import { Sidebar, TAB_LABELS, type TabId } from '../../components/layout/Sidebar';
 import { BottomTabBar } from '../../components/layout/BottomTabBar';
+import { QuickAddFab } from '../../components/layout/QuickAddFab';
 import { Topbar } from '../../components/layout/Topbar';
 import { SettingsPage } from '../settings/SettingsPage';
 import { greetingText } from '../../lib/greeting';
@@ -29,6 +30,7 @@ export function AppShell() {
   const [tab, setTab] = useState<TabId>('panel');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [searchFocusTick, setSearchFocusTick] = useState(0);
+  const [newTxTick, setNewTxTick] = useState(0);
   const [subView, setSubView] = useState<SubViewType | null>(null);
   const [svMonth, setSvMonth] = useState(() => {
     const d = new Date();
@@ -46,6 +48,13 @@ export function AppShell() {
   function goTab(t: TabId) {
     setSubView(null);
     setTab(t);
+  }
+
+  // Usado por el FAB de mobile y por el "+" del riel/drawer: navega a Transacciones
+  // y le pide directamente abrir el formulario, en vez de solo dejarlo a la vista.
+  function openNewTransaction() {
+    goTab('transacciones');
+    setNewTxTick((t) => t + 1);
   }
 
   if (isLoading) {
@@ -88,7 +97,7 @@ export function AppShell() {
         showAdmin={data.profile.isAdmin}
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onQuickAdd={() => goTab('transacciones')}
+        onQuickAdd={openNewTransaction}
         online
       />
       <div className="flex min-h-screen flex-col md:pl-[88px]">
@@ -131,7 +140,9 @@ export function AppShell() {
               />
             </div>
           )}
-          {tab === 'transacciones' && <TransaccionesPage data={data} focusSearchSignal={searchFocusTick} />}
+          {tab === 'transacciones' && (
+            <TransaccionesPage data={data} focusSearchSignal={searchFocusTick} newTxSignal={newTxTick} />
+          )}
           {tab === 'cuentas' && <CuentasPage data={data} />}
           {tab === 'tarjeta' && <TarjetaPage data={data} />}
           {tab === 'chanchitos' && <ChanchitosPage data={data} />}
@@ -145,6 +156,7 @@ export function AppShell() {
       </div>
 
       <BottomTabBar active={tab} onChange={goTab} onMore={() => setSidebarOpen(true)} moreActive={moreActive} />
+      <QuickAddFab onClick={openNewTransaction} />
     </div>
   );
 }
