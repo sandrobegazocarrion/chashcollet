@@ -304,13 +304,13 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, o
           </TileCard>
         </div>
 
-        <MotionCard className="flex-[1.3]" delay={0.36} padded={false}>
+        <MotionCard className="min-w-0 flex-[1.3]" delay={0.36} padded={false}>
           <IncomeExpenseChart data={data} onOpenSubView={onOpenSubView} />
         </MotionCard>
-        <MotionCard className="flex-1" delay={0.42} padded={false}>
+        <MotionCard className="min-w-0 flex-1" delay={0.42} padded={false}>
           <CategoryDonutChart data={data} />
         </MotionCard>
-        <MotionCard className="flex-1" delay={0.48} padded={false}>
+        <MotionCard className="min-w-0 flex-1" delay={0.48} padded={false}>
           <ActivityFeed transactions={data.transactions} accounts={data.accounts} />
         </MotionCard>
       </div>
