@@ -6,6 +6,8 @@ interface MonthCompareCardProps {
   monthIn: number;
   monthOut: number;
   monthNet: number;
+  spendVsPrevPct: number | null;
+  prevMonthLabel: string;
   onOpenSubView: (type: 'ingresos' | 'gastos' | 'balance') => void;
 }
 
@@ -13,12 +15,15 @@ interface MonthCompareCardProps {
 // ingresos/gastos del mes en curso, más el balance neto del período — el balance y
 // cada lado (ingresos/gastos) son botones que abren su propia sub-vista con el
 // detalle día a día (ver SubView.tsx / data-action="open-subview" en el original).
-export function MonthCompareCard({ monthIn, monthOut, monthNet, onOpenSubView }: MonthCompareCardProps) {
+export function MonthCompareCard({ monthIn, monthOut, monthNet, spendVsPrevPct, prevMonthLabel, onOpenSubView }: MonthCompareCardProps) {
   const total = monthIn + monthOut;
   const inPct = total > 0 ? Math.round((monthIn / total) * 100) : monthIn === 0 && monthOut === 0 ? 50 : monthIn > 0 ? 100 : 0;
   const outPct = 100 - inPct;
   const monthLabel = new Date().toLocaleDateString('es-PE', { month: 'long', year: 'numeric' });
   const positive = monthNet >= 0;
+  // Gastar menos que el mes pasado es la buena noticia, aunque el número sea
+  // negativo — por eso el tono se decide por spendingUp, no por el signo del %.
+  const spendingUp = spendVsPrevPct !== null && spendVsPrevPct > 0;
 
   return (
     <Card>
@@ -34,6 +39,13 @@ export function MonthCompareCard({ monthIn, monthOut, monthNet, onOpenSubView }:
           <AnimatedDigits value={(positive ? '+' : '') + formatMoney(monthNet)} animationKey="monthNet" />
         </button>
       </div>
+
+      {spendVsPrevPct !== null && (
+        <p className={`num mt-1 text-[11.5px] font-bold ${spendingUp ? 'text-[var(--red)]' : 'text-[var(--green)]'}`}>
+          <i className={`ph ${spendingUp ? 'ph-trend-up' : 'ph-trend-down'}`} aria-hidden="true" /> {Math.abs(spendVsPrevPct)}% en gastos vs.{' '}
+          {prevMonthLabel}
+        </p>
+      )}
 
       <div className="mt-2.5 flex h-1.5 overflow-hidden rounded-[var(--radius-pill)] bg-[var(--surface-raised)]">
         <div className="bg-[var(--green)]" style={{ width: `${inPct}%` }} />

@@ -44,12 +44,15 @@ export function TransaccionesPage({
   data,
   focusSearchSignal,
   newTxSignal,
+  newTxType,
 }: {
   data: AppState;
   focusSearchSignal?: number;
   newTxSignal?: number;
+  newTxType?: 'ingreso' | 'gasto';
 }) {
   const [creating, setCreating] = useState(false);
+  const [creatingType, setCreatingType] = useState<'ingreso' | 'gasto'>('gasto');
   const [importing, setImporting] = useState(false);
   const [editing, setEditing] = useState<Transaction | null>(null);
 
@@ -70,16 +73,19 @@ export function TransaccionesPage({
     return () => clearTimeout(t);
   }, [focusSearchSignal]);
 
-  // Mismo mecanismo que focusSearchSignal, para el FAB de mobile: al tocarlo desde
-  // cualquier pestaña, <AppShell> navega acá e incrementa newTxSignal.
+  // Mismo mecanismo que focusSearchSignal, para el FAB/"+" de mobile y escritorio:
+  // <AppShell> abre <AddChoiceSheet>, navega acá e incrementa newTxSignal con el
+  // tipo ya elegido (ingreso/gasto).
   useEffect(() => {
     if (!newTxSignal) return;
+    setCreatingType(newTxType || 'gasto');
     setCreating(true);
   }, [newTxSignal]);
 
   const deleteTx = useApiMutation<{ id: string }, void>('DELETE', (body) => `/api/transactions/${body.id}`);
 
   function openCreate() {
+    setCreatingType('gasto');
     setCreating(true);
   }
   function openEdit(tx: Transaction) {
@@ -292,7 +298,7 @@ export function TransaccionesPage({
         </>
       )}
 
-      <TransactionSheet open={creating || !!editing} editing={editing} onClose={closeModal} data={data} />
+      <TransactionSheet open={creating || !!editing} editing={editing} onClose={closeModal} data={data} initialType={creatingType} />
     </div>
   );
 }

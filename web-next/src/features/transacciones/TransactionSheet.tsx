@@ -29,11 +29,13 @@ export function TransactionSheet({
   editing,
   onClose,
   data,
+  initialType = 'gasto',
 }: {
   open: boolean;
   editing: Transaction | null;
   onClose: () => void;
   data: AppState;
+  initialType?: 'ingreso' | 'gasto';
 }) {
   const [type, setType] = useState<'ingreso' | 'gasto'>('gasto');
   const [amountStr, setAmountStr] = useState('');
@@ -62,7 +64,7 @@ export function TransactionSheet({
       setAccountId(editing.accountId || '');
       setDescription(editing.description || '');
     } else {
-      setType('gasto');
+      setType(initialType);
       setAmountStr('');
       setDate(todayStr());
       setCategory(data.categories[0] || 'Otros');
@@ -77,7 +79,7 @@ export function TransactionSheet({
       cancelAnimationFrame(raf);
       clearTimeout(focusT);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe resetear al abrir/cambiar de movimiento, no en cada cambio de `data`
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- solo debe resetear al abrir/cambiar de movimiento, no en cada cambio de `data`/`initialType`
   }, [open, editing]);
 
   useEffect(() => {

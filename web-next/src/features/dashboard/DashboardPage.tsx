@@ -17,6 +17,7 @@ interface DashboardPageProps {
   onNewGoal: () => void;
   onOpenGoals: () => void;
   onGoTab: (tab: TabId) => void;
+  onRegisterIncome: () => void;
   subView: SubViewType | null;
   svMonth: Date;
   onOpenSubView: (type: SubViewType) => void;
@@ -33,6 +34,7 @@ export function DashboardPage({
   onNewGoal,
   onOpenGoals,
   onGoTab,
+  onRegisterIncome,
   subView,
   svMonth,
   onOpenSubView,
@@ -51,15 +53,27 @@ export function DashboardPage({
 
   const now = new Date();
   const monthKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+  const prevDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonthKey = prevDate.getFullYear() + '-' + String(prevDate.getMonth() + 1).padStart(2, '0');
+  const prevMonthLabel = prevDate.toLocaleDateString('es-PE', { month: 'long' });
   let monthIn = 0;
   let monthOut = 0;
+  let prevMonthOut = 0;
   data.transactions.forEach((tx) => {
-    if (!tx.date || tx.date.slice(0, 7) !== monthKey) return;
-    if (tx.type === 'ingreso') monthIn += tx.amount;
-    else monthOut += tx.amount;
+    if (!tx.date) return;
+    const key = tx.date.slice(0, 7);
+    if (key === monthKey) {
+      if (tx.type === 'ingreso') monthIn += tx.amount;
+      else monthOut += tx.amount;
+    } else if (key === prevMonthKey && tx.type === 'gasto') {
+      prevMonthOut += tx.amount;
+    }
   });
   const monthNet = monthIn - monthOut;
   const savingsRate = monthIn > 0 ? Math.round((monthNet / monthIn) * 100) : null;
+  // % de gasto vs. el mes anterior — la única comparación mes-a-mes que se puede
+  // calcular con datos reales sin inventar un histórico de saldo que no existe.
+  const spendVsPrevPct = prevMonthOut > 0 ? Math.round(((monthOut - prevMonthOut) / prevMonthOut) * 100) : null;
 
   const upcoming = computeUpcomingPayments(data, Infinity);
   const urgent = upcoming.find((i) => i.days <= 2) || upcoming[0];
@@ -77,12 +91,19 @@ export function DashboardPage({
         {/* Hero: aire generoso, es el dato que manda en la pantalla. */}
         <NetWorthHero totalLiquid={totals.totalLiquid} monthNet={monthNet} />
 
-        <MonthCompareCard monthIn={monthIn} monthOut={monthOut} monthNet={monthNet} onOpenSubView={onOpenSubView} />
+        <MonthCompareCard
+          monthIn={monthIn}
+          monthOut={monthOut}
+          monthNet={monthNet}
+          spendVsPrevPct={spendVsPrevPct}
+          prevMonthLabel={prevMonthLabel}
+          onOpenSubView={onOpenSubView}
+        />
 
         {/* Balance disponible y Tasa de ahorro van lado a lado incluso en mobile —
             son dos números cortos, apilarlos era solo alargar el scroll sin motivo. */}
         <div className="grid grid-cols-2 gap-3">
-          <StatsRow safeToSpend={safeToSpend} savingsRate={savingsRate} />
+          <StatsRow safeToSpend={safeToSpend} savingsRate={savingsRate} onRegisterIncome={onRegisterIncome} />
         </div>
 
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">

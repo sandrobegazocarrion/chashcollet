@@ -6,6 +6,7 @@ import { Sidebar, TAB_LABELS, type TabId } from '../../components/layout/Sidebar
 import { BottomTabBar } from '../../components/layout/BottomTabBar';
 import { QuickAddFab } from '../../components/layout/QuickAddFab';
 import { MoreSheet } from '../../components/layout/MoreSheet';
+import { AddChoiceSheet } from '../../components/layout/AddChoiceSheet';
 import { Topbar } from '../../components/layout/Topbar';
 import { SettingsPage } from '../settings/SettingsPage';
 import { greetingText } from '../../lib/greeting';
@@ -30,8 +31,10 @@ export function AppShell() {
   const { data, isLoading, isError, error } = useAppState();
   const [tab, setTab] = useState<TabId>('panel');
   const [moreOpen, setMoreOpen] = useState(false);
+  const [addChoiceOpen, setAddChoiceOpen] = useState(false);
   const [searchFocusTick, setSearchFocusTick] = useState(0);
   const [newTxTick, setNewTxTick] = useState(0);
+  const [newTxType, setNewTxType] = useState<'ingreso' | 'gasto'>('gasto');
   const [subView, setSubView] = useState<SubViewType | null>(null);
   const [svMonth, setSvMonth] = useState(() => {
     const d = new Date();
@@ -51,9 +54,10 @@ export function AppShell() {
     setTab(t);
   }
 
-  // Usado por el FAB de mobile y por el "+" del riel/drawer: navega a Transacciones
-  // y le pide directamente abrir el formulario, en vez de solo dejarlo a la vista.
-  function openNewTransaction() {
+  // Usado tras elegir Ingreso/Gasto en <AddChoiceSheet>: navega a Transacciones y le
+  // pide abrir el formulario directamente con ese tipo ya seleccionado.
+  function openNewTransaction(type: 'ingreso' | 'gasto') {
+    setNewTxType(type);
     goTab('transacciones');
     setNewTxTick((t) => t + 1);
   }
@@ -92,7 +96,7 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      <Sidebar active={tab} onChange={goTab} showAdmin={data.profile.isAdmin} onQuickAdd={openNewTransaction} online />
+      <Sidebar active={tab} onChange={goTab} showAdmin={data.profile.isAdmin} onQuickAdd={() => setAddChoiceOpen(true)} online />
       <div className="flex min-h-screen flex-col md:pl-[88px]">
         <Topbar
           title={title}
@@ -124,6 +128,7 @@ export function AppShell() {
                 onNewGoal={() => goTab('chanchitos')}
                 onOpenGoals={() => goTab('chanchitos')}
                 onGoTab={goTab}
+                onRegisterIncome={() => openNewTransaction('ingreso')}
                 subView={subView}
                 svMonth={svMonth}
                 onOpenSubView={setSubView}
@@ -134,7 +139,7 @@ export function AppShell() {
             </div>
           )}
           {tab === 'transacciones' && (
-            <TransaccionesPage data={data} focusSearchSignal={searchFocusTick} newTxSignal={newTxTick} />
+            <TransaccionesPage data={data} focusSearchSignal={searchFocusTick} newTxSignal={newTxTick} newTxType={newTxType} />
           )}
           {tab === 'cuentas' && <CuentasPage data={data} />}
           {tab === 'tarjeta' && <TarjetaPage data={data} />}
@@ -149,7 +154,7 @@ export function AppShell() {
       </div>
 
       <BottomTabBar active={tab} onChange={goTab} onMore={() => setMoreOpen(true)} moreActive={moreActive} />
-      <QuickAddFab onClick={openNewTransaction} />
+      <QuickAddFab onClick={() => setAddChoiceOpen(true)} />
       <MoreSheet
         open={moreOpen}
         onClose={() => setMoreOpen(false)}
@@ -157,6 +162,14 @@ export function AppShell() {
         onChange={goTab}
         showAdmin={data.profile.isAdmin}
         primaryIds={PRIMARY_MOBILE_TABS}
+      />
+      <AddChoiceSheet
+        open={addChoiceOpen}
+        onClose={() => setAddChoiceOpen(false)}
+        onChoose={(type) => {
+          setAddChoiceOpen(false);
+          openNewTransaction(type);
+        }}
       />
     </div>
   );
