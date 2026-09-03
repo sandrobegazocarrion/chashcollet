@@ -14,6 +14,7 @@ interface TopbarProps {
   data: AppState;
   onGoTab: (tab: TabId) => void;
   onSearchClick: () => void;
+  brand?: boolean;
 }
 
 // Título/saludo de la pestaña activa, buscador (focus-search, con atajo ⌘K/Ctrl+K),
@@ -22,7 +23,7 @@ interface TopbarProps {
 // botones en vez del modal de Configuración directo. El hamburger que abría el
 // riel/drawer se sacó de acá: en mobile esa función ahora la cumple "Más" de
 // <BottomTabBar>, no tenía sentido tener dos entradas al mismo menú.
-export function Topbar({ title, avatarLabel, data, onGoTab, onSearchClick }: TopbarProps) {
+export function Topbar({ title, avatarLabel, data, onGoTab, onSearchClick, brand = false }: TopbarProps) {
   const { theme, toggle } = useTheme();
   const { signOut } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
@@ -84,9 +85,19 @@ export function Topbar({ title, avatarLabel, data, onGoTab, onSearchClick }: Top
   const upcoming = computeUpcomingPayments(data, 14).slice(0, 6);
   const hasUrgent = computeUpcomingPayments(data, 2).length > 0;
 
+  // "brand" (Inicio en mobile/tablet, hasta el mismo quiebre lg en el que
+  // DashboardPage cede el paso a DesktopHomePage) funde este header con el saludo
+  // en un solo bloque morado sólido, igual que el mockup — a partir de lg vuelve al
+  // tratamiento neutro de siempre, donde ya existe el hero oscuro propio de escritorio.
   return (
-    <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-[var(--border-flat)] bg-[var(--bg)]/80 px-4 py-3 backdrop-blur-md sm:gap-3 sm:px-6">
-      <div className="min-w-0 truncate text-[15px] font-bold text-[var(--text)]">{title}</div>
+    <header
+      className={`sticky top-0 z-20 flex items-center gap-2 px-4 py-3 backdrop-blur-md sm:gap-3 sm:px-6 ${
+        brand
+          ? 'bg-[var(--brand)] lg:border-b lg:border-[var(--border-flat)] lg:bg-[var(--bg)]/80'
+          : 'border-b border-[var(--border-flat)] bg-[var(--bg)]/80'
+      }`}
+    >
+      <div className={`min-w-0 truncate text-[15px] font-bold ${brand ? 'text-white lg:text-[var(--text)]' : 'text-[var(--text)]'}`}>{title}</div>
 
       <button
         type="button"
@@ -102,7 +113,7 @@ export function Topbar({ title, avatarLabel, data, onGoTab, onSearchClick }: Top
       </button>
 
       <div className="relative ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-        <IconPill icon="ph-magnifying-glass" label="Buscar movimientos" onClick={onSearchClick} ghost className="md:hidden" />
+        <IconPill icon="ph-magnifying-glass" label="Buscar movimientos" onClick={onSearchClick} ghost onBrand={brand} className="md:hidden" />
 
         <div ref={notifRef}>
           <IconPill
@@ -111,6 +122,7 @@ export function Topbar({ title, avatarLabel, data, onGoTab, onSearchClick }: Top
             dot={hasUrgent}
             expanded={notifOpen}
             ghost
+            onBrand={brand}
             onClick={() => {
               setNotifOpen((v) => !v);
               setAccountOpen(false);
@@ -153,14 +165,18 @@ export function Topbar({ title, avatarLabel, data, onGoTab, onSearchClick }: Top
           </div>
         )}
 
-        <IconPill icon="ph-download-simple" label="Descargar en Excel" onClick={() => exportExcel(data)} ghost className="hidden sm:flex" />
+        <IconPill icon="ph-download-simple" label="Descargar en Excel" onClick={() => exportExcel(data)} ghost onBrand={brand} className="hidden sm:flex" />
 
         <button
           type="button"
           onClick={toggle}
           title="Cambiar tema"
           aria-label="Cambiar tema"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]"
+          className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] ${
+            brand
+              ? 'text-white/90 hover:bg-white/15 hover:text-white lg:text-[var(--text-muted)] lg:hover:bg-[var(--surface-raised)] lg:hover:text-[var(--text)]'
+              : 'text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]'
+          }`}
         >
           <i className={`ph ${theme === 'dark' ? 'ph-sun' : 'ph-moon'}`} aria-hidden="true" />
         </button>
@@ -176,7 +192,9 @@ export function Topbar({ title, avatarLabel, data, onGoTab, onSearchClick }: Top
             aria-label="Cuenta"
             aria-haspopup="menu"
             aria-expanded={accountOpen}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--brand)] text-sm font-bold uppercase text-white"
+            className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold uppercase ${
+              brand ? 'bg-white text-[var(--brand)] lg:bg-[var(--brand)] lg:text-white' : 'bg-[var(--brand)] text-white'
+            }`}
           >
             {avatarLabel}
           </button>
@@ -232,6 +250,7 @@ function IconPill({
   dot,
   expanded,
   ghost = false,
+  onBrand = false,
   className = '',
 }: {
   icon: string;
@@ -240,8 +259,14 @@ function IconPill({
   dot?: boolean;
   expanded?: boolean;
   ghost?: boolean;
+  onBrand?: boolean;
   className?: string;
 }) {
+  const tone = onBrand
+    ? 'text-white/90 hover:bg-white/15 hover:text-white lg:text-[var(--text-muted)] lg:hover:bg-[var(--surface-raised)] lg:hover:text-[var(--text)]'
+    : ghost
+      ? 'text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]'
+      : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-raised)]';
   return (
     <button
       type="button"
@@ -250,11 +275,7 @@ function IconPill({
       aria-label={dot ? `${label} (vencimientos próximos)` : label}
       aria-haspopup={expanded !== undefined ? 'dialog' : undefined}
       aria-expanded={expanded}
-      className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] ${
-        ghost
-          ? 'text-[var(--text-muted)] hover:bg-[var(--surface-raised)] hover:text-[var(--text)]'
-          : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text)] hover:bg-[var(--surface-raised)]'
-      } ${className}`}
+      className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-[var(--radius-control)] ${tone} ${className}`}
     >
       <i className={`ph ${icon}`} aria-hidden="true" />
       {dot && <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--red)]" aria-hidden="true" />}

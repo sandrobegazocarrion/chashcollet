@@ -103,6 +103,7 @@ export function AppShell() {
           avatarLabel={avatarLabel}
           data={data}
           onGoTab={goTab}
+          brand={tab === 'panel' && !subView}
           onSearchClick={() => {
             goTab('transacciones');
             setSearchFocusTick((t) => t + 1);
