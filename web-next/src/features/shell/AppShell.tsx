@@ -5,6 +5,7 @@ import { Skeleton } from '../../components/ui/Skeleton';
 import { Sidebar, TAB_LABELS, type TabId } from '../../components/layout/Sidebar';
 import { BottomTabBar } from '../../components/layout/BottomTabBar';
 import { QuickAddFab } from '../../components/layout/QuickAddFab';
+import { MoreSheet } from '../../components/layout/MoreSheet';
 import { Topbar } from '../../components/layout/Topbar';
 import { SettingsPage } from '../settings/SettingsPage';
 import { greetingText } from '../../lib/greeting';
@@ -28,7 +29,7 @@ export function AppShell() {
   const { session } = useAuth();
   const { data, isLoading, isError, error } = useAppState();
   const [tab, setTab] = useState<TabId>('panel');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [searchFocusTick, setSearchFocusTick] = useState(0);
   const [newTxTick, setNewTxTick] = useState(0);
   const [subView, setSubView] = useState<SubViewType | null>(null);
@@ -91,15 +92,7 @@ export function AppShell() {
 
   return (
     <div className="min-h-screen bg-[var(--bg)]">
-      <Sidebar
-        active={tab}
-        onChange={goTab}
-        showAdmin={data.profile.isAdmin}
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onQuickAdd={openNewTransaction}
-        online
-      />
+      <Sidebar active={tab} onChange={goTab} showAdmin={data.profile.isAdmin} onQuickAdd={openNewTransaction} online />
       <div className="flex min-h-screen flex-col md:pl-[88px]">
         <Topbar
           title={title}
@@ -155,8 +148,16 @@ export function AppShell() {
         </main>
       </div>
 
-      <BottomTabBar active={tab} onChange={goTab} onMore={() => setSidebarOpen(true)} moreActive={moreActive} />
+      <BottomTabBar active={tab} onChange={goTab} onMore={() => setMoreOpen(true)} moreActive={moreActive} />
       <QuickAddFab onClick={openNewTransaction} />
+      <MoreSheet
+        open={moreOpen}
+        onClose={() => setMoreOpen(false)}
+        active={tab}
+        onChange={goTab}
+        showAdmin={data.profile.isAdmin}
+        primaryIds={PRIMARY_MOBILE_TABS}
+      />
     </div>
   );
 }
