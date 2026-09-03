@@ -713,7 +713,7 @@ function PersonLoanCard({
   const modo = loan.returnMode === 'cuotas' ? 'en cuotas' : loan.reminderFrequency === 'monthly' ? 'recordatorio mensual' : loan.dueDate ? 'pago único' : 'sin fecha fija';
 
   return (
-    <Card className="flex flex-col gap-3.5 border-l-2" style={{ borderLeftColor: `var(${toneVar})` }}>
+    <Card className="flex flex-col gap-3.5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-1.5">

@@ -254,8 +254,7 @@ export function TransaccionesPage({
                   return (
                     <div
                       key={tx.id}
-                      className="group flex items-center gap-3.5 rounded-[var(--radius-control)] border-l-2 py-3 pl-3 pr-2.5 hover:bg-[var(--surface-raised)]"
-                      style={{ borderLeftColor: `var(${colorVar})` }}
+                      className="group flex items-center gap-3.5 rounded-[var(--radius-control)] py-3 pl-3 pr-2.5 hover:bg-[var(--surface-raised)]"
                     >
                       <span
                         className="flex h-[38px] w-[38px] shrink-0 items-center justify-center rounded-full text-[17px]"

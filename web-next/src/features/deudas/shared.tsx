@@ -209,8 +209,7 @@ export function DeudaItem({
 
   return (
     <div
-      className={`flex flex-col gap-2.5 rounded-[var(--radius-control)] border border-l-2 border-[var(--border)] bg-[var(--surface)] px-4 py-3 ${paid ? 'opacity-70' : ''}`}
-      style={{ borderLeftColor: `var(${colorVar})` }}
+      className={`flex flex-col gap-2.5 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 ${paid ? 'opacity-70' : ''}`}
     >
       <div className="flex items-center gap-3">
         <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: `var(${colorVar})` }} />
@@ -277,7 +276,7 @@ export function PersonLoansList({ loans, onSettle, onDelete }: { loans: PersonLo
     const urgency = personLoanUrgency(p.dueDate);
     const colorVar = isDebo ? '--red' : '--green';
     return (
-      <div key={p.id} className={`flex items-center gap-3 rounded-[var(--radius-control)] border border-l-2 border-[var(--border)] bg-[var(--surface)] px-4 py-3 ${p.paid ? 'opacity-70' : ''}`} style={{ borderLeftColor: `var(${colorVar})` }}>
+      <div key={p.id} className={`flex items-center gap-3 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-4 py-3 ${p.paid ? 'opacity-70' : ''}`}>
         <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: `var(${colorVar})` }} />
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-bold text-[var(--text)]">
