@@ -319,7 +319,7 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, o
         </MotionCard>
       </div>
 
-      <Modal open={cardModalOpen} onClose={() => setCardModalOpen(false)} size="lg">
+      <Modal open={cardModalOpen} onClose={() => setCardModalOpen(false)} size="xl">
         <TarjetaPage data={data} />
       </Modal>
     </div>

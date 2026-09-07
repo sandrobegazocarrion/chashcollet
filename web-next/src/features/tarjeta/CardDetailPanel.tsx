@@ -23,12 +23,17 @@ interface CardDetailPanelProps {
   onMarkInstallment: (chargeId: string) => void;
   onDeleteCharge: (chargeId: string) => void;
   onDeletePayment: (paymentId: string) => void;
+  // Escritorio: el panel vive en una columna propia junto a la tarjeta (no debajo,
+  // angosto) — sin el límite de 380px pensado para acoplarse a la barra compacta
+  // de mobile (ver CardShell.tsx).
+  wide?: boolean;
 }
 
-// Panel blanco debajo de la barra compacta (ver CardShell.tsx) con 3 tabs. La altura
-// se anima con el truco de grid-template-rows 0fr↔1fr (permite animar hacia "auto"
-// sin medir el DOM a mano) sincronizado con el zoom de la tarjeta — se queda montado
-// siempre para que la transición sea fluida, no aparece/desaparece de golpe.
+// Panel con 3 tabs. En mobile va debajo de la barra compacta (ver CardShell.tsx) y
+// la altura se anima con el truco de grid-template-rows 0fr↔1fr (permite animar
+// hacia "auto" sin medir el DOM a mano) sincronizado con el zoom de la tarjeta — se
+// queda montado siempre para que la transición sea fluida. En escritorio (`wide`)
+// va siempre abierto junto a la tarjeta, sin ese gesto de expandir/contraer.
 export function CardDetailPanel({
   account,
   data,
@@ -41,6 +46,7 @@ export function CardDetailPanel({
   onMarkInstallment,
   onDeleteCharge,
   onDeletePayment,
+  wide = false,
 }: CardDetailPanelProps) {
   const [tab, setTab] = useState<Tab>('resumen');
   const [simulating, setSimulating] = useState(false);
@@ -63,13 +69,13 @@ export function CardDetailPanel({
 
   return (
     <div
-      className={`grid w-full max-w-[380px] transition-[grid-template-rows] duration-[400ms] ease-[cubic-bezier(.22,.9,.32,1)] ${
+      className={`grid w-full transition-[grid-template-rows] duration-[400ms] ease-[cubic-bezier(.22,.9,.32,1)] ${wide ? '' : 'max-w-[380px]'} ${
         expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
       }`}
     >
       <div className="overflow-hidden">
         <div
-          className={`overflow-hidden rounded-[24px] bg-[var(--surface)] p-5 shadow-[0_18px_40px_-16px_rgba(0,0,0,.22)] transition-opacity duration-300 ${
+          className={`overflow-hidden rounded-[24px] bg-[var(--surface)] shadow-[0_18px_40px_-16px_rgba(0,0,0,.22)] transition-opacity duration-300 ${wide ? 'p-6' : 'p-5'} ${
             expanded ? 'opacity-100 delay-100' : 'opacity-0'
           }`}
         >

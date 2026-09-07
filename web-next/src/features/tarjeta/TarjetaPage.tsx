@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { PageHeader } from '../../components/layout/PageHeader';
+import { EmptyState } from '../../components/ui/EmptyState';
 import { Modal } from '../../components/ui/Modal';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
@@ -151,7 +152,13 @@ export function TarjetaPage({ data }: { data: AppState }) {
     return (
       <div className="flex flex-col gap-6">
         <PageHeader title="Tarjeta" actionLabel="Nueva tarjeta" onAction={() => setAddingCard(true)} />
-        <p className="text-sm text-[var(--text-muted)]">Todavía no tienes tarjetas de crédito registradas.</p>
+        <EmptyState
+          mascot="listo-para-ayudarte"
+          icon="ph-credit-card"
+          title="Todavía no tienes tarjetas de crédito registradas"
+          subtitle="Agrega tu tarjeta para ver tu deuda, línea disponible y ciclo de facturación en un solo lugar."
+          cta={{ label: '+ Nueva tarjeta', onClick: () => setAddingCard(true) }}
+        />
         <NewCardModal
           open={addingCard}
           onClose={() => setAddingCard(false)}
@@ -212,7 +219,9 @@ export function TarjetaPage({ data }: { data: AppState }) {
         )}
       </PageHeader>
 
-      <div className="flex flex-col items-center gap-4">
+      {/* Mobile/tablet (<lg): carrusel centrado, tocar la tarjeta la encoge y abre
+          el detalle debajo — gesto pensado para el dedo. */}
+      <div className="flex flex-col items-center gap-4 lg:hidden">
         {/* w-full + min-w-0 en el slot del medio: en pantallas angostas (el ancho
             fijo de 380px de la tarjeta desbordaba en celulares reales, ej. Galaxy
             S25 ~393px) las flechas se quedan con su tamaño y la tarjeta se achica
@@ -287,6 +296,84 @@ export function TarjetaPage({ data }: { data: AppState }) {
             onDeleteCharge={(id) => deleteCharge.mutate({ id })}
             onDeletePayment={(id) => deletePayment.mutate({ id })}
           />
+        )}
+      </div>
+
+      {/* Escritorio (≥lg): tarjeta protagonista a la izquierda, detalle SIEMPRE
+          visible a la derecha — sin el gesto de "tocar para expandir", que tiene
+          sentido en el dedo pero no en el mouse. Antes esta pestaña reusaba el
+          mismo carrusel angosto de mobile estirado en una pantalla ancha, y se
+          veía desolada con tanto espacio vacío alrededor. */}
+      <div className="hidden gap-8 lg:grid lg:grid-cols-[380px_1fr] lg:items-start">
+        <div className="flex flex-col items-center gap-4">
+          <div className="flex w-full items-center gap-3">
+            <button
+              type="button"
+              onClick={goPrev}
+              disabled={clampedPosition === 0}
+              aria-label="Tarjeta anterior"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] shadow-sm hover:text-[var(--text)] disabled:pointer-events-none disabled:opacity-30"
+            >
+              <i className="ph ph-caret-left" aria-hidden="true" />
+            </button>
+
+            <div className="min-w-0 flex-1">
+              {isAddPosition ? (
+                <AddCardTile onClick={() => setAddingCard(true)} />
+              ) : (
+                activeCard && <CardShell account={activeCard} expanded={false} onToggle={() => {}} />
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={clampedPosition === cards.length}
+              aria-label="Tarjeta siguiente"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] shadow-sm hover:text-[var(--text)] disabled:pointer-events-none disabled:opacity-30"
+            >
+              <i className="ph ph-caret-right" aria-hidden="true" />
+            </button>
+          </div>
+
+          {cards.length > 1 && (
+            <div className="flex gap-1.5">
+              {cards.map((c, i) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  aria-label={`Ir a tarjeta ${i + 1}`}
+                  onClick={() => goTo(i)}
+                  className="h-[7px] w-[7px] rounded-full transition-colors"
+                  style={{ background: i === clampedPosition ? 'var(--text)' : 'var(--border)' }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {activeCard ? (
+          <CardDetailPanel
+            account={activeCard}
+            data={data}
+            expanded
+            wide
+            onPay={() => setPaying(true)}
+            onSimulateApply={(amount) => {
+              setPayForm({ ...payForm, amount });
+              setPaying(true);
+            }}
+            onSetColor={(color) => setColor.mutate({ id: activeCard.id, color })}
+            onSetInterestRate={(rate) => setInterestRate.mutate({ id: activeCard.id, interestRate: rate })}
+            savingRate={setInterestRate.isPending}
+            onMarkInstallment={(id) => markInstallment.mutate({ id })}
+            onDeleteCharge={(id) => deleteCharge.mutate({ id })}
+            onDeletePayment={(id) => deletePayment.mutate({ id })}
+          />
+        ) : (
+          <div className="flex h-full min-h-[300px] items-center justify-center rounded-[24px] border border-dashed border-[var(--border)] text-sm text-[var(--text-faint)]">
+            Crea la tarjeta para ver su resumen, cuotas y movimientos acá.
+          </div>
         )}
       </div>
 

@@ -5,12 +5,13 @@ interface ModalProps {
   onClose: () => void;
   title?: string;
   children: ReactNode;
-  size?: 'md' | 'lg'; // 'lg' para detalle a dos columnas (ej. AccountDetailModal)
+  size?: 'md' | 'lg' | 'xl'; // 'lg' detalle a dos columnas (AccountDetailModal); 'xl' contenido con su propio layout de escritorio (ej. TarjetaPage dentro de un modal)
 }
 
 const SIZE_CLASSES: Record<NonNullable<ModalProps['size']>, string> = {
   md: 'max-w-md',
   lg: 'max-w-2xl',
+  xl: 'max-w-4xl',
 };
 
 const DISMISS_THRESHOLD = 110; // px arrastrados hacia abajo para cerrar la hoja en mobile
