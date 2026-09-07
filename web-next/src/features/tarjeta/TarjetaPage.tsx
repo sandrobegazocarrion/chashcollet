@@ -47,7 +47,7 @@ export function TarjetaPage({ data }: { data: AppState }) {
   const [error, setError] = useState<string | null>(null);
 
   const [newCardForm, setNewCardForm] = useState(EMPTY_NEW_CARD);
-  const [editCardForm, setEditCardForm] = useState({ name: '', balance: '' });
+  const [editCardForm, setEditCardForm] = useState({ name: '', balance: '', creditLimit: '' });
   const [chargeForm, setChargeForm] = useState({ description: '', totalAmount: '', totalInstallments: '1', date: todayStr() });
   const liquidAccounts = data.accounts.filter((a) => a.type !== 'tarjeta');
   const [payForm, setPayForm] = useState({ amount: '', sourceId: liquidAccounts[0]?.id || '' });
@@ -107,27 +107,40 @@ export function TarjetaPage({ data }: { data: AppState }) {
   function openEditCard() {
     if (!activeCard) return;
     setError(null);
-    setEditCardForm({ name: activeCard.name, balance: String(activeCard.balance) });
+    setEditCardForm({
+      name: activeCard.name,
+      balance: String(activeCard.balance),
+      creditLimit: activeCard.creditLimit ? String(activeCard.creditLimit) : '',
+    });
     setEditingCard(true);
   }
 
-  // Corregir el saldo de una tarjeta es distinto de registrar un movimiento: no
-  // pasa por Transacciones, así que si el número cambia se pide confirmar
-  // explícitamente el antes/después — es plata, no una preferencia de UI.
+  // Corregir el saldo o la línea de crédito de una tarjeta es distinto de
+  // registrar un movimiento: no pasa por Transacciones, así que si cualquiera de
+  // los dos números cambia se pide confirmar explícitamente el antes/después —
+  // es plata, no una preferencia de UI.
   async function handleEditCard(e: FormEvent) {
     e.preventDefault();
     if (!activeCard) return;
     setError(null);
     const newBalance = Number(editCardForm.balance) || 0;
+    const newLimit = editCardForm.creditLimit ? Number(editCardForm.creditLimit) : null;
     const newName = editCardForm.name.trim();
-    if (newBalance !== activeCard.balance) {
-      const ok = confirm(
-        `¿Corregir el saldo de "${activeCard.name}" de ${formatMoney(activeCard.balance)} a ${formatMoney(newBalance)}?\n\nEsto no crea un movimiento — ajusta el saldo directamente.`
-      );
-      if (!ok) return;
+    const balanceChanged = newBalance !== activeCard.balance;
+    const limitChanged = newLimit !== (activeCard.creditLimit ?? null);
+    if (balanceChanged || limitChanged) {
+      const lines = [`¿Guardar estos cambios en "${activeCard.name}"?`, ''];
+      if (balanceChanged) lines.push(`Deuda: ${formatMoney(activeCard.balance)} → ${formatMoney(newBalance)}`);
+      if (limitChanged) {
+        lines.push(
+          `Línea de crédito: ${activeCard.creditLimit ? formatMoney(activeCard.creditLimit) : 'sin definir'} → ${newLimit ? formatMoney(newLimit) : 'sin definir'}`
+        );
+      }
+      lines.push('', 'Esto no crea un movimiento — ajusta los datos directamente.');
+      if (!confirm(lines.join('\n'))) return;
     }
     try {
-      await updateAccount.mutateAsync({ id: activeCard.id, name: newName, balance: newBalance });
+      await updateAccount.mutateAsync({ id: activeCard.id, name: newName, balance: newBalance, creditLimit: newLimit });
       setEditingCard(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo actualizar la tarjeta.');
@@ -298,9 +311,17 @@ export function TarjetaPage({ data }: { data: AppState }) {
             value={editCardForm.balance}
             onChange={(e) => setEditCardForm({ ...editCardForm, balance: e.target.value })}
           />
+          <Input
+            label="Línea de crédito"
+            type="number"
+            step="0.01"
+            placeholder="Sin definir"
+            value={editCardForm.creditLimit}
+            onChange={(e) => setEditCardForm({ ...editCardForm, creditLimit: e.target.value })}
+          />
           <p className="text-[11.5px] leading-relaxed text-[var(--text-faint)]">
-            Esto corrige el saldo directamente (ej. un cargo del banco que no pasó por la app). Para un pago o una compra nueva, usa "Pagar" o
-            "Compra en cuotas".
+            Esto corrige el saldo y la línea de crédito directamente (ej. un cargo del banco que no pasó por la app, o el banco te subió/bajó la
+            línea). Para un pago o una compra nueva, usa "Pagar" o "Compra en cuotas".
           </p>
           {error && (
             <p className="text-sm text-[var(--red)]" role="alert">
