@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
+import { animate, type AnimationPlaybackControls } from 'framer-motion';
 
 interface ModalProps {
   open: boolean;
@@ -14,7 +15,8 @@ const SIZE_CLASSES: Record<NonNullable<ModalProps['size']>, string> = {
   xl: 'max-w-4xl',
 };
 
-const DISMISS_THRESHOLD = 110; // px arrastrados hacia abajo para cerrar la hoja en mobile
+const DISMISS_OFFSET = 110; // px arrastrados hacia abajo para cerrar la hoja en mobile
+const DISMISS_VELOCITY = 700; // px/s — un flick rápido cierra aunque no haya llegado al offset
 
 // En mobile sube como bottom sheet (con su propio manejo de drag-to-dismiss desde el
 // handle); en md+ se queda como diálogo centrado — el mismo componente cambia de
@@ -25,6 +27,12 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
   const [dragY, setDragY] = useState(0);
   const draggingRef = useRef(false);
   const startYRef = useRef(0);
+  // Últimas muestras {t, y} del arrastre — hace falta la velocidad real al soltar
+  // (no solo la posición) para decidir si cierra de un tirón y para que, si vuelve
+  // a su lugar, el spring arranque con esa misma velocidad en vez de a 0 (si no,
+  // frenaría en seco justo donde el dedo lo soltó, sin inercia).
+  const samplesRef = useRef<{ t: number; y: number }[]>([]);
+  const snapBackRef = useRef<AnimationPlaybackControls | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -32,6 +40,8 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
       const raf = requestAnimationFrame(() => setVisible(true));
       return () => cancelAnimationFrame(raf);
     }
+    snapBackRef.current?.stop();
+    setDragY(0);
     setVisible(false);
     const t = setTimeout(() => setMounted(false), 260);
     return () => clearTimeout(t);
@@ -50,19 +60,41 @@ export function Modal({ open, onClose, title, children, size = 'md' }: ModalProp
 
   function onHandlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
     if (window.innerWidth >= 768) return;
+    // Si agarra la hoja de nuevo mientras todavía vuelve a su lugar del gesto
+    // anterior, ese spring viejo tiene que parar ya — si no, sigue empujando
+    // dragY por su cuenta y compite con el arrastre nuevo.
+    snapBackRef.current?.stop();
     draggingRef.current = true;
-    startYRef.current = e.clientY;
+    startYRef.current = e.clientY - dragY; // resta el offset donde ya estaba, no desde 0
+    samplesRef.current = [{ t: performance.now(), y: dragY }];
     e.currentTarget.setPointerCapture(e.pointerId);
   }
   function onHandlePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
     if (!draggingRef.current) return;
-    setDragY(Math.max(0, e.clientY - startYRef.current));
+    const y = Math.max(0, e.clientY - startYRef.current);
+    setDragY(y);
+    const now = performance.now();
+    samplesRef.current.push({ t: now, y });
+    // Solo importa el tramo reciente del gesto — una muestra vieja de hace medio
+    // segundo (ej. el dedo se quedó quieto un rato) arruinaría la velocidad real.
+    samplesRef.current = samplesRef.current.filter((s) => now - s.t < 100);
   }
   function onHandlePointerUp() {
     if (!draggingRef.current) return;
     draggingRef.current = false;
-    if (dragY > DISMISS_THRESHOLD) onClose();
-    setDragY(0);
+    const first = samplesRef.current[0];
+    const last = samplesRef.current[samplesRef.current.length - 1];
+    const dt = last && first ? (last.t - first.t) / 1000 : 0;
+    const velocity = dt > 0 ? (last.y - first.y) / dt : 0; // px/s, positivo = bajando
+    if (dragY > DISMISS_OFFSET || velocity > DISMISS_VELOCITY) {
+      onClose();
+      return;
+    }
+    // No llegó a cerrar: vuelve a su lugar con la misma velocidad que traía el
+    // gesto, no una transición de duración fija que ignora cómo se soltó — un
+    // arrastre que frenaba antes de soltar vuelve suave; uno que aceleraba
+    // hacia arriba vuelve con ese mismo impulso.
+    snapBackRef.current = animate(dragY, 0, { type: 'spring', velocity, bounce: 0, duration: 0.32, onUpdate: setDragY });
   }
 
   return (
