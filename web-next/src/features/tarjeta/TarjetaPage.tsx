@@ -41,16 +41,19 @@ export function TarjetaPage({ data }: { data: AppState }) {
   const activeCard = isAddPosition ? undefined : cards[clampedPosition];
 
   const [addingCard, setAddingCard] = useState(false);
+  const [editingCard, setEditingCard] = useState(false);
   const [addingCharge, setAddingCharge] = useState(false);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [newCardForm, setNewCardForm] = useState(EMPTY_NEW_CARD);
+  const [editCardForm, setEditCardForm] = useState({ name: '', balance: '' });
   const [chargeForm, setChargeForm] = useState({ description: '', totalAmount: '', totalInstallments: '1', date: todayStr() });
   const liquidAccounts = data.accounts.filter((a) => a.type !== 'tarjeta');
   const [payForm, setPayForm] = useState({ amount: '', sourceId: liquidAccounts[0]?.id || '' });
 
   const addAccount = useApiMutation<unknown, Account>('POST', '/api/accounts');
+  const updateAccount = useApiMutation<{ id: string } & Record<string, unknown>, Account>('PUT', (b) => `/api/accounts/${b.id}`);
   const setColor = useApiMutation<{ id: string; color: AccountColorKey }, Account>('PUT', (b) => `/api/accounts/${b.id}`);
   const setInterestRate = useApiMutation<{ id: string; interestRate: number | null }, Account>('PUT', (b) => `/api/accounts/${b.id}`);
   const addCharge = useApiMutation<unknown, CardCharge>('POST', '/api/cardcharges');
@@ -98,6 +101,36 @@ export function TarjetaPage({ data }: { data: AppState }) {
       setAddingCard(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo crear la tarjeta.');
+    }
+  }
+
+  function openEditCard() {
+    if (!activeCard) return;
+    setError(null);
+    setEditCardForm({ name: activeCard.name, balance: String(activeCard.balance) });
+    setEditingCard(true);
+  }
+
+  // Corregir el saldo de una tarjeta es distinto de registrar un movimiento: no
+  // pasa por Transacciones, así que si el número cambia se pide confirmar
+  // explícitamente el antes/después — es plata, no una preferencia de UI.
+  async function handleEditCard(e: FormEvent) {
+    e.preventDefault();
+    if (!activeCard) return;
+    setError(null);
+    const newBalance = Number(editCardForm.balance) || 0;
+    const newName = editCardForm.name.trim();
+    if (newBalance !== activeCard.balance) {
+      const ok = confirm(
+        `¿Corregir el saldo de "${activeCard.name}" de ${formatMoney(activeCard.balance)} a ${formatMoney(newBalance)}?\n\nEsto no crea un movimiento — ajusta el saldo directamente.`
+      );
+      if (!ok) return;
+    }
+    try {
+      await updateAccount.mutateAsync({ id: activeCard.id, name: newName, balance: newBalance });
+      setEditingCard(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'No se pudo actualizar la tarjeta.');
     }
   }
 
@@ -153,7 +186,18 @@ export function TarjetaPage({ data }: { data: AppState }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Tarjeta" actionLabel="Compra en cuotas" onAction={() => setAddingCharge(true)} />
+      <PageHeader title="Tarjeta" actionLabel="Compra en cuotas" onAction={() => setAddingCharge(true)}>
+        {activeCard && (
+          <button
+            type="button"
+            onClick={openEditCard}
+            className="flex items-center gap-1.5 rounded-[var(--radius-control)] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-[13px] font-semibold text-[var(--text-muted)] hover:border-[var(--text-muted)] hover:text-[var(--text)]"
+          >
+            <i className="ph ph-pencil-simple" aria-hidden="true" />
+            Editar
+          </button>
+        )}
+      </PageHeader>
 
       <div className="flex flex-col items-center gap-4">
         {/* w-full + min-w-0 en el slot del medio: en pantallas angostas (el ancho
@@ -242,6 +286,32 @@ export function TarjetaPage({ data }: { data: AppState }) {
         loading={addAccount.isPending}
         error={error}
       />
+
+      <Modal open={editingCard} onClose={() => setEditingCard(false)} title={`Editar ${activeCard?.name ?? 'tarjeta'}`}>
+        <form onSubmit={handleEditCard} className="flex flex-col gap-4">
+          <Input label="Nombre" required value={editCardForm.name} onChange={(e) => setEditCardForm({ ...editCardForm, name: e.target.value })} />
+          <Input
+            label="Deuda actual"
+            type="number"
+            step="0.01"
+            required
+            value={editCardForm.balance}
+            onChange={(e) => setEditCardForm({ ...editCardForm, balance: e.target.value })}
+          />
+          <p className="text-[11.5px] leading-relaxed text-[var(--text-faint)]">
+            Esto corrige el saldo directamente (ej. un cargo del banco que no pasó por la app). Para un pago o una compra nueva, usa "Pagar" o
+            "Compra en cuotas".
+          </p>
+          {error && (
+            <p className="text-sm text-[var(--red)]" role="alert">
+              {error}
+            </p>
+          )}
+          <GradientButton type="submit" loading={updateAccount.isPending} className="w-full">
+            Guardar cambios
+          </GradientButton>
+        </form>
+      </Modal>
 
       <Modal open={addingCharge} onClose={() => setAddingCharge(false)} title="Nueva compra en cuotas">
         <form onSubmit={handleAddCharge} className="flex flex-col gap-4">

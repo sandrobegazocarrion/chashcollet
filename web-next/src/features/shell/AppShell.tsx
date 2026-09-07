@@ -117,7 +117,6 @@ export function AppShell() {
                 onOpenSubView={setSubView}
                 onNewGoal={() => goTab('chanchitos')}
                 onOpenGoals={() => goTab('chanchitos')}
-                onOpenTarjeta={() => goTab('tarjeta')}
                 onOpenPresupuestos={() => goTab('presupuestos')}
               />
             </div>

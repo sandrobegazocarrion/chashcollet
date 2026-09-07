@@ -7,6 +7,8 @@ import { IncomeExpenseChart } from './IncomeExpenseChart';
 import { CategoryDonutChart } from './CategoryDonutChart';
 import { ActivityFeed } from './ActivityFeed';
 import { CardShell, AddCardTile } from '../tarjeta/CardShell';
+import { TarjetaPage } from '../tarjeta/TarjetaPage';
+import { Modal } from '../../components/ui/Modal';
 import type { AppState } from '../../lib/types';
 import type { SubViewType } from './SubView';
 
@@ -15,7 +17,6 @@ interface DesktopHomePageProps {
   onOpenSubView: (type: SubViewType) => void;
   onNewGoal: () => void;
   onOpenGoals: () => void;
-  onOpenTarjeta: () => void;
   onOpenPresupuestos: () => void;
 }
 
@@ -29,7 +30,8 @@ interface DesktopHomePageProps {
 // dos capas más sutil. IncomeExpenseChart/CategoryDonutChart/ActivityFeed se
 // reutilizan tal cual (son también de mobile) para no duplicar lógica ni arriesgar
 // el diseño compartido.
-export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, onOpenTarjeta, onOpenPresupuestos }: DesktopHomePageProps) {
+export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, onOpenPresupuestos }: DesktopHomePageProps) {
+  const [cardModalOpen, setCardModalOpen] = useState(false);
   const totals = computeTotals(data);
   const now = new Date();
   const monthKey = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
@@ -242,14 +244,16 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, o
         <div className="flex w-[270px] shrink-0 flex-col gap-5">
           {/* Sin panel envolvente: la tarjeta "de billetera" va directo, más grande,
               aprovechando el espacio que antes se perdía en el header/padding de una
-              TileCard. Es el mismo CardShell de la página de Tarjeta — el click ya
-              navega ahí, no hace falta un link "Ver" aparte. */}
+              TileCard. Es el mismo CardShell de la página de Tarjeta — el click ya no
+              navega afuera, abre <TarjetaPage> completa en un modal (mismo componente,
+              cero lógica duplicada) para pagar/ver cuotas sin perder el contexto de
+              Inicio detrás. */}
           <MotionCard delay={0.26} padded={false}>
             {!mainCard ? (
-              <AddCardTile onClick={onOpenTarjeta} />
+              <AddCardTile onClick={() => setCardModalOpen(true)} />
             ) : (
               <>
-                <CardShell account={mainCard} expanded={false} onToggle={onOpenTarjeta} compact />
+                <CardShell account={mainCard} expanded={false} onToggle={() => setCardModalOpen(true)} compact />
                 {cards.length > 1 && (
                   <p className="mt-2.5 text-center text-[11.5px] text-[var(--text-muted)]">
                     +{cards.length - 1} tarjeta{cards.length - 1 === 1 ? '' : 's'} más
@@ -314,6 +318,10 @@ export function DesktopHomePage({ data, onOpenSubView, onNewGoal, onOpenGoals, o
           <ActivityFeed transactions={data.transactions} accounts={data.accounts} />
         </MotionCard>
       </div>
+
+      <Modal open={cardModalOpen} onClose={() => setCardModalOpen(false)} size="lg">
+        <TarjetaPage data={data} />
+      </Modal>
     </div>
   );
 }
