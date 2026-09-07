@@ -221,3 +221,16 @@ body {
     animation: none !important;
   }
 }
+
+/* Riel de escritorio (Sidebar.tsx): con muchas pestañas + poca altura de ventana,
+   el overflow-y-auto es necesario para que "Admin"/el botón "+" sigan alcanzables,
+   pero la scrollbar nativa del sistema ahí se ve como un slider ajeno pegado al
+   riel. Se oculta visualmente sin quitar el scroll — sigue funcionando con rueda
+   del mouse o touch, igual que en Slack/Discord. */
+.scrollbar-hidden {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Edge legado */
+}
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/Edge */
+}

@@ -60,7 +60,7 @@ export function Sidebar({ active, onChange, showAdmin, onQuickAdd, online }: Sid
   const tabs = showAdmin ? TABS : TABS.filter((t) => t.id !== 'admin');
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 hidden w-[88px] flex-shrink-0 flex-col items-center overflow-y-auto bg-[var(--sidebar-bg)] md:flex">
+    <aside className="scrollbar-hidden fixed inset-y-0 left-0 z-40 hidden w-[88px] flex-shrink-0 flex-col items-center overflow-y-auto bg-[var(--sidebar-bg)] md:flex">
       <div className="flex w-full items-center justify-center py-6">
         <BrandMark className="h-7 w-7 text-white" />
       </div>
